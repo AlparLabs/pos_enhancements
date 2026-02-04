@@ -2,8 +2,8 @@
 <templates id="template" xml:space="preserve">
 
     <!-- Mobile view: Add VAT after contact info -->
-    <t t-name="pos_search_vat.PartnerLineVatMobile" t-inherit="point_of_sale.PartnerLine" t-inherit-mode="extension">
-        <xpath expr="//div[hasclass('partner-line-email')]/div[last()]" position="after">
+    <t t-inherit="point_of_sale.PartnerLine" t-inherit-mode="extension">
+        <xpath expr="//div[hasclass('partner-line-email')]" position="inside">
             <div class="mb-1" t-if="props.partner.vat">
                 <i class="fa fa-fw fa-id-card me-2"/>
                 <span class="fw-bold text-primary"><t t-esc="props.partner.vat"/></span>
@@ -12,7 +12,7 @@
     </t>
 
     <!-- Desktop view: Add VAT column -->
-    <t t-name="pos_search_vat.PartnerLineVatDesktop" t-inherit="point_of_sale.PartnerLine" t-inherit-mode="extension">
+    <t t-inherit="point_of_sale.PartnerLine" t-inherit-mode="extension">
         <xpath expr="//tr[hasclass('partner-line')]//td[hasclass('partner-line-email')]" position="after">
             <td class="partner-line-vat">
                 <div t-if="props.partner.vat" class="d-flex align-items-center">

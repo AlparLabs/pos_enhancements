@@ -11,7 +11,7 @@
     'depends': ['point_of_sale'],
     'assets': {
         'point_of_sale._assets_pos': [
-            'pos_search_vat/static/src/xml/partner_line.xml',
+            'pos_show_vat/static/src/xml/partner_line.xml',
         ],
     },
     'installable': True,
