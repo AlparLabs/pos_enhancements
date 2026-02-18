@@ -133,7 +133,7 @@ class PosPaymentMethod(models.Model):
         if 'data' in data:
             # Search for a device that contains the serial number entered by the user
             found_device = next(
-                (device for device in data['data'] if point_smart in device.get('terminal_id', '')),
+                (device for device in data['data'] if isinstance(device, dict) and point_smart in device.get('terminal_id', '')),
                 None
             )
 
