@@ -12,7 +12,7 @@ export class PaymentMercadoPago extends PaymentInterface {
         const infos = {
             amount: parseInt(line.amount * 100, 10),
             additional_info: {
-                external_reference: `${this.pos.config.current_session_id.id}_${line.payment_method_id.id}_${order.uuid}`,
+                external_reference: `${this.pos.pos_session.id}_${line.payment_method_id.id}_${order.uuid}`,
                 print_on_terminal: true,
             },
         };
@@ -66,9 +66,13 @@ export class PaymentMercadoPago extends PaymentInterface {
             // During payment creation, user can't cancel the order
             line.setPaymentStatus("waitingCapture");
             // Call Mercado Pago to create an order
+            console.log("Sending Mercado Pago Order...", { line, amount: line.amount });
             const order = await this.createOrder();
+            console.log("Mercado Pago Order Response:", order);
+            
             if (!("id" in order)) {
-                this._showMsg(order.message, "error");
+                const msg = order.errorMessage || order.message || "Unknown error from Mercado Pago";
+                this._showMsg(msg, "error");
                 return false;
             }
             // Order creation successfull, save it
