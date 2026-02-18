@@ -20,7 +20,7 @@ Features:
     ],
     'assets': {
         'point_of_sale._assets_pos': [
-            'pos_mercago_pago_alpy/static/src/**/*',
+            'pos_mercado_pago_alpy/static/src/**/*',
         ],
     },
     'license': 'LGPL-3',
