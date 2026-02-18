@@ -125,27 +125,26 @@ class PosPaymentMethod(models.Model):
         """
         Find the terminal ID from Mercado Pago using the new terminals API.
         """
-        mercado_pago = MercadoPagoPosRequest(token)
-        # Use the new terminals endpoint
+        # Reverting to terminals/v1/list as per user preference/verification
         data = mercado_pago.call_mercado_pago("get", "/terminals/v1/list", {})
+        _logger.info("Mercado Pago Devices Response: %s", data)
 
-        # New API returns data in 'data' array
-        if 'data' in data:
-            # Search for a device that contains the serial number entered by the user
-            found_device = next(
-                (device for device in data['data'] if isinstance(device, dict) and point_smart in device.get('terminal_id', '')),
-                None
-            )
+        # Logic for /terminals/v1/list response structure
+        # { "data": { "terminals": [ { "id": "..." } ] } }
+        
+        terminals = []
+        if 'data' in data and isinstance(data['data'], dict) and 'terminals' in data['data']:
+             terminals = data['data']['terminals']
+        elif 'devices' in data: # Fallback just in case
+             terminals = data['devices']
+
+        if terminals:
+            # Search for a device id that contains the serial number entered by the user
+            found_device = next((device for device in terminals if point_smart in device['id']), None)
 
             if not found_device:
                 raise UserError(_("The terminal serial number is not registered on Mercado Pago"))
 
-            return found_device.get('terminal_id', '')
-        # Fallback: try legacy format for backwards compatibility during transition
-        elif 'devices' in data:
-            found_device = next((device for device in data['devices'] if point_smart in device['id']), None)
-            if not found_device:
-                raise UserError(_("The terminal serial number is not registered on Mercado Pago"))
             return found_device.get('id', '')
         else:
             raise UserError(_("Please verify your production user token as it was rejected"))
