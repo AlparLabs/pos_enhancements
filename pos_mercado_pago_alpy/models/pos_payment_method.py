@@ -25,7 +25,7 @@ class PosPaymentMethod(models.Model):
     mp_id_point_smart_complet = fields.Char()
 
     def _get_payment_terminal_selection(self):
-        return super()._get_payment_terminal_selection() + [('mercado_pago', 'Mercado Pago')]
+        return super()._get_payment_terminal_selection() + [('mercado_pago_alpy', 'Mercado Pago Alpy')]
 
     def _check_special_access(self):
         if not self.env.user.has_group('point_of_sale.group_pos_user'):

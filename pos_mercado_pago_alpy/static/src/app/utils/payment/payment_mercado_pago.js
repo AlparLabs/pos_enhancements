@@ -198,4 +198,4 @@ export class PaymentMercadoPago extends PaymentInterface {
     }
 }
 
-register_payment_method("mercado_pago", PaymentMercadoPago);
+register_payment_method("mercado_pago_alpy", PaymentMercadoPago);
