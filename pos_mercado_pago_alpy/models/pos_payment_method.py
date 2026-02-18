@@ -125,6 +125,7 @@ class PosPaymentMethod(models.Model):
         """
         Find the terminal ID from Mercado Pago using the new terminals API.
         """
+        mercado_pago = MercadoPagoPosRequest(token)
         # Reverting to terminals/v1/list as per user preference/verification
         data = mercado_pago.call_mercado_pago("get", "/terminals/v1/list", {})
         _logger.info("Mercado Pago Devices Response: %s", data)
