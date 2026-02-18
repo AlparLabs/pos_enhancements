@@ -152,10 +152,11 @@ class PosPaymentMethod(models.Model):
 
     def write(self, vals):
         records = super().write(vals)
-
+        
         if 'mp_id_point_smart' in vals or 'mp_bearer_token' in vals:
-            self.mp_id_point_smart_complet = self._find_terminal(self.mp_bearer_token, self.mp_id_point_smart)
-
+            for record in self:
+                if record.mp_bearer_token and record.mp_id_point_smart:
+                    record.mp_id_point_smart_complet = record._find_terminal(record.mp_bearer_token, record.mp_id_point_smart)
         return records
 
     @api.model_create_multi
