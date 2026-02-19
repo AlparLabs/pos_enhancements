@@ -66,8 +66,7 @@ class PosPaymentMethod(models.Model):
             "external_reference": infos['additional_info']['external_reference'],
             "transactions": {
                 "payments": [{
-                    "amount": amount_decimal,
-                    "print_on_terminal": infos['additional_info'].get('print_on_terminal', True)
+                    "amount": amount_decimal
                 }]
             },
             "config": {
