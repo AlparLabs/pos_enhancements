@@ -4,12 +4,17 @@ import { AlertDialog } from "@web/core/confirmation_dialog/confirmation_dialog";
 import { register_payment_method } from "@point_of_sale/app/store/pos_store";
 
 export class PaymentMercadoPago extends PaymentInterface {
+    setup(pos, payment_method_id) {
+        super.setup(pos, payment_method_id);
+        this.webhook_resolver = null;
+        this.mp_order = {};
+    }
+
+    // ---- RPC helpers (private) ----
+
     async _createOrder() {
-        const order = this.pos.getOrder();
-        const line = order.getSelectedPaymentline();
-        // Build informations for creating an order on Mercado Pago.
-        // Data in "external_reference" are sent back with the webhook notification.
-        // Format: sessionId_paymentMethodId_orderUUID
+        const order = this.pos.get_order();
+        const line = order.get_selected_paymentline();
         const infos = {
             amount: parseInt(line.amount * 100, 10),
             additional_info: {
@@ -25,7 +30,8 @@ export class PaymentMercadoPago extends PaymentInterface {
     }
 
     async _getOrderStatus() {
-        const line = this.pos.getOrder().getSelectedPaymentline();
+        const order = this.pos.get_order();
+        const line = order.get_selected_paymentline();
         return await this.env.services.orm.silent.call(
             "pos.payment.method",
             "mp_order_get",
@@ -34,7 +40,8 @@ export class PaymentMercadoPago extends PaymentInterface {
     }
 
     async _cancelOrder() {
-        const line = this.pos.getOrder().getSelectedPaymentline();
+        const order = this.pos.get_order();
+        const line = order.get_selected_paymentline();
         return await this.env.services.orm.silent.call(
             "pos.payment.method",
             "mp_order_cancel",
@@ -43,7 +50,8 @@ export class PaymentMercadoPago extends PaymentInterface {
     }
 
     async _getPayment(payment_id) {
-        const line = this.pos.getOrder().getSelectedPaymentline();
+        const order = this.pos.get_order();
+        const line = order.get_selected_paymentline();
         return await this.env.services.orm.silent.call(
             "pos.payment.method",
             "mp_get_payment_status",
@@ -51,31 +59,27 @@ export class PaymentMercadoPago extends PaymentInterface {
         );
     }
 
-    setup(pos, payment_method_id) {
-        super.setup(pos, payment_method_id);
-        this.webhook_resolver = null;
-        this.mp_order = {};
-    }
+    // ---- PaymentInterface overrides (snake_case required by Odoo 18) ----
 
     async send_payment_request(cid) {
-        const line = this.pos.getOrder().getSelectedPaymentline();
+        const order = this.pos.get_order();
+        const line = order.get_selected_paymentline();
         try {
             // During payment creation, user can't cancel the order
-            line.setPaymentStatus("waitingCapture");
-            // Call Mercado Pago to create an order
+            line.set_payment_status("waitingCapture");
             console.log("MercadoPago: Sending order...", { amount: line.amount });
-            const order = await this._createOrder();
-            console.log("MercadoPago: Order response:", order);
+            const mp_response = await this._createOrder();
+            console.log("MercadoPago: Order response:", mp_response);
 
-            if (!order || !("id" in order)) {
-                const msg = order?.errorMessage || order?.message || "Unknown error from Mercado Pago";
+            if (!mp_response || !("id" in mp_response)) {
+                const msg = mp_response?.errorMessage || mp_response?.message || "Unknown error from Mercado Pago";
                 this._showMsg(msg, "error");
                 return false;
             }
             // Order created successfully, save it
-            this.mp_order = order;
+            this.mp_order = mp_response;
             // After order creation, allow the user to cancel
-            line.setPaymentStatus("waitingCard");
+            line.set_payment_status("waitingCard");
             // Wait for webhook to resolve the payment status
             return await new Promise((resolve) => {
                 this.webhook_resolver = resolve;
@@ -90,16 +94,24 @@ export class PaymentMercadoPago extends PaymentInterface {
         if (!("id" in this.mp_order)) {
             return true;
         }
-        const canceling_status = await this._cancelOrder();
-        if (!canceling_status || "error" in canceling_status || "errorMessage" in canceling_status) {
-            this._showMsg(_t("Could not cancel the order, please cancel directly on the terminal"), "info");
+        try {
+            const canceling_status = await this._cancelOrder();
+            if (!canceling_status || "error" in canceling_status || "errorMessage" in canceling_status) {
+                this._showMsg(_t("Could not cancel the order, please cancel directly on the terminal"), "info");
+                return false;
+            }
+            return true;
+        } catch (error) {
+            this._showMsg(error?.message || String(error), "System error");
             return false;
         }
-        return true;
     }
 
+    // ---- Webhook handler (called from pos_store.js) ----
+
     async handleMercadoPagoWebhook() {
-        const line = this.pos.getOrder().getSelectedPaymentline();
+        const order = this.pos.get_order();
+        const line = order.get_selected_paymentline();
         const MAX_RETRY = 5;
         const RETRY_DELAY = 1000;
 
@@ -107,7 +119,7 @@ export class PaymentMercadoPago extends PaymentInterface {
             if (!resolverValue) {
                 this._showMsg(messageKey, status);
             }
-            line.setPaymentStatus("done");
+            line.set_payment_status("done");
             this.webhook_resolver?.(resolverValue);
             return resolverValue;
         };
@@ -179,7 +191,8 @@ export class PaymentMercadoPago extends PaymentInterface {
         return showMessageAndResolve(_t("Unknown payment status"), "error", false);
     }
 
-    // private methods
+    // ---- Private helpers ----
+
     _showMsg(msg, title) {
         this.env.services.dialog.add(AlertDialog, {
             title: "Mercado Pago " + title,
