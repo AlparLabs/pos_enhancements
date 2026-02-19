@@ -8,13 +8,26 @@ export class PaymentMercadoPago extends PaymentInterface {
         super.setup(pos, payment_method_id);
         this.webhook_resolver = null;
         this.mp_order = {};
+        this.pending_cid = null;
+    }
+
+    // Find the payment line by UUID (cid). In Odoo 18, send_payment_request
+    // receives the payment line's UUID, not a selected-line reference.
+    _findPaymentLine(cid) {
+        const order = this.pos.get_order();
+        if (cid) {
+            const found = order.payment_ids.find((pl) => pl.uuid === cid);
+            if (found) return found;
+        }
+        // Fallback: try the selected line
+        return order.get_selected_paymentline();
     }
 
     // ---- RPC helpers (private) ----
 
-    async _createOrder() {
+    async _createOrder(cid) {
         const order = this.pos.get_order();
-        const line = order.get_selected_paymentline();
+        const line = this._findPaymentLine(cid);
         const infos = {
             amount: parseInt(line.amount * 100, 10),
             additional_info: {
@@ -30,8 +43,7 @@ export class PaymentMercadoPago extends PaymentInterface {
     }
 
     async _getOrderStatus() {
-        const order = this.pos.get_order();
-        const line = order.get_selected_paymentline();
+        const line = this._findPaymentLine(this.pending_cid);
         return await this.env.services.orm.silent.call(
             "pos.payment.method",
             "mp_order_get",
@@ -40,8 +52,7 @@ export class PaymentMercadoPago extends PaymentInterface {
     }
 
     async _cancelOrder() {
-        const order = this.pos.get_order();
-        const line = order.get_selected_paymentline();
+        const line = this._findPaymentLine(this.pending_cid);
         return await this.env.services.orm.silent.call(
             "pos.payment.method",
             "mp_order_cancel",
@@ -50,8 +61,7 @@ export class PaymentMercadoPago extends PaymentInterface {
     }
 
     async _getPayment(payment_id) {
-        const order = this.pos.get_order();
-        const line = order.get_selected_paymentline();
+        const line = this._findPaymentLine(this.pending_cid);
         return await this.env.services.orm.silent.call(
             "pos.payment.method",
             "mp_get_payment_status",
@@ -62,13 +72,12 @@ export class PaymentMercadoPago extends PaymentInterface {
     // ---- PaymentInterface overrides (snake_case required by Odoo 18) ----
 
     async send_payment_request(cid) {
-        const order = this.pos.get_order();
-        const line = order.get_selected_paymentline();
+        this.pending_cid = cid;
+        const line = this._findPaymentLine(cid);
         try {
-            // During payment creation, user can't cancel the order
             line.set_payment_status("waitingCapture");
             console.log("MercadoPago: Sending order...", { amount: line.amount });
-            const mp_response = await this._createOrder();
+            const mp_response = await this._createOrder(cid);
             console.log("MercadoPago: Order response:", mp_response);
 
             if (!mp_response || !("id" in mp_response)) {
@@ -76,11 +85,8 @@ export class PaymentMercadoPago extends PaymentInterface {
                 this._showMsg(msg, "error");
                 return false;
             }
-            // Order created successfully, save it
             this.mp_order = mp_response;
-            // After order creation, allow the user to cancel
             line.set_payment_status("waitingCard");
-            // Wait for webhook to resolve the payment status
             return await new Promise((resolve) => {
                 this.webhook_resolver = resolve;
             });
@@ -110,8 +116,8 @@ export class PaymentMercadoPago extends PaymentInterface {
     // ---- Webhook handler (called from pos_store.js) ----
 
     async handleMercadoPagoWebhook() {
-        const order = this.pos.get_order();
-        const line = order.get_selected_paymentline();
+        const line = this._findPaymentLine(this.pending_cid);
+        if (!line) return;
         const MAX_RETRY = 5;
         const RETRY_DELAY = 1000;
 
@@ -141,15 +147,12 @@ export class PaymentMercadoPago extends PaymentInterface {
             }
         };
 
-        // No order id means either that the user reloaded the page or it is an old webhook
         if (!("id" in this.mp_order)) {
             return;
         }
 
-        // Call Mercado Pago to get the order status
         let last_status_order = await this._getOrderStatus();
 
-        // Bad order id -> old webhook not related to current order, ignore
         if (this.mp_order.id != last_status_order.id) {
             return;
         }
@@ -158,8 +161,6 @@ export class PaymentMercadoPago extends PaymentInterface {
             return await handleFinishedPayment(last_status_order);
         }
 
-        // BUG: Sometimes MP webhook returns at_terminal/created instead of
-        // canceled/processed. Retry up to MAX_RETRY times.
         if (["created", "at_terminal", "action_required"].includes(last_status_order.status)) {
             return await new Promise((resolve) => {
                 let retry_cnt = 0;
