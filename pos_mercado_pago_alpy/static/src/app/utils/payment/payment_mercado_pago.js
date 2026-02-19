@@ -1,7 +1,7 @@
 import { _t } from "@web/core/l10n/translation";
 import { PaymentInterface } from "@point_of_sale/app/payment/payment_interface";
 import { AlertDialog } from "@web/core/confirmation_dialog/confirmation_dialog";
-import { register_payment_method } from "@point_of_sale/app/store/pos_store";
+import { registry } from "@web/core/registry";
 
 export class PaymentMercadoPago extends PaymentInterface {
     setup(pos, payment_method_id) {
@@ -11,22 +11,21 @@ export class PaymentMercadoPago extends PaymentInterface {
         this.pending_cid = null;
     }
 
-    // Find the payment line by UUID (cid). In Odoo 18, send_payment_request
-    // receives the payment line's UUID, not a selected-line reference.
+    // Find the payment line by UUID (cid).
     _findPaymentLine(cid) {
-        const order = this.pos.get_order();
+        const order = this.pos.getOrder();
         if (cid) {
             const found = order.payment_ids.find((pl) => pl.uuid === cid);
             if (found) return found;
         }
         // Fallback: try the selected line
-        return order.get_selected_paymentline();
+        return order.getSelectedPaymentline();
     }
 
     // ---- RPC helpers (private) ----
 
     async _createOrder(cid) {
-        const order = this.pos.get_order();
+        const order = this.pos.getOrder();
         const line = this._findPaymentLine(cid);
         const infos = {
             amount: parseInt(line.amount * 100, 10),
@@ -69,13 +68,13 @@ export class PaymentMercadoPago extends PaymentInterface {
         );
     }
 
-    // ---- PaymentInterface overrides (snake_case required by Odoo 18) ----
+    // ---- PaymentInterface overrides (camelCase required by Odoo 19) ----
 
-    async send_payment_request(cid) {
+    async sendPaymentRequest(cid) {
         this.pending_cid = cid;
         const line = this._findPaymentLine(cid);
         try {
-            line.set_payment_status("waitingCapture");
+            line.setPaymentStatus("waitingCapture");
             console.log("MercadoPago: Sending order...", { amount: line.amount });
             const mp_response = await this._createOrder(cid);
             console.log("MercadoPago: Order response:", mp_response);
@@ -86,7 +85,7 @@ export class PaymentMercadoPago extends PaymentInterface {
                 return false;
             }
             this.mp_order = mp_response;
-            line.set_payment_status("waitingCard");
+            line.setPaymentStatus("waitingCard");
             return await new Promise((resolve) => {
                 this.webhook_resolver = resolve;
             });
@@ -96,7 +95,7 @@ export class PaymentMercadoPago extends PaymentInterface {
         }
     }
 
-    async send_payment_cancel(order, cid) {
+    async sendPaymentCancel(order, cid) {
         if (!("id" in this.mp_order)) {
             return true;
         }
@@ -125,7 +124,7 @@ export class PaymentMercadoPago extends PaymentInterface {
             if (!resolverValue) {
                 this._showMsg(messageKey, status);
             }
-            line.set_payment_status("done");
+            line.setPaymentStatus("done");
             this.webhook_resolver?.(resolverValue);
             return resolverValue;
         };
@@ -202,4 +201,4 @@ export class PaymentMercadoPago extends PaymentInterface {
     }
 }
 
-register_payment_method("mercado_pago_alpy", PaymentMercadoPago);
+registry.category("pos_payment_methods").add("mercado_pago_alpy", PaymentMercadoPago);
