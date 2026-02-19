@@ -7,7 +7,7 @@ patch(PosStore.prototype, {
         await super.setup(...arguments);
         this.data.connectWebSocket("MERCADO_PAGO_LATEST_MESSAGE", (payload) => {
             if (payload.config_id === this.config.id) {
-                const pendingLine = this.getPendingPaymentLine("mercado_pago");
+                const pendingLine = this.getPendingPaymentLine("mercado_pago_alpy");
 
                 if (pendingLine) {
                     pendingLine.payment_method_id.payment_terminal.handleMercadoPagoWebhook();

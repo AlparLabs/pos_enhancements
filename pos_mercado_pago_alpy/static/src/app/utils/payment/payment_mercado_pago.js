@@ -84,7 +84,7 @@ export class PaymentMercadoPago extends PaymentInterface {
                 this.webhook_resolver = resolve;
             });
         } catch (error) {
-            this._showMsg(error, "System error");
+            this._showMsg(error?.message || String(error), "System error");
             return false;
         }
     }
@@ -95,13 +95,9 @@ export class PaymentMercadoPago extends PaymentInterface {
             return true;
         }
         const canceling_status = await this.cancelOrder();
-        if ("error" in canceling_status) {
-            const message =
-                canceling_status.status === 409
-                    ? _t("Payment has to be canceled on terminal")
-                    : _t("Payment not found (canceled/finished on terminal)");
-            this._showMsg(message, "info");
-            return canceling_status.status !== 409;
+        if (!canceling_status || "error" in canceling_status || "errorMessage" in canceling_status) {
+            this._showMsg(_t("Could not cancel the order, please cancel directly on the terminal"), "info");
+            return false;
         }
         return true;
     }
