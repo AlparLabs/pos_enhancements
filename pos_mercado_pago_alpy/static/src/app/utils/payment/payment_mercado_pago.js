@@ -31,7 +31,7 @@ export class PaymentMercadoPago extends PaymentInterface {
         const infos = {
             amount: parseInt(line.amount * 100, 10),
             additional_info: {
-                external_reference: `${this.pos.config.current_session_id.id}_${line.payment_method_id.id}_${order.uuid}`,
+                external_reference: `${this.pos.config.current_session_id.id}_${line.payment_method_id.id}_${order.uuid}_${Date.now()}`,
                 print_on_terminal: true,
             },
         };

@@ -56,7 +56,7 @@ class PosMercadoPagoWebhook(http.Controller):
             # Fallback for legacy format during transition
             external_reference = data.get('additional_info', {}).get('external_reference')
 
-        mercado_pago_pattern = r'(\d+)_(\d+)_([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})'
+        mercado_pago_pattern = r'(\d+)_(\d+)_([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})(?:_\d+)?'
 
         if not external_reference or not (match := re.fullmatch(mercado_pago_pattern, external_reference)):
             _logger.warning('POST message received with no or malformed "external_reference" key: %s', external_reference)

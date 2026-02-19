@@ -1,6 +1,6 @@
 {
     'name': 'POS Mercado Pago (Alpy)',
-    'version': '18.0.0.1',
+    'version': '18.0.0.2',
     'category': 'Sales/Point of Sale',
     'summary': 'Integrate your POS with Mercado Pago Point Smart terminals using the Orders API',
     'description': """
