@@ -9,16 +9,17 @@ import { NumberPopup } from "@point_of_sale/app/utils/input_popups/number_popup"
 import { makeAwaitable } from "@point_of_sale/app/store/make_awaitable_dialog";
 import { _t } from "@web/core/l10n/translation";
 
+// Same helper as control_buttons.js — checks `_role` (underscore prefix), not `role`
 async function requestSupervisorPin(pos, dialog, notification) {
     if (!pos.config.module_pos_hr) {
         return true;
     }
     const cashier = pos.get_cashier();
-    if (cashier?.role === "manager") {
+    if (cashier?._role === "manager") {
         return true;
     }
     const employees = pos.models["hr.employee"] || [];
-    const managers = employees.filter((e) => e.role === "manager");
+    const managers = employees.filter((e) => e._role === "manager");
     if (!managers.length) {
         return true;
     }
@@ -30,7 +31,7 @@ async function requestSupervisorPin(pos, dialog, notification) {
         return false;
     }
     const hashedPin = Sha1.hash(inputPin);
-    const authorized = managers.some((manager) => manager._pin && manager._pin === hashedPin);
+    const authorized = managers.some((m) => m._pin && m._pin === hashedPin);
     if (!authorized) {
         notification.add(_t("Incorrect PIN. Discount not authorized."), {
             type: "warning",

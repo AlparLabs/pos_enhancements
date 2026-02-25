@@ -10,33 +10,34 @@ import { makeAwaitable } from "@point_of_sale/app/store/make_awaitable_dialog";
 import { _t } from "@web/core/l10n/translation";
 
 /**
- * Returns true if a supervisor PIN is needed and validates it.
- * 
- * "Manager" is defined by the `role` field on the hr.employee record in POS.
- * To configure:
- *  - Open Employees → find the employee → Point of Sale tab → set "Point of Sale Role" to "Manager"
- *  - That employee must also have a PIN set in their employee profile
+ * Returns true if the current cashier is authorized to apply a discount.
  *
- * If pos_hr is not enabled on this POS, or if the current cashier is already
- * a manager, or if no manager employees exist, the action is allowed freely.
+ * In Odoo 18, employee roles are sent to the frontend as `_role` (underscore prefix).
+ * An employee becomes a manager if:
+ *  - Their linked user belongs to the POS Manager group, OR
+ *  - They are listed in the POS config's "Advanced Employees" (advanced_employee_ids)
+ * Both cases result in `_role === 'manager'` on the employee object in the POS.
+ *
+ * If pos_hr is not enabled, or no managers are configured, the action is allowed freely.
  */
 async function requestSupervisorPin(pos, dialog, notification) {
-    // 1. If pos_hr employee login is not enabled, skip check
+    // 1. If pos_hr employee login is not enabled for this POS config, allow freely
     if (!pos.config.module_pos_hr) {
         return true;
     }
 
-    // 2. If the current cashier is already a manager, skip check
+    // 2. If the current cashier is already a manager, allow freely
     const cashier = pos.get_cashier();
-    if (cashier?.role === "manager") {
+    if (cashier?._role === "manager") {
         return true;
     }
 
-    // 3. Find manager employees from the loaded POS data
+    // 3. Find all manager employees from the POS loaded data
+    //    Note: field is `_role` (not `role`) — set server-side in hr_employee._load_pos_data()
     const employees = pos.models["hr.employee"] || [];
-    const managers = employees.filter((e) => e.role === "manager");
+    const managers = employees.filter((e) => e._role === "manager");
 
-    // 4. If no managers are configured, allow freely (nothing to validate against)
+    // 4. If no managers are configured at all, allow freely (degraded mode)
     if (!managers.length) {
         return true;
     }
@@ -48,12 +49,13 @@ async function requestSupervisorPin(pos, dialog, notification) {
     });
 
     if (!inputPin) {
-        // User cancelled
+        // User pressed cancel
         return false;
     }
 
+    // _pin is a SHA1 hash of the raw PIN, set server-side
     const hashedPin = Sha1.hash(inputPin);
-    const authorized = managers.some((manager) => manager._pin && manager._pin === hashedPin);
+    const authorized = managers.some((m) => m._pin && m._pin === hashedPin);
 
     if (!authorized) {
         notification.add(_t("Incorrect PIN. Discount not authorized."), {
