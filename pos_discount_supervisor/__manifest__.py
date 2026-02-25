@@ -14,8 +14,8 @@ If a cashier (non-manager) attempts to apply a line discount or a global discoun
     'data': [],
     'assets': {
         'point_of_sale._assets_pos': [
-            'pos_discount_supervisor/static/src/overrides/components/discount_button.js',
-            'pos_discount_supervisor/static/src/overrides/components/numpad.js',
+            'pos_discount_supervisor/static/src/overrides/components/control_buttons.js',
+            'pos_discount_supervisor/static/src/overrides/components/product_screen.js',
         ],
     },
     'installable': True,
