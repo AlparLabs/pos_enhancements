@@ -15,8 +15,7 @@ Features:
     """,
     'depends': ['point_of_sale'],
     'data': [
-        'views/pos_payment_method_views.xml',
-        'data/neutralize.sql',
+        'views/pos_payment_method_views.xml'
     ],
     'assets': {
         'point_of_sale._assets_pos': [
