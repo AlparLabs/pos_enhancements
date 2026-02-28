@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates id="template" xml:space="preserve">
+    <!--
+        XPath patch on the kiosk PaymentPage template.
+
+        Replaces the Back button's click handler so that when a Mercado Pago
+        payment is in progress (_mpPolling = true), pressing "Back" calls
+        cancelMercadoPagoPayment() instead of router.back(). This ensures the
+        pending MP order is cancelled before the kiosk navigates away.
+
+        When _mpPolling is false, the original router.back() behaviour is preserved.
+    -->
+    <t t-inherit="pos_self_order.PaymentPage" t-inherit-mode="extension">
+        <xpath expr="//button[contains(@class,'btn-primary')]" position="replace">
+            <button
+                class="btn btn-primary btn-lg"
+                t-if="state.selection or selectedPaymentMethod.is_online_payment or selfOrder.paymentError or _mpPolling"
+                t-on-click="() => _mpPolling ? cancelMercadoPagoPayment() : router.back()"
+            >Back</button>
+        </xpath>
+    </t>
+</templates>
