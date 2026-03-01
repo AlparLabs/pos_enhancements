@@ -15,12 +15,20 @@ class PosPaymentMethod(models.Model):
         Extend the kiosk payment method whitelist to include Mercado Pago Alpy.
         Without this override, the kiosk frontend would never load our payment method.
         """
+        domain = super()._load_pos_self_data_domain(data)
         if data['pos.config']['data'][0]['self_ordering_mode'] == 'kiosk':
-            return [
-                ('use_payment_terminal', 'in', ['adyen', 'stripe', 'mercado_pago_alpy']),
-                ('id', 'in', data['pos.config']['data'][0]['payment_method_ids']),
-            ]
-        return super()._load_pos_self_data_domain(data)
+            # We want to add mercado_pago_alpy to the 'in' list of the use_payment_terminal condition
+            new_domain = []
+            for condition in domain:
+                if isinstance(condition, tuple) and condition[0] == 'use_payment_terminal' and condition[1] == 'in':
+                    terminals = list(condition[2])
+                    if 'mercado_pago_alpy' not in terminals:
+                        terminals.append('mercado_pago_alpy')
+                    new_domain.append((condition[0], condition[1], terminals))
+                else:
+                    new_domain.append(condition)
+            return new_domain
+        return domain
 
     def _payment_request_from_kiosk(self, order):
         """
