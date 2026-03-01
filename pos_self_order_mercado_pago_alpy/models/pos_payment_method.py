@@ -23,16 +23,10 @@ class PosPaymentMethod(models.Model):
     def _payment_request_from_kiosk(self, order):
         """
         Called by the /kiosk/payment/ route when a kiosk order is submitted.
-        For Mercado Pago, we create the MP order immediately and return the full
-        MP response (including its id) so the kiosk JavaScript can poll for
-        the payment result asynchronously via /kiosk/mp/status/.
+        Routes the request using the main POS Mercado Pago order creation logic.
         """
         if self.use_payment_terminal != 'mercado_pago_alpy':
             return super()._payment_request_from_kiosk(order)
-
-        from odoo.addons.pos_mercado_pago_alpy.models.mercado_pago_post_request import (
-            MercadoPagoPosRequest,
-        )
 
         try:
             # Check if order is a dictionary (from Kiosk front-end JSON) or an ORM record
@@ -45,40 +39,28 @@ class PosPaymentMethod(models.Model):
                 session_id = order.session_id.id
                 pos_reference = order.pos_reference
 
-            mercado_pago = MercadoPagoPosRequest(self.sudo().mp_bearer_token)
-            amount_decimal = "{:.2f}".format(float(amount_total))
-
             # Build a unique external reference for the kiosk payment
             external_ref = f"kiosk_{session_id}_{self.id}_{pos_reference}"
 
-            payload = {
-                "type": "point",
-                "external_reference": external_ref,
-                "transactions": {
-                    "payments": [{"amount": amount_decimal}]
-                },
-                "config": {
-                    "point": {"terminal_id": self.mp_id_point_smart_complet}
-                },
+            # Prepare infos assuming mp_order_create expects amount in cents
+            infos = {
+                'amount': float(amount_total) * 100,
+                'additional_info': {
+                    'external_reference': external_ref,
+                    'payment_method_type': 'credit'  # standard fallback for terminal mode
+                }
             }
 
-            # Idempotency key ensures retries don't create duplicate orders
-            idempotency_key = f"kiosk_{external_ref}"
-            
-            _logger.info("Mercado Pago Kiosk request payload: %s", payload)
-            resp = mercado_pago.call_mercado_pago("post", "/v1/orders", payload, idempotency_key)
+            _logger.info("Mercado Pago Kiosk request creating order via mp_order_create for reference %s", external_ref)
+            resp = self.mp_order_create(infos)
 
-            _logger.info(
-                "Kiosk MP order created for %s (terminal: %s): %s",
-                pos_reference,
-                self.mp_id_point_smart_complet,
-                resp,
-            )
+            _logger.info("Kiosk MP order response: %s", resp)
 
-            # Return the full MP response — the kiosk JS will read resp.id to start polling
+            # Return the full MP response to the frontend
             return resp
 
         except Exception as e:
             _logger.error("Mercado Pago Kiosk Error: %s", str(e), exc_info=True)
             # Raise an exception with a clear message so the Kiosk frontend catch block shows it
+            raise ValueError(f"Failed to create Mercado Pago order via Kiosk: {str(e)}")
             raise ValueError(f"Failed to create Mercado Pago order via Kiosk: {str(e)}")

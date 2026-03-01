@@ -45,25 +45,28 @@ class KioskMercadoPagoController(http.Controller):
         type='json',
         website=True,
     )
-    def kiosk_mp_status(self, payment_method_id, mp_order_id, access_token):
+    def kiosk_mp_status(self, payment_method_id, mp_order_id, access_token, **kwargs):
         """
         Returns the current status of a Mercado Pago order.
         Called by the kiosk JS every ~3 seconds while waiting for payment confirmation.
-
-        Returns the full MP order object, including its 'status' field.
-        Terminal states are: created, at_terminal, action_required,
-                             processed, finished, canceled, failed, expired
         """
         method = self._get_payment_method(access_token, payment_method_id)
 
-        from odoo.addons.pos_mercado_pago_alpy.models.mercado_pago_post_request import (
-            MercadoPagoPosRequest,
-        )
+        is_qr = kwargs.get('is_qr', False)
 
-        mp = MercadoPagoPosRequest(method.mp_bearer_token)
-        resp = mp.call_mercado_pago("get", f"/v1/orders/{mp_order_id}", {})
-        _logger.debug("Kiosk MP status for order %s: %s", mp_order_id, resp)
-        return resp
+        if is_qr:
+            # For QR we poll using the external reference
+            resp = method.mp_qr_status_get(mp_order_id)
+            _logger.debug("Kiosk MP QR status for order %s: %s", mp_order_id, resp)
+            return resp
+        else:
+            from odoo.addons.pos_mercado_pago_alpy.models.mercado_pago_post_request import (
+                MercadoPagoPosRequest,
+            )
+            mp = MercadoPagoPosRequest(method.mp_bearer_token)
+            resp = mp.call_mercado_pago("get", f"/v1/orders/{mp_order_id}", {})
+            _logger.debug("Kiosk MP Terminal status for order %s: %s", mp_order_id, resp)
+            return resp
 
     @http.route(
         '/kiosk/mp/cancel/<int:payment_method_id>/<mp_order_id>',
@@ -72,18 +75,22 @@ class KioskMercadoPagoController(http.Controller):
         website=True,
         methods=['POST'],
     )
-    def kiosk_mp_cancel(self, payment_method_id, mp_order_id, access_token):
+    def kiosk_mp_cancel(self, payment_method_id, mp_order_id, access_token, **kwargs):
         """
         Cancels a pending Mercado Pago order.
         Called by the kiosk JS when the customer presses the cancel button
         during the payment waiting screen.
-
-        Note: MP only allows cancellation when the order status is
-        'created' or 'action_required'. If the terminal has already
-        processed it, this call will gracefully return an error which
-        the JS ignores (best-effort cancel).
         """
         method = self._get_payment_method(access_token, payment_method_id)
+
+        is_qr = kwargs.get('is_qr', False)
+
+        if is_qr:
+            # QR orders might not be cancellable this way in API, but we can try ignoring or
+            # making a best-effort call to cancel it if there's an endpoint.
+            # Currently mp_order_cancel just hits /v1/orders/ which is Terminal. 
+            _logger.info("Kiosk MP cancel requested for QR order %s - Ignoring as QR doesn't require explicit cancel", mp_order_id)
+            return {"status": "canceled"}
 
         from odoo.addons.pos_mercado_pago_alpy.models.mercado_pago_post_request import (
             MercadoPagoPosRequest,

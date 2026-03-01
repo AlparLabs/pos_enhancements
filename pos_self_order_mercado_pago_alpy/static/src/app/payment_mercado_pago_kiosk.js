@@ -57,12 +57,22 @@ patch(PaymentPage.prototype, {
 
             const mpOrder = result?.payment_status;
 
-            if (!mpOrder || !mpOrder.id) {
+            if (!mpOrder || (!mpOrder.id && !mpOrder.in_store_order_id)) {
                 const errMsg = mpOrder?.message || mpOrder?.errorMessage || _t("Mercado Pago did not return a valid order.");
                 throw new Error("MP_ERROR: " + errMsg);
             }
 
-            this._mpOrderId = mpOrder.id;
+            if (mpOrder.qr_data) {
+                this._mpQrData = mpOrder.qr_data;
+                // Backend added kiosk_external_reference so we can query status by it
+                this._mpOrderId = mpOrder.kiosk_external_reference;
+                this._mpIsQR = true;
+            } else {
+                this._mpQrData = null;
+                this._mpOrderId = mpOrder.id;
+                this._mpIsQR = false;
+            }
+
             this._mpPaymentMethodId = this.state.paymentMethodId;
 
             await this._pollMercadoPago();
@@ -83,27 +93,39 @@ patch(PaymentPage.prototype, {
                 try {
                     const status = await rpc(
                         `/kiosk/mp/status/${this._mpPaymentMethodId}/${this._mpOrderId}`,
-                        { access_token: this.selfOrder.access_token }
+                        { access_token: this.selfOrder.access_token, is_qr: this._mpIsQR }
                     );
 
-                    if (!TERMINAL_STATUSES.includes(status?.status)) {
-                        return;
-                    }
-
-                    this._stopPolling();
-
-                    if (SUCCESS_STATUSES.includes(status.status)) {
-                        const payments = status.transactions?.payments || [];
-                        const lastPayment = payments[payments.length - 1];
-
-                        if (lastPayment?.status === "approved") {
-                            this.router.navigate("order");
-                            return resolve(true);
+                    if (this._mpIsQR) {
+                        const payments = status?.elements || [];
+                        if (payments.length > 0) {
+                            const latestPayment = payments[0];
+                            if (latestPayment.status === "approved" || latestPayment.status === "authorized") {
+                                this._stopPolling();
+                                this.router.navigate("order");
+                                return resolve(true);
+                            }
                         }
-                    }
+                    } else {
+                        if (!TERMINAL_STATUSES.includes(status?.status)) {
+                            return;
+                        }
 
-                    this.selfOrder.paymentError = true;
-                    resolve(false);
+                        this._stopPolling();
+
+                        if (SUCCESS_STATUSES.includes(status.status)) {
+                            const payments = status.transactions?.payments || [];
+                            const lastPayment = payments[payments.length - 1];
+
+                            if (lastPayment?.status === "approved") {
+                                this.router.navigate("order");
+                                return resolve(true);
+                            }
+                        }
+
+                        this.selfOrder.paymentError = true;
+                        resolve(false);
+                    }
 
                 } catch (pollError) {
                     this._stopPolling();
@@ -135,6 +157,7 @@ patch(PaymentPage.prototype, {
         try {
             await rpc(`/kiosk/mp/cancel/${methodId}/${orderIdToCancel}`, {
                 access_token: this.selfOrder.access_token,
+                is_qr: this._mpIsQR
             });
         } catch (_cancelError) {
         }
