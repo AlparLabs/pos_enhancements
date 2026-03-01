@@ -16,7 +16,7 @@ import { _t } from "@web/core/l10n/translation";
 patch(SelfOrder.prototype, {
     filterPaymentMethods(pms) {
         return this.config.self_ordering_mode === "kiosk"
-            ? pms.filter((rec) => ["adyen", "stripe", "mercado_pago_alpy"].includes(rec.use_payment_terminal))
+            ? pms.filter((rec) => !rec.use_payment_terminal || ["adyen", "stripe", "mercado_pago_alpy"].includes(rec.use_payment_terminal))
             : [];
     }
 });
