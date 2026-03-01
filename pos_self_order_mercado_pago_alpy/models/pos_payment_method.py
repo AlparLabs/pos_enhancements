@@ -17,7 +17,6 @@ class PosPaymentMethod(models.Model):
         """
         domain = super()._load_pos_self_data_domain(data)
         if data['pos.config']['data'][0]['self_ordering_mode'] == 'kiosk':
-            # We want to add mercado_pago_alpy to the 'in' list of the use_payment_terminal condition
             new_domain = []
             for condition in domain:
                 if isinstance(condition, tuple) and condition[0] == 'use_payment_terminal' and condition[1] == 'in':
@@ -44,35 +43,51 @@ class PosPaymentMethod(models.Model):
             MercadoPagoPosRequest,
         )
 
-        mercado_pago = MercadoPagoPosRequest(self.sudo().mp_bearer_token)
-        amount_decimal = "{:.2f}".format(order.amount_total)
+        try:
+            # Check if order is a dictionary (from Kiosk front-end JSON) or an ORM record
+            if isinstance(order, dict):
+                amount_total = order.get('amount_total', order.get('amount', 0.0))
+                session_id = order.get('session_id', 0)
+                pos_reference = order.get('pos_reference', 'kiosk')
+            else:
+                amount_total = order.amount_total
+                session_id = order.session_id.id
+                pos_reference = order.pos_reference
 
-        # Build a unique external reference for the kiosk payment
-        external_ref = (
-            f"kiosk_{order.session_id.id}_{self.id}_{order.pos_reference}"
-        )
+            mercado_pago = MercadoPagoPosRequest(self.sudo().mp_bearer_token)
+            amount_decimal = "{:.2f}".format(float(amount_total))
 
-        payload = {
-            "type": "point",
-            "external_reference": external_ref,
-            "transactions": {
-                "payments": [{"amount": amount_decimal}]
-            },
-            "config": {
-                "point": {"terminal_id": self.mp_id_point_smart_complet}
-            },
-        }
+            # Build a unique external reference for the kiosk payment
+            external_ref = f"kiosk_{session_id}_{self.id}_{pos_reference}"
 
-        # Idempotency key ensures retries don't create duplicate orders
-        idempotency_key = f"kiosk_{external_ref}"
-        resp = mercado_pago.call_mercado_pago("post", "/v1/orders", payload, idempotency_key)
+            payload = {
+                "type": "point",
+                "external_reference": external_ref,
+                "transactions": {
+                    "payments": [{"amount": amount_decimal}]
+                },
+                "config": {
+                    "point": {"terminal_id": self.mp_id_point_smart_complet}
+                },
+            }
 
-        _logger.info(
-            "Kiosk MP order created for %s (terminal: %s): %s",
-            order.pos_reference,
-            self.mp_id_point_smart_complet,
-            resp,
-        )
+            # Idempotency key ensures retries don't create duplicate orders
+            idempotency_key = f"kiosk_{external_ref}"
+            
+            _logger.info("Mercado Pago Kiosk request payload: %s", payload)
+            resp = mercado_pago.call_mercado_pago("post", "/v1/orders", payload, idempotency_key)
 
-        # Return the full MP response — the kiosk JS will read resp.id to start polling
-        return resp
+            _logger.info(
+                "Kiosk MP order created for %s (terminal: %s): %s",
+                pos_reference,
+                self.mp_id_point_smart_complet,
+                resp,
+            )
+
+            # Return the full MP response — the kiosk JS will read resp.id to start polling
+            return resp
+
+        except Exception as e:
+            _logger.error("Mercado Pago Kiosk Error: %s", str(e), exc_info=True)
+            # Raise an exception with a clear message so the Kiosk frontend catch block shows it
+            raise ValueError(f"Failed to create Mercado Pago order via Kiosk: {str(e)}")
