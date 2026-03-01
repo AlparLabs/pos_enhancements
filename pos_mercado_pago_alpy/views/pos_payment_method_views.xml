@@ -6,8 +6,14 @@
         <field name="inherit_id" ref="point_of_sale.pos_payment_method_view_form"/>
         <field name="arch" type="xml">
             <xpath expr="//field[@name='use_payment_terminal']" position="after">
-                <!-- MercadoPago -->
-
+                <field name="mp_bearer_token" invisible="use_payment_terminal != 'mercado_pago_alpy'" required="use_payment_terminal == 'mercado_pago_alpy'"/>
+                <field name="mp_webhook_secret_key" invisible="use_payment_terminal != 'mercado_pago_alpy'" required="use_payment_terminal == 'mercado_pago_alpy'"/>
+                <field name="mp_payment_type" invisible="use_payment_terminal != 'mercado_pago_alpy'" required="use_payment_terminal == 'mercado_pago_alpy'"/>
+                <field name="mp_id_point_smart" invisible="use_payment_terminal != 'mercado_pago_alpy' or mp_payment_type != 'terminal'" required="use_payment_terminal == 'mercado_pago_alpy' and mp_payment_type == 'terminal'"/>
+                <field name="mp_external_store_id" invisible="use_payment_terminal != 'mercado_pago_alpy' or mp_payment_type != 'qr'" readonly="1"/>
+                <field name="mp_external_pos_id" invisible="use_payment_terminal != 'mercado_pago_alpy' or mp_payment_type != 'qr'" readonly="1"/>
+                <button name="action_mp_register_qr_pos" type="object" string="Initialize QR POS" class="btn-primary" invisible="use_payment_terminal != 'mercado_pago_alpy' or mp_payment_type != 'qr'"/>
+            </xpath>
         </field>
     </record>
 </odoo>
