@@ -164,11 +164,6 @@ class PosPaymentMethod(models.Model):
         mercado_pago = MercadoPagoPosRequest(self.sudo().mp_bearer_token)
         # New API uses POST to cancel endpoint instead of DELETE
         resp = mercado_pago.call_mercado_pago("post", f"/v1/orders/{order_id}/cancel", {})
-        _logger.debug("mp_order_cancel(), response from Mercado Pago: %s",
-        """
-        Queries Mercado Pago for devices associated with the token.
-        """
-        mercado_pago = MercadoPagoPosRequest(token)
 
     def _find_terminal(self, token, point_smart):
         """
