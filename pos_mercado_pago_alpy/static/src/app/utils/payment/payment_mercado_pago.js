@@ -2,6 +2,7 @@ import { _t } from "@web/core/l10n/translation";
 import { PaymentInterface } from "@point_of_sale/app/payment/payment_interface";
 import { AlertDialog } from "@web/core/confirmation_dialog/confirmation_dialog";
 import { register_payment_method } from "@point_of_sale/app/store/pos_store";
+import { MercadoPagoQrPopup } from "@pos_mercado_pago_alpy/app/components/qr_popup/qr_popup";
 
 export class PaymentMercadoPago extends PaymentInterface {
     setup(pos, payment_method_id) {
@@ -44,6 +45,14 @@ export class PaymentMercadoPago extends PaymentInterface {
     }
 
     async _getOrderStatus() {
+        if (this.is_qr_payment && this.qr_external_reference) {
+            return await this.env.services.orm.silent.call(
+                "pos.payment.method",
+                "mp_qr_status_get",
+                [[this.pending_payment_method_id], this.qr_external_reference]
+            );
+        }
+        
         const line = this._findPaymentLine(this.pending_cid);
         return await this.env.services.orm.silent.call(
             "pos.payment.method",
@@ -75,11 +84,29 @@ export class PaymentMercadoPago extends PaymentInterface {
     async send_payment_request(cid) {
         this.pending_cid = cid;
         const line = this._findPaymentLine(cid);
+        this.pending_payment_method_id = line.payment_method_id.id;
         try {
             line.set_payment_status("waitingCapture");
             console.log("MercadoPago: Sending order...", { amount: line.amount });
             const mp_response = await this._createOrder(cid);
             console.log("MercadoPago: Order response:", mp_response);
+
+            if (mp_response && mp_response.qr_data) {
+                // This is a QR Payment
+                this.is_qr_payment = true;
+                this.qr_external_reference = mp_response.in_store_order_id || `${this.pos.config.current_session_id.id}_${line.payment_method_id.id}_${this.pos.get_order().uuid}`;
+                
+                this.pos.popup.add(MercadoPagoQrPopup, {
+                    qrData: mp_response.qr_data,
+                    amount: line.amount,
+                });
+                
+                line.set_payment_status("waitingCard");
+                return await new Promise((resolve) => {
+                    this.webhook_resolver = resolve;
+                    this._startPolling(line);
+                });
+            }
 
             if (!mp_response || !("id" in mp_response)) {
                 const msg = mp_response?.errorMessage || mp_response?.message || "Unknown error from Mercado Pago";
@@ -115,13 +142,29 @@ export class PaymentMercadoPago extends PaymentInterface {
 
     async _checkStatus() {
         const line = this._findPaymentLine(this.pending_cid);
-        if (!line || !this.mp_order.id) {
+        if (!line || (!this.mp_order.id && !this.is_qr_payment)) {
             this._stopPolling();
             return;
         }
 
         try {
             const status = await this._getOrderStatus();
+            
+            if (this.is_qr_payment) {
+                // Special handling for QR status checks
+                if (status && status.elements && status.elements.length > 0) {
+                    const payment = status.elements[0];
+                    if (payment.status === 'approved') {
+                        this._stopPolling();
+                        line.set_payment_status("done");
+                        if (this.webhook_resolver) {
+                            this.webhook_resolver(true);
+                        }
+                    }
+                }
+                return;
+            }
+            
             const TERMINAL_STATUSES = ["processed", "finished", "canceled", "failed", "expired"];
             
             if (TERMINAL_STATUSES.includes(status.status)) {
