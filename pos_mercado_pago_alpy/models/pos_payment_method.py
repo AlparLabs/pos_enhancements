@@ -7,10 +7,30 @@ from .mercado_pago_post_request import MercadoPagoPosRequest
 
 _logger = logging.getLogger(__name__)
 
-
 class PosPaymentMethod(models.Model):
+    _inherit = 'pos.payment.method'
 
-
+    mp_bearer_token = fields.Char(
+        string="Production user token",
+        help='Mercado Pago customer production user token: https://www.mercadopago.com.mx/developers/en/reference',
+        groups="point_of_sale.group_pos_manager")
+    mp_webhook_secret_key = fields.Char(
+        string="Production secret key",
+        help='Mercado Pago production secret key from integration application: https://www.mercadopago.com.mx/developers/panel/app',
+        groups="point_of_sale.group_pos_manager")
+    mp_id_point_smart = fields.Char(
+        string="Terminal S/N",
+        help="Enter your Point Smart terminal serial number written on the back of your terminal.")
+    mp_id_point_smart_complet = fields.Char()
+    
+    mp_payment_type = fields.Selection([
+        ('terminal', 'Point Smart Terminal'),
+        ('qr', 'Dynamic QR Code')
+    ], string="Mercado Pago Payment Type", default='terminal')
+    mp_external_store_id = fields.Char(string="Mercado Pago Store ID", 
+                                       help="Will be auto-filled if empty when clicking Initialize QR POS.")
+    mp_external_pos_id = fields.Char(string="Mercado Pago POS ID", 
+                                     help="Will be auto-filled if empty when clicking Initialize QR POS.")
 
     def _check_special_access(self):
         if not self.env.user.has_group('point_of_sale.group_pos_user'):
@@ -118,121 +138,174 @@ class PosPaymentMethod(models.Model):
         _logger.debug("mp_get_payment_status(), response from Mercado Pago: %s", resp)
         return resp
 
+    def mp_qr_status_get(self, external_reference):
+        """
+        Get payment status for a QR code using the external_reference.
+        Called from frontend while polling the QR code popup.
+        """
+        self._check_special_access()
+        mercado_pago = MercadoPagoPosRequest(self.sudo().mp_bearer_token)
+        # Search for payments matching this external reference
+        resp = mercado_pago.call_mercado_pago("get", f"/v1/payments/search", {"external_reference": external_reference})
+        _logger.debug("mp_qr_status_get(), response from Mercado Pago: %s", resp)
+        
+        # We only care about the results array
+        if resp and 'results' in resp:
+            return {"elements": resp["results"]}
+        return {"elements": []}
 
+    def mp_order_cancel(self, order_id):
+        """
+        Cancel an order using the new Mercado Pago Orders API.
+        Note: Only orders with "created" or "action_required" status can be canceled.
+        """
+        self._check_special_access()
+
+        mercado_pago = MercadoPagoPosRequest(self.sudo().mp_bearer_token)
+        # New API uses POST to cancel endpoint instead of DELETE
+        resp = mercado_pago.call_mercado_pago("post", f"/v1/orders/{order_id}/cancel", {})
+        _logger.debug("mp_order_cancel(), response from Mercado Pago: %s", resp)
+        return resp
 
     def _find_terminal(self, token, point_smart):
         """
-        Find the terminal ID from Mercado Pago using the new terminals API.
+        Queries Mercado Pago for devices associated with the token.
+        Automatically registers the Store and POS if they do not exist.
         """
         mercado_pago = MercadoPagoPosRequest(token)
-        # Reverting to terminals/v1/list as per user preference/verification
-        data = mercado_pago.call_mercado_pago("get", "/terminals/v1/list", {})
-        _logger.info("Mercado Pago Devices Response: %s", data)
-
-        # Logic for /terminals/v1/list response structure
-        # { "data": { "terminals": [ { "id": "..." } ] } }
         
-        terminals = []
-        if 'data' in data and isinstance(data['data'], dict) and 'terminals' in data['data']:
-             terminals = data['data']['terminals']
-        elif 'devices' in data: # Fallback just in case
-             terminals = data['devices']
+        # Ensure Store and POS exist for QR Code integration
+        self._ensure_store_and_pos(mercado_pago)
 
-        if terminals:
-            # Search for a device id that contains the serial number entered by the user
-            found_device = next((device for device in terminals if point_smart in device['id']), None)
+        resp = mercado_pago.call_mercado_pago("get", "/point/integration-api/devices", {"limit": 50})
+        _logger.debug("Terminal search response: %s", resp)
 
-            if not found_device:
-                raise UserError(_("The terminal serial number is not registered on Mercado Pago"))
-
-            return found_device.get('id', '')
+        if resp.get('devices'):
+            # Looking for the specific terminal ID
+            find_terminal = [x for x in resp.get('devices') if x.get('id') == point_smart]
+            if len(find_terminal) > 0:
+                terminal_data = find_terminal[0]
+                if terminal_data.get('operating_mode') != 'PDV':
+                    mode = {"operating_mode": "PDV"}
+                    resp_mode = mercado_pago.call_mercado_pago("patch", f"/point/integration-api/devices/{terminal_data.get('id')}", mode)
+                    if resp_mode.get('operating_mode') != 'PDV':
+                        _logger.error("Failed to set terminal mode to PDV. Response: %s", resp_mode)
+                return True
+            else:
+                _logger.warning("Terminal %s not found in the list of devices.", point_smart)
         else:
-            raise UserError(_("Please verify your production user token as it was rejected"))
+            _logger.error("Failed to retrieve devices from Mercado Pago. Response: %s", resp)
+
+        return False
+
+    def _ensure_store_and_pos(self, mercado_pago):
+        """
+        Checks if Store and POS exist for the company/config.
+        If not, automatically creates them in Mercado Pago and stores the external IDs.
+        """
+        # Fetch user info
+        user_info = mercado_pago.call_mercado_pago("get", "/users/me", {})
+        user_id = user_info.get("id")
+        if not user_id:
+            _logger.error("Could not fetch user_id from Mercado Pago")
+            return
+
+        pos_config = self.env['pos.config'].search([], limit=1)
+        company = pos_config.company_id if pos_config else self.env.company
+
+        # Ensure Store exists
+        if not self.mp_external_store_id:
+            store_ext_id = f"store_{company.id}"
+            store_payload = {
+                "name": company.name or "Odoo Store",
+                "location": {
+                    "street_number": "1",
+                    "street_name": company.street or "Unknown",
+                    "city_name": company.city or "Unknown",
+                    "state_name": company.state_id.name if company.state_id else "Unknown",
+                    "latitude": 0,
+                    "longitude": 0,
+                    "reference": "Odoo Store"
+                },
+                "external_id": store_ext_id
+            }
+            resp_store = mercado_pago.call_mercado_pago("post", f"/users/{user_id}/stores", store_payload)
+            _logger.debug("Store creation response: %s", resp_store)
+            
+            # The API returns id directly or inside 'id' if successful
+            # NOTE: If the external_id already exists, it will throw a 400.
+            if resp_store and 'id' in resp_store:
+                self.mp_external_store_id = str(resp_store['external_id'])
+
+        # Ensure POS exists
+        if not self.mp_external_pos_id and self.mp_external_store_id:
+            pos_ext_id = f"pos_{pos_config.id if pos_config else 1}"
+            pos_payload = {
+                "name": pos_config.name if pos_config else "Odoo POS",
+                "fixed_amount": True,
+                "store_id": self.mp_external_store_id,
+                "external_store_id": self.mp_external_store_id,
+                "external_id": pos_ext_id,
+                "category": 6211
+            }
+            resp_pos = mercado_pago.call_mercado_pago("post", "/pos", pos_payload)
+            _logger.debug("POS creation response: %s", resp_pos)
+            
+            if resp_pos and 'id' in resp_pos:
+                self.mp_external_pos_id = str(resp_pos['external_id'])
+
+    @api.model_create_multi
+    def create(self, vals_list):
+        for vals in vals_list:
+            if vals.get('use_payment_terminal') == 'mercado_pago_alpy':
+                if not vals.get('mp_bearer_token'):
+                    raise UserError(_("Please configure the PRODUCTION USER TOKEN"))
+                if vals.get('mp_payment_type') == 'terminal':
+                    if not vals.get('mp_id_point_smart'):
+                        raise UserError(_("Please configure the TERMINAL S/N"))
+                    if not self._find_terminal(vals.get('mp_bearer_token'), vals.get('mp_id_point_smart').strip()):
+                        raise UserError(_("Terminal (%s) not found for this PRODUCTION USER TOKEN") % vals.get('mp_id_point_smart'))
+                    vals['mp_id_point_smart_complet'] = "PDV_" + vals.get('mp_id_point_smart').strip()
+        return super().create(vals_list)
 
     def write(self, vals):
-        records = super().write(vals)
-        
-        if 'mp_id_point_smart' in vals or 'mp_bearer_token' in vals:
-            for record in self:
-                if record.mp_bearer_token and record.mp_id_point_smart:
-                    record.mp_id_point_smart_complet = record._find_terminal(record.mp_bearer_token, record.mp_id_point_smart)
-        return records
+        for rec in self:
+            if vals.get('use_payment_terminal', rec.use_payment_terminal) == 'mercado_pago_alpy':
+                if vals.get('mp_payment_type', rec.mp_payment_type) == 'terminal':
+                    mp_id_point_smart = vals.get('mp_id_point_smart', rec.mp_id_point_smart)
+                    if not mp_id_point_smart:
+                        raise UserError(_("Please configure the TERMINAL S/N"))
+                    if 'mp_id_point_smart' in vals or 'mp_bearer_token' in vals:
+                        token = vals.get('mp_bearer_token', rec.mp_bearer_token)
+                        if not rec._find_terminal(token, mp_id_point_smart.strip()):
+                            raise UserError(_("Terminal (%s) not found for this PRODUCTION USER TOKEN") % mp_id_point_smart)
+                        vals['mp_id_point_smart_complet'] = "PDV_" + mp_id_point_smart.strip()
+                elif vals.get('mp_payment_type', rec.mp_payment_type) == 'qr':
+                    pass
+        return super().write(vals)
 
     def action_mp_register_qr_pos(self):
-        """ Automatically registers the Store and POS in Mercado Pago. """
-        self._check_special_access()
-        for record in self:
-            mercado_pago = MercadoPagoPosRequest(record.sudo().mp_bearer_token)
-            
-            # Step 1: Get User ID by making a dummy call to /users/me
-            user_info = mercado_pago.call_mercado_pago("get", "/users/me", {})
-            user_id = user_info.get("id")
-            if not user_id:
-                raise UserError(_("Could not fetch user_id from Mercado Pago. Check your token."))
-            
-            store_id = record.mp_external_store_id
-            pos_id = record.mp_external_pos_id
-
-            # Step 2: Create Store if empty
-            if not store_id:
-                store_payload = {
-                    "name": self.env.company.name or "Main Store",
-                    "location": {
-                        "street_number": "123",
-                        "street_name": "Main Street",
-                        "city_name": "City",
-                        "state_name": "State",
-                        "latitude": -34.61315,
-                        "longitude": -58.37723,
-                        "reference": "Store"
-                    }
-                }
-                store_resp = mercado_pago.call_mercado_pago("post", f"/users/{user_id}/stores", store_payload)
-                if store_resp.get("id"):
-                    store_id = store_resp["id"]
-                    record.mp_external_store_id = store_id
-                else:
-                    raise UserError(_("Failed to create Store in Mercado Pago: %s", store_resp))
-                    
-            # Step 3: Create POS if empty
-            if not pos_id:
-                # Odoo's pos.config uses this payment method
-                # We can just use the first pos.config that has it, or a generic name.
-                pos_configs = self.env['pos.config'].search([('payment_method_ids', 'in', record.id)])
-                pos_name = pos_configs[0].name if pos_configs else "Odoo POS"
-                external_id = f"odoo_pos_{record.id}_{pos_configs[0].id if pos_configs else '1'}"
-                
-                pos_payload = {
-                    "name": pos_name,
-                    "fixed_amount": True,
-                    "store_id": int(store_id),
-                    "external_store_id": str(store_id),
-                    "external_id": external_id,
-                    "category": 6211
-                }
-                pos_resp = mercado_pago.call_mercado_pago("post", "/pos", pos_payload)
-                if pos_resp.get("id"):
-                    # We store the external_id because the QR API actually needs the external_pos_id
-                    record.mp_external_pos_id = external_id
-                else:
-                    raise UserError(_("Failed to create POS in Mercado Pago: %s", pos_resp))
-                    
+        """
+        Manually trigger the Store and POS creation from the UI button.
+        """
+        self.ensure_one()
+        if not self.mp_bearer_token:
+            raise UserError(_("Please configure the PRODUCTION USER TOKEN first."))
+        mercado_pago = MercadoPagoPosRequest(self.sudo().mp_bearer_token)
+        self._ensure_store_and_pos(mercado_pago)
+        if self.mp_external_store_id and self.mp_external_pos_id:
             return {
                 'type': 'ir.actions.client',
                 'tag': 'display_notification',
                 'params': {
                     'title': _('Success'),
-                    'message': _('Mercado Pago Store and POS initialized successfully!'),
+                    'message': _('QR Store and POS were initialized successfully!'),
                     'type': 'success',
+                    'sticky': False,
                 }
             }
+        else:
+            raise UserError(_("Store and POS could not be fully initialized. Please test your API credentials or review the Odoo Log."))
 
-    @api.model_create_multi
-    def create(self, vals_list):
-        records = super().create(vals_list)
-
-        for record in records:
-            if record.mp_bearer_token:
-                record.mp_id_point_smart_complet = record._find_terminal(record.mp_bearer_token, record.mp_id_point_smart)
-
-        return records
+    def _get_payment_terminal_selection(self):
+        return super()._get_payment_terminal_selection() + [('mercado_pago_alpy', 'Mercado Pago Alpy')]
