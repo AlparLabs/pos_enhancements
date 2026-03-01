@@ -9,6 +9,7 @@ export class PaymentMercadoPago extends PaymentInterface {
         this.webhook_resolver = null;
         this.mp_order = {};
         this.pending_cid = null;
+        this.poll_timer = null;
     }
 
     // Find the payment line by UUID (cid). In Odoo 18, send_payment_request
@@ -89,6 +90,7 @@ export class PaymentMercadoPago extends PaymentInterface {
             line.set_payment_status("waitingCard");
             return await new Promise((resolve) => {
                 this.webhook_resolver = resolve;
+                this._startPolling(line);
             });
         } catch (error) {
             this._showMsg(error?.message || String(error), "System error");
@@ -96,7 +98,64 @@ export class PaymentMercadoPago extends PaymentInterface {
         }
     }
 
+    _startPolling(line) {
+        this._stopPolling();
+        const POLL_INTERVAL = 3000;
+        this.poll_timer = setInterval(async () => {
+             await this._checkStatus();
+        }, POLL_INTERVAL);
+    }
+
+    _stopPolling() {
+        if (this.poll_timer) {
+            clearInterval(this.poll_timer);
+            this.poll_timer = null;
+        }
+    }
+
+    async _checkStatus() {
+        const line = this._findPaymentLine(this.pending_cid);
+        if (!line || !this.mp_order.id) {
+            this._stopPolling();
+            return;
+        }
+
+        try {
+            const status = await this._getOrderStatus();
+            const TERMINAL_STATUSES = ["processed", "finished", "canceled", "failed", "expired"];
+            
+            if (TERMINAL_STATUSES.includes(status.status)) {
+                this._stopPolling();
+                await this._handleFinishedResult(status, line);
+            }
+        } catch (error) {
+            console.error("MercadoPago: Polling error", error);
+        }
+    }
+
+    async _handleFinishedResult(status, line) {
+        if (["processed", "finished"].includes(status.status)) {
+            const payments = status.transactions?.payments || [];
+            if (payments.length > 0) {
+                const paymentId = payments[payments.length - 1].id;
+                const payment = await this._getPayment(paymentId);
+                if (payment.status === "approved") {
+                    line.set_payment_status("done");
+                    this.webhook_resolver?.(true);
+                    return;
+                }
+            }
+        }
+        
+        // Canceled, failed, expired or rejected
+        const msg = status.status === "canceled" ? _t("Payment has been canceled") : _t("Payment has been rejected");
+        this._showMsg(msg, "info");
+        line.set_payment_status("retry");
+        this.webhook_resolver?.(false);
+    }
+
     async send_payment_cancel(order, cid) {
+        this._stopPolling();
         if (!("id" in this.mp_order)) {
             return true;
         }
@@ -106,6 +165,11 @@ export class PaymentMercadoPago extends PaymentInterface {
                 this._showMsg(_t("Could not cancel the order, please cancel directly on the terminal"), "info");
                 return false;
             }
+            const line = this._findPaymentLine(cid || this.pending_cid);
+            if (line) {
+                line.set_payment_status("retry");
+            }
+            this.webhook_resolver?.(false);
             return true;
         } catch (error) {
             this._showMsg(error?.message || String(error), "System error");
@@ -116,80 +180,7 @@ export class PaymentMercadoPago extends PaymentInterface {
     // ---- Webhook handler (called from pos_store.js) ----
 
     async handleMercadoPagoWebhook() {
-        const line = this._findPaymentLine(this.pending_cid);
-        if (!line) return;
-        const MAX_RETRY = 5;
-        const RETRY_DELAY = 1000;
-
-        const showMessageAndResolve = (messageKey, status, resolverValue) => {
-            if (!resolverValue) {
-                this._showMsg(messageKey, status);
-            }
-            line.set_payment_status("done");
-            this.webhook_resolver?.(resolverValue);
-            return resolverValue;
-        };
-
-        const handleFinishedPayment = async (orderStatus) => {
-            if (orderStatus.status === "canceled") {
-                return showMessageAndResolve(_t("Payment has been canceled"), "info", false);
-            }
-            if (["processed", "finished"].includes(orderStatus.status)) {
-                const payments = orderStatus.transactions?.payments || [];
-                if (payments.length > 0) {
-                    const paymentId = payments[payments.length - 1].id;
-                    const payment = await this._getPayment(paymentId);
-                    if (payment.status === "approved") {
-                        return showMessageAndResolve(_t("Payment has been processed"), "info", true);
-                    }
-                }
-                return showMessageAndResolve(_t("Payment has been rejected"), "info", false);
-            }
-        };
-
-        if (!("id" in this.mp_order)) {
-            return;
-        }
-
-        let last_status_order = await this._getOrderStatus();
-
-        if (this.mp_order.id != last_status_order.id) {
-            return;
-        }
-
-        if (["processed", "finished", "canceled", "failed", "expired"].includes(last_status_order.status)) {
-            return await handleFinishedPayment(last_status_order);
-        }
-
-        if (["created", "at_terminal", "action_required"].includes(last_status_order.status)) {
-            return await new Promise((resolve) => {
-                let retry_cnt = 0;
-                const s = setInterval(async () => {
-                    last_status_order = await this._getOrderStatus();
-                    if (
-                        ["processed", "finished", "canceled", "failed", "expired"].includes(
-                            last_status_order.status
-                        )
-                    ) {
-                        clearInterval(s);
-                        resolve(await handleFinishedPayment(last_status_order));
-                    }
-                    retry_cnt += 1;
-                    if (retry_cnt >= MAX_RETRY) {
-                        clearInterval(s);
-                        resolve(
-                            showMessageAndResolve(
-                                _t("Payment status could not be confirmed"),
-                                "error",
-                                false
-                            )
-                        );
-                    }
-                }, RETRY_DELAY);
-            });
-        }
-
-        return showMessageAndResolve(_t("Unknown payment status"), "error", false);
+        await this._checkStatus();
     }
 
     // ---- Private helpers ----

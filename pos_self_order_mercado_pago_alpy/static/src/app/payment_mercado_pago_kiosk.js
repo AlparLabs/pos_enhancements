@@ -58,9 +58,8 @@ patch(PaymentPage.prototype, {
             const mpOrder = result?.payment_status;
 
             if (!mpOrder || !mpOrder.id) {
-                throw new Error(
-                    _t("Mercado Pago did not return a valid order. Please try again.")
-                );
+                const errMsg = mpOrder?.message || mpOrder?.errorMessage || _t("Mercado Pago did not return a valid order.");
+                throw new Error("MP_ERROR: " + errMsg);
             }
 
             this._mpOrderId = mpOrder.id;
@@ -69,7 +68,9 @@ patch(PaymentPage.prototype, {
             await this._pollMercadoPago();
 
         } catch (error) {
-            this.selfOrder.handleErrorNotification(error);
+            // Unpack server errors string into the notification so the user can see it on Kiosk
+            const detailMsg = error?.data?.message || error?.message || String(error);
+            this.selfOrder.handleErrorNotification(new Error("MercadoPago Kiosk Error: " + detailMsg));
             this.selfOrder.paymentError = true;
         } finally {
             this._mpPolling = false;
