@@ -243,7 +243,7 @@ class PosPaymentMethod(models.Model):
             search_pos = mercado_pago.call_mercado_pago("get", "/pos", {"external_id": pos_ext_id})
             
             if search_pos and search_pos.get('results') and len(search_pos['results']) > 0:
-                self.mp_external_pos_id = str(search_pos['results'][0]['id'])
+                self.mp_external_pos_id = str(search_pos['results'][0].get('external_id', pos_ext_id))
             else:
                 pos_payload = {
                     "name": pos_config.name if pos_config else "Odoo POS",
@@ -257,7 +257,7 @@ class PosPaymentMethod(models.Model):
                 _logger.debug("POS creation response: %s", resp_pos)
                 
                 if resp_pos and 'id' in resp_pos:
-                    self.mp_external_pos_id = str(resp_pos['id'])
+                    self.mp_external_pos_id = str(resp_pos.get('external_id', pos_ext_id))
                 else:
                     raise UserError(_("Failed to create POS in Mercado Pago: %s", resp_pos))
 
