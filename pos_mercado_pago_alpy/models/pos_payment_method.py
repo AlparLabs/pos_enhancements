@@ -195,58 +195,72 @@ class PosPaymentMethod(models.Model):
     def _ensure_store_and_pos(self, mercado_pago):
         """
         Checks if Store and POS exist for the company/config.
-        If not, automatically creates them in Mercado Pago and stores the external IDs.
+        Searches Mercado Pago first by external_id. If missing, creates them.
         """
         # Fetch user info
         user_info = mercado_pago.call_mercado_pago("get", "/users/me", {})
         user_id = user_info.get("id")
         if not user_id:
-            _logger.error("Could not fetch user_id from Mercado Pago")
-            return
+            raise UserError(_("Could not fetch user_id from Mercado Pago. Check your Production Token."))
 
         pos_config = self.env['pos.config'].search([], limit=1)
         company = pos_config.company_id if pos_config else self.env.company
 
-        # Ensure Store exists
+        # 1. Ensure Store
         if not self.mp_external_store_id:
             store_ext_id = f"store_{company.id}"
-            store_payload = {
-                "name": company.name or "Odoo Store",
-                "location": {
-                    "street_number": "1",
-                    "street_name": company.street or "Unknown",
-                    "city_name": company.city or "Unknown",
-                    "state_name": company.state_id.name if company.state_id else "Unknown",
-                    "latitude": 0,
-                    "longitude": 0,
-                    "reference": "Odoo Store"
-                },
-                "external_id": store_ext_id
-            }
-            resp_store = mercado_pago.call_mercado_pago("post", f"/users/{user_id}/stores", store_payload)
-            _logger.debug("Store creation response: %s", resp_store)
+            # Check if it already exists
+            search_store = mercado_pago.call_mercado_pago("get", f"/users/{user_id}/stores/search", {"external_id": store_ext_id})
             
-            # The API returns id directly or inside 'id' if successful
-            # NOTE: If the external_id already exists, it will throw a 400.
-            if resp_store and 'id' in resp_store:
-                self.mp_external_store_id = str(resp_store['external_id'])
+            if search_store and search_store.get('results') and len(search_store['results']) > 0:
+                self.mp_external_store_id = str(search_store['results'][0]['external_id'])
+            else:
+                store_payload = {
+                    "name": company.name or "Odoo Store",
+                    "location": {
+                        "street_number": "1",
+                        "street_name": company.street or "Unknown",
+                        "city_name": company.city or "Unknown",
+                        "state_name": company.state_id.name if company.state_id else "Unknown",
+                        "latitude": 0,
+                        "longitude": 0,
+                        "reference": "Odoo Store"
+                    },
+                    "external_id": store_ext_id
+                }
+                resp_store = mercado_pago.call_mercado_pago("post", f"/users/{user_id}/stores", store_payload)
+                _logger.debug("Store creation response: %s", resp_store)
+                
+                if resp_store and 'id' in resp_store:
+                    self.mp_external_store_id = str(resp_store.get('external_id', store_ext_id))
+                else:
+                    raise UserError(_("Failed to create Store in Mercado Pago: %s", resp_store))
 
-        # Ensure POS exists
+        # 2. Ensure POS
         if not self.mp_external_pos_id and self.mp_external_store_id:
             pos_ext_id = f"pos_{pos_config.id if pos_config else 1}"
-            pos_payload = {
-                "name": pos_config.name if pos_config else "Odoo POS",
-                "fixed_amount": True,
-                "store_id": self.mp_external_store_id,
-                "external_store_id": self.mp_external_store_id,
-                "external_id": pos_ext_id,
-                "category": 6211
-            }
-            resp_pos = mercado_pago.call_mercado_pago("post", "/pos", pos_payload)
-            _logger.debug("POS creation response: %s", resp_pos)
             
-            if resp_pos and 'id' in resp_pos:
-                self.mp_external_pos_id = str(resp_pos['external_id'])
+            # Check if it already exists
+            search_pos = mercado_pago.call_mercado_pago("get", "/pos", {"external_id": pos_ext_id})
+            
+            if search_pos and search_pos.get('results') and len(search_pos['results']) > 0:
+                self.mp_external_pos_id = str(search_pos['results'][0]['external_id'])
+            else:
+                pos_payload = {
+                    "name": pos_config.name if pos_config else "Odoo POS",
+                    "fixed_amount": True,
+                    "store_id": self.mp_external_store_id,
+                    "external_store_id": self.mp_external_store_id,
+                    "external_id": pos_ext_id,
+                    "category": 6211
+                }
+                resp_pos = mercado_pago.call_mercado_pago("post", "/pos", pos_payload)
+                _logger.debug("POS creation response: %s", resp_pos)
+                
+                if resp_pos and 'id' in resp_pos:
+                    self.mp_external_pos_id = str(resp_pos.get('external_id', pos_ext_id))
+                else:
+                    raise UserError(_("Failed to create POS in Mercado Pago: %s", resp_pos))
 
     @api.model_create_multi
     def create(self, vals_list):
