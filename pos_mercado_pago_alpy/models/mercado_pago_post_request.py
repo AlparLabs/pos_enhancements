@@ -33,10 +33,18 @@ class MercadoPagoPosRequest:
             header['X-Idempotency-Key'] = idempotency_key
         try:
             response = requests.request(method, endpoint, headers=header, json=payload, timeout=REQUEST_TIMEOUT)
+            
+            if not response.content:
+                if response.ok:
+                    return {"status": "success"}
+                else:
+                    return {"errorMessage": f"HTTP {response.status_code} Error (Empty Response)"}
+            
             return response.json()
         except requests.exceptions.RequestException as error:
             _logger.warning("Cannot connect with Mercado Pago POS. Error: %s", error)
             return {'errorMessage': str(error)}
         except ValueError as error:
-            _logger.warning("Cannot decode response json. Error: %s", error)
-            return {'errorMessage': f"Cannot decode Mercado Pago POS response. Error: {error}"}
+            _logger.warning("Cannot decode response json. Status: %s, Body: %s. Error: %s", getattr(response, 'status_code', 'N/A'), getattr(response, 'text', ''), error)
+            msg = getattr(response, 'text', '')[:200]
+            return {'errorMessage': f"API Error: HTTP {getattr(response, 'status_code', 'N/A')}. {msg}"}

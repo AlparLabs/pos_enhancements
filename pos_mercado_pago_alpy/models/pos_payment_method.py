@@ -102,9 +102,10 @@ class PosPaymentMethod(models.Model):
             if infos['additional_info'].get('additional_info'):
                 order_payload["additional_info"] = infos['additional_info']['additional_info']
 
-            _logger.info('Calling Mercado Pago to create QR order: %s', order_payload)
-            resp = mercado_pago.call_mercado_pago("post", f"/instore/qr/seller/collectors/{user_id}/pos/{pos_id}/orders", order_payload)
-            _logger.debug("Mercado Pago QR order creation response: %s", resp)
+            _logger.info('Calling Mercado Pago to create Dynamic QR order: %s', order_payload)
+            # The dynamic QR endpoint returns the qr_data needed for the frontend display
+            resp = mercado_pago.call_mercado_pago("post", f"/instore/orders/qr/seller/collectors/{user_id}/pos/{pos_id}/qrs", order_payload)
+            _logger.debug("Mercado Pago Dynamic QR order creation response: %s", resp)
             return resp
         
         elif self.mp_payment_type == 'terminal':
