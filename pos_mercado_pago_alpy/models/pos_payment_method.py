@@ -213,7 +213,7 @@ class PosPaymentMethod(models.Model):
             search_store = mercado_pago.call_mercado_pago("get", f"/users/{user_id}/stores/search", {"external_id": store_ext_id})
             
             if search_store and search_store.get('results') and len(search_store['results']) > 0:
-                self.mp_external_store_id = str(search_store['results'][0]['external_id'])
+                self.mp_external_store_id = str(search_store['results'][0].get('external_id', store_ext_id))
             else:
                 store_payload = {
                     "name": company.name or "Odoo Store",
@@ -244,7 +244,7 @@ class PosPaymentMethod(models.Model):
             search_pos = mercado_pago.call_mercado_pago("get", "/pos", {"external_id": pos_ext_id})
             
             if search_pos and search_pos.get('results') and len(search_pos['results']) > 0:
-                self.mp_external_pos_id = str(search_pos['results'][0]['external_id'])
+                self.mp_external_pos_id = str(search_pos['results'][0].get('external_id', pos_ext_id))
             else:
                 pos_payload = {
                     "name": pos_config.name if pos_config else "Odoo POS",
