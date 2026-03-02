@@ -86,9 +86,7 @@ class PosPaymentMethod(models.Model):
                 }]
             }
             
-            # Add sponsor_id if available
-            if self.mp_sponsor_id:
-                order_payload["sponsor_id"] = int(self.mp_sponsor_id)
+
 
             # Add cash_out if available
             if infos['additional_info'].get('cash_out_amount'):
