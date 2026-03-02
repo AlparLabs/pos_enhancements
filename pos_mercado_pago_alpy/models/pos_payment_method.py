@@ -207,7 +207,7 @@ class PosPaymentMethod(models.Model):
         company = pos_config.company_id if pos_config else self.env.company
 
         # 1. Ensure Store
-        store_ext_id = f"store_{company.id}"
+        store_ext_id = f"odoo_store_{company.id}"
         internal_store_id = None
         
         search_store = mercado_pago.call_mercado_pago("get", f"/users/{user_id}/stores/search", {"external_id": store_ext_id})
@@ -238,7 +238,7 @@ class PosPaymentMethod(models.Model):
                 raise UserError(_("Failed to create Store in Mercado Pago: %s", resp_store))
 
         # 2. Ensure POS
-        pos_ext_id = f"pos_{pos_config.id if pos_config else 1}"
+        pos_ext_id = f"odoo_pos_{pos_config.id if pos_config else 1}"
         search_pos = mercado_pago.call_mercado_pago("get", "/pos", {"external_id": pos_ext_id})
         
         if search_pos and search_pos.get('results') and len(search_pos['results']) > 0:
