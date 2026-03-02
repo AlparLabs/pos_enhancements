@@ -1,10 +1,9 @@
 /** @odoo-module */
 
-import { AbstractAwaitablePopup } from "@point_of_sale/app/popup/abstract_awaitable_popup";
 import { usePos } from "@point_of_sale/app/store/pos_hook";
-import { useState } from "@odoo/owl";
+import { Component, useState } from "@odoo/owl";
 
-export class MercadoPagoQrPopup extends AbstractAwaitablePopup {
+export class MercadoPagoQrPopup extends Component {
     static template = "pos_mercado_pago_alpy.MercadoPagoQrPopup";
     static defaultProps = {
         title: "Mercado Pago QR",
@@ -13,7 +12,6 @@ export class MercadoPagoQrPopup extends AbstractAwaitablePopup {
     };
 
     setup() {
-        super.setup();
         this.pos = usePos();
         this.state = useState({ status: "pending" });
     }
