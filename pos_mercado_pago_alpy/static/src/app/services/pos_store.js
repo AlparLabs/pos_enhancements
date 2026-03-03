@@ -10,7 +10,7 @@ patch(PosStore.prototype, {
                 const pendingLine = this.getPendingPaymentLine("mercado_pago_alpy");
 
                 if (pendingLine) {
-                    pendingLine.payment_method_id.payment_terminal.handleMercadoPagoWebhook();
+                    pendingLine.payment_method_id.payment_interface.handleMercadoPagoWebhook();
                 }
             }
         });

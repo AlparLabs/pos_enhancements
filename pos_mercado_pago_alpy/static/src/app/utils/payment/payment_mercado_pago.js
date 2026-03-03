@@ -201,4 +201,4 @@ export class PaymentMercadoPago extends PaymentInterface {
     }
 }
 
-registry.category("pos_payment_methods").add("mercado_pago_alpy", PaymentMercadoPago);
+registry.category("pos_payment_providers").add("mercado_pago_alpy", PaymentMercadoPago);

@@ -1,6 +1,6 @@
 {
     'name': 'POS Mercado Pago (Alpy)',
-    'version': '19.0.0.2',
+    'version': '19.0.0.3',
     'category': 'Sales/Point of Sale',
     'summary': 'Integrate your POS with Mercado Pago Point Smart terminals using the Orders API',
     'description': """
@@ -13,6 +13,7 @@ Features:
 - Webhook support for status updates
 - 'Force PDV' mode for terminals
     """,
+    'author': 'AlparData',
     'depends': ['point_of_sale'],
     'data': [
         'views/pos_payment_method_views.xml',
