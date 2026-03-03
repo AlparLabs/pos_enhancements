@@ -27,10 +27,11 @@ export class PaymentMercadoPago extends PaymentInterface {
     async _createOrder(cid) {
         const order = this.pos.getOrder();
         const line = this._findPaymentLine(cid);
+        const sessionId = this.pos.session?.id || this.pos.pos_session?.id || this.pos.config?.current_session_id?.id || this.pos.config?.current_session_id || '0';
         const infos = {
             amount: parseInt(line.amount * 100, 10),
             additional_info: {
-                external_reference: `${this.pos.config.current_session_id.id}_${line.payment_method_id.id}_${order.uuid}_${Date.now()}`,
+                external_reference: `${sessionId}_${line.payment_method_id.id}_${order.uuid}_${Date.now()}`,
                 print_on_terminal: true,
             },
         };

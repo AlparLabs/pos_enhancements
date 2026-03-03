@@ -71,7 +71,8 @@ class PosMercadoPagoWebhook(http.Controller):
             _logger.error('No Mercado Pago Alpy payment methods configured with a webhook secret key')
             return http.Response(status=500)
 
-        signed_template = f"id:{data.get('id')};request-id:{x_request_id};ts:{ts};"
+        webhook_id = request.params.get('data.id') or request.params.get('id') or data.get('data', {}).get('id') or data.get('id')
+        signed_template = f"id:{webhook_id};request-id:{x_request_id};ts:{ts};"
         signature_valid = False
         matched_method = None
 
@@ -96,7 +97,7 @@ class PosMercadoPagoWebhook(http.Controller):
 
         # ── 5. Extract external_reference ─────────────────────────────────
         # The external_reference format: "{session_id}_{payment_method_id}_{order_uuid}[_{timestamp}]"
-        mercado_pago_pattern = r'(\d+)_(\d+)_([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})(?:_\d+)?'
+        mercado_pago_pattern = r'([^_]+)_(\d+)_([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})(?:_\d+)?'
 
         external_reference = None
 
@@ -153,16 +154,28 @@ class PosMercadoPagoWebhook(http.Controller):
 
         # ── 6. Extract session and payment method from external_reference ──
         match = re.fullmatch(mercado_pago_pattern, external_reference)
-        session_id, payment_method_id, _ = match.groups()
+        session_id_str, payment_method_id_str, _ = match.groups()
 
-        pos_session_sudo = request.env['pos.session'].sudo().browse(int(session_id))
+        try:
+            session_id = int(session_id_str)
+        except ValueError:
+            session_id = 0
+
+        payment_method_id = int(payment_method_id_str)
+
+        pos_session_sudo = request.env['pos.session'].sudo().browse(session_id)
         if not pos_session_sudo.exists() or pos_session_sudo.state != 'opened':
             _logger.warning("Webhook for session id=%s but session is not open (state=%s)",
                           session_id, pos_session_sudo.state if pos_session_sudo.exists() else 'NOT FOUND')
+            payment_method_sudo = request.env['pos.payment.method'].sudo().browse(payment_method_id)
+            if payment_method_sudo.exists() and payment_method_sudo.use_payment_terminal == 'mercado_pago_alpy':
+                configs = request.env['pos.config'].sudo().search([('payment_method_ids', 'in', payment_method_sudo.ids)])
+                for config in configs:
+                    config._notify('MERCADO_PAGO_LATEST_MESSAGE', {'config_id': config.id})
             return http.Response('OK', status=200)
 
         payment_method_sudo = pos_session_sudo.config_id.payment_method_ids.filtered(
-            lambda p: p.id == int(payment_method_id)
+            lambda p: p.id == payment_method_id
         )
         if not payment_method_sudo or payment_method_sudo.use_payment_terminal != 'mercado_pago_alpy':
             _logger.warning("Webhook for payment method id=%s but not found or not mercado_pago_alpy", payment_method_id)
