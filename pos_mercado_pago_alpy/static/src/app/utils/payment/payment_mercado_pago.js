@@ -89,6 +89,28 @@ export class PaymentMercadoPago extends PaymentInterface {
             line.setPaymentStatus("waitingCard");
             return await new Promise((resolve) => {
                 this.webhook_resolver = resolve;
+                
+                // Fallback polling for Odoo.sh or unstable networks (every 5 seconds, up to 90 seconds)
+                let pollCount = 0;
+                const pollInterval = setInterval(async () => {
+                    pollCount++;
+                    if (this.pending_cid !== cid) {
+                        clearInterval(pollInterval);
+                        return;
+                    }
+                    try {
+                        const statusResp = await this._getOrderStatus();
+                        if (statusResp && ["processed", "finished", "canceled", "failed", "expired"].includes(statusResp.status)) {
+                            clearInterval(pollInterval);
+                            this.handleMercadoPagoWebhook();
+                        }
+                    } catch (e) {
+                         // ignore poll errors
+                    }
+                    if (pollCount > 18) {
+                        clearInterval(pollInterval);
+                    }
+                }, 5000);
             });
         } catch (error) {
             this._showMsg(error?.message || String(error), "System error");
@@ -127,6 +149,7 @@ export class PaymentMercadoPago extends PaymentInterface {
             }
             line.setPaymentStatus("done");
             this.webhook_resolver?.(resolverValue);
+            this.webhook_resolver = null; // Important: Clear to prevent duplicate resolutions
             return resolverValue;
         };
 

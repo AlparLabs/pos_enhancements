@@ -26,10 +26,10 @@ class PosMercadoPagoWebhook(http.Controller):
 
         # ── 1. Log full request for debugging ─────────────────────────────
         raw_body = request.httprequest.get_data(as_text=True)
-        webhook_type = request.params.get('type', 'unknown')
-        data_id_param = request.params.get('data.id', '')
+        webhook_type = request.params.get('type') or request.params.get('topic') or 'unknown'
+        data_id_param = request.params.get('data.id', request.params.get('id', ''))
         _logger.info(
-            'MP Webhook received [type=%s, data.id=%s]: body=%s',
+            'MP Webhook received [type/topic=%s, data.id=%s]: body=%s',
             webhook_type, data_id_param, raw_body
         )
 
@@ -120,7 +120,7 @@ class PosMercadoPagoWebhook(http.Controller):
 
         # Last resort: call MP API to fetch the order/payment and get external_reference
         if not external_reference:
-            resource_id = data.get('data', {}).get('id', data.get('id'))
+            resource_id = data.get('data', {}).get('id') or data.get('id') or request.params.get('data.id') or request.params.get('id')
             _logger.info(
                 'external_reference not found in webhook body, attempting API lookup. '
                 'type=%s, resource_id=%s', webhook_type, resource_id
@@ -128,21 +128,26 @@ class PosMercadoPagoWebhook(http.Controller):
             if resource_id and matched_method.mp_bearer_token:
                 mercado_pago = MercadoPagoPosRequest(matched_method.mp_bearer_token)
 
-                # Try fetching as an order first (most likely for our integration)
-                if webhook_type in ('order', 'point_integration_wh'):
+                # Try fetching as an order first
+                try:
                     resp = mercado_pago.call_mercado_pago("get", f"/v1/orders/{resource_id}", {})
                     ext_ref_candidate = resp.get('external_reference', '')
                     if ext_ref_candidate and re.fullmatch(mercado_pago_pattern, ext_ref_candidate):
                         external_reference = ext_ref_candidate
                         _logger.info('Resolved external_reference from Orders API: %s', external_reference)
+                except Exception:
+                    pass
 
                 # Try fetching as a payment
-                if not external_reference and webhook_type == 'payment':
-                    resp = mercado_pago.call_mercado_pago("get", f"/v1/payments/{resource_id}", {})
-                    ext_ref_candidate = resp.get('external_reference', '')
-                    if ext_ref_candidate and re.fullmatch(mercado_pago_pattern, ext_ref_candidate):
-                        external_reference = ext_ref_candidate
-                        _logger.info('Resolved external_reference from Payments API: %s', external_reference)
+                if not external_reference:
+                    try:
+                        resp = mercado_pago.call_mercado_pago("get", f"/v1/payments/{resource_id}", {})
+                        ext_ref_candidate = resp.get('external_reference', '')
+                        if ext_ref_candidate and re.fullmatch(mercado_pago_pattern, ext_ref_candidate):
+                            external_reference = ext_ref_candidate
+                            _logger.info('Resolved external_reference from Payments API: %s', external_reference)
+                    except Exception:
+                        pass
 
         if not external_reference:
             _logger.warning(
