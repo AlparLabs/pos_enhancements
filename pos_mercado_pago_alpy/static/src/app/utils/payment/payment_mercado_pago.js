@@ -158,17 +158,22 @@ export class PaymentMercadoPago extends PaymentInterface {
                 return showMessageAndResolve(_t("Payment has been canceled"), "info", false);
             }
             if (["processed", "finished", "closed"].includes(orderStatus.status)) {
-                // For Orders API, payments are sometimes flat inside orderStatus.payments
-                let payments = orderStatus.payments || [];
-                if (payments.length === 0 && orderStatus.transactions) {
-                     payments = orderStatus.transactions.payments || [];
-                }
+                // In Orders API, payments are located in orderStatus.transactions.payments
+                const payments = orderStatus.transactions?.payments || [];
                 
                 if (payments.length > 0) {
-                    const paymentId = payments[payments.length - 1].id;
-                    const payment = await this._getPayment(paymentId);
-                    if (payment.status === "approved" || payment.status === "accredited") {
-                        return showMessageAndResolve(_t("Payment has been processed"), "info", true);
+                    const lastPayment = payments[payments.length - 1];
+                    const paymentId = lastPayment.id || lastPayment.payment_id;
+                    
+                    if (paymentId) {
+                        try {
+                            const payment = await this._getPayment(paymentId);
+                            if (payment && (payment.status === "approved" || payment.status === "accredited")) {
+                                return showMessageAndResolve(_t("Payment has been processed"), "info", true);
+                            }
+                        } catch (e) {
+                            // ignore and let it fail
+                        }
                     }
                 }
                 return showMessageAndResolve(_t("Payment has been rejected"), "info", false);
