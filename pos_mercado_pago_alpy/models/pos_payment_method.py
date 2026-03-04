@@ -92,7 +92,9 @@ class PosPaymentMethod(models.Model):
 
         mercado_pago = MercadoPagoPosRequest(self.sudo().mp_bearer_token)
         resp = mercado_pago.call_mercado_pago("get", f"/v1/orders/{order_id}", {})
-        _logger.debug("mp_order_get(), response from Mercado Pago: %s", resp)
+        _logger.info("====================== MERADO_PAGO DEBUG ======================")
+        _logger.info("mp_order_get(%s), response: %s", order_id, resp)
+        _logger.info("===============================================================")
         return resp
 
     def mp_get_payment_status(self, payment_id):
@@ -104,7 +106,9 @@ class PosPaymentMethod(models.Model):
 
         mercado_pago = MercadoPagoPosRequest(self.sudo().mp_bearer_token)
         resp = mercado_pago.call_mercado_pago("get", f"/v1/payments/{payment_id}", {})
-        _logger.debug("mp_get_payment_status(), response from Mercado Pago: %s", resp)
+        _logger.info("====================== MERADO_PAGO DEBUG ======================")
+        _logger.info("mp_get_payment_status(%s), response: %s", payment_id, resp)
+        _logger.info("===============================================================")
         return resp
 
     def mp_order_cancel(self, order_id):
