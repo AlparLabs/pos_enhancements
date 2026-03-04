@@ -28,10 +28,11 @@ export class PaymentMercadoPago extends PaymentInterface {
     async _createOrder(cid) {
         const order = this.pos.get_order();
         const line = this._findPaymentLine(cid);
+        const sessionId = this.pos.session?.id || this.pos.pos_session?.id || this.pos.config?.current_session_id?.id || this.pos.config?.current_session_id || '0';
         const infos = {
             amount: parseInt(line.amount * 100, 10),
             additional_info: {
-                external_reference: `${this.pos.config.current_session_id.id}_${line.payment_method_id.id}_${order.uuid}_${Date.now()}`,
+                external_reference: `${sessionId}_${line.payment_method_id.id}_${order.uuid}_${Date.now()}`,
                 print_on_terminal: true,
             },
         };
@@ -89,6 +90,26 @@ export class PaymentMercadoPago extends PaymentInterface {
             line.set_payment_status("waitingCard");
             return await new Promise((resolve) => {
                 this.webhook_resolver = resolve;
+                
+                // Fallback polling for Odoo.sh or unstable networks 
+                let pollCount = 0;
+                const pollInterval = setInterval(async () => {
+                    pollCount++;
+                    if (this.pending_cid !== cid) {
+                        clearInterval(pollInterval);
+                        return;
+                    }
+                    try {
+                        const statusResp = await this._getOrderStatus();
+                        if (statusResp && ["processed", "finished", "canceled", "failed", "expired", "closed"].includes(statusResp.status)) {
+                            clearInterval(pollInterval);
+                            this.handleMercadoPagoWebhook();
+                        }
+                    } catch (e) { } // ignore
+                    if (pollCount > 18) {
+                        clearInterval(pollInterval);
+                    }
+                }, 5000);
             });
         } catch (error) {
             this._showMsg(error?.message || String(error), "System error");
@@ -127,6 +148,7 @@ export class PaymentMercadoPago extends PaymentInterface {
             }
             line.set_payment_status("done");
             this.webhook_resolver?.(resolverValue);
+            this.webhook_resolver = null;
             return resolverValue;
         };
 
@@ -134,12 +156,17 @@ export class PaymentMercadoPago extends PaymentInterface {
             if (orderStatus.status === "canceled") {
                 return showMessageAndResolve(_t("Payment has been canceled"), "info", false);
             }
-            if (["processed", "finished"].includes(orderStatus.status)) {
+            if (["processed", "finished", "closed"].includes(orderStatus.status)) {
+                // In Orders API, payments are located inside transactions
                 const payments = orderStatus.transactions?.payments || [];
+                
                 if (payments.length > 0) {
-                    const paymentId = payments[payments.length - 1].id;
-                    const payment = await this._getPayment(paymentId);
-                    if (payment.status === "approved") {
+                    const lastPayment = payments[payments.length - 1];
+                    const innerStatus = lastPayment.status || lastPayment.state;
+                    const innerDetail = lastPayment.status_detail;
+                    
+                    if (["approved", "accredited", "processed"].includes(innerStatus) || 
+                        ["approved", "accredited"].includes(innerDetail)) {
                         return showMessageAndResolve(_t("Payment has been processed"), "info", true);
                     }
                 }
@@ -157,7 +184,7 @@ export class PaymentMercadoPago extends PaymentInterface {
             return;
         }
 
-        if (["processed", "finished", "canceled", "failed", "expired"].includes(last_status_order.status)) {
+        if (["closed", "processed", "finished", "canceled", "failed", "expired"].includes(last_status_order.status)) {
             return await handleFinishedPayment(last_status_order);
         }
 
@@ -167,7 +194,7 @@ export class PaymentMercadoPago extends PaymentInterface {
                 const s = setInterval(async () => {
                     last_status_order = await this._getOrderStatus();
                     if (
-                        ["processed", "finished", "canceled", "failed", "expired"].includes(
+                        ["closed", "processed", "finished", "canceled", "failed", "expired"].includes(
                             last_status_order.status
                         )
                     ) {
