@@ -7,7 +7,7 @@ import re
 from odoo import http
 from odoo.http import request
 
-from ..models.mercado_pago_post_request import MercadoPagoPosRequest
+from odoo.addons.pos_mercado_pago_alpy.models.mercado_pago_post_request import MercadoPagoPosRequest
 
 _logger = logging.getLogger(__name__)
 
