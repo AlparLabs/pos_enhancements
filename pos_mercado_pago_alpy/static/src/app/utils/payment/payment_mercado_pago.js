@@ -163,17 +163,10 @@ export class PaymentMercadoPago extends PaymentInterface {
                 
                 if (payments.length > 0) {
                     const lastPayment = payments[payments.length - 1];
-                    const paymentId = lastPayment.id || lastPayment.payment_id;
+                    const innerStatus = lastPayment.status || lastPayment.state;
                     
-                    if (paymentId) {
-                        try {
-                            const payment = await this._getPayment(paymentId);
-                            if (payment && (payment.status === "approved" || payment.status === "accredited")) {
-                                return showMessageAndResolve(_t("Payment has been processed"), "info", true);
-                            }
-                        } catch (e) {
-                            // ignore and let it fail
-                        }
+                    if (innerStatus === "approved" || innerStatus === "accredited") {
+                        return showMessageAndResolve(_t("Payment has been processed"), "info", true);
                     }
                 }
                 return showMessageAndResolve(_t("Payment has been rejected"), "info", false);
