@@ -157,12 +157,17 @@ export class PaymentMercadoPago extends PaymentInterface {
             if (orderStatus.status === "canceled") {
                 return showMessageAndResolve(_t("Payment has been canceled"), "info", false);
             }
-            if (["processed", "finished"].includes(orderStatus.status)) {
-                const payments = orderStatus.transactions?.payments || [];
+            if (["processed", "finished", "closed"].includes(orderStatus.status)) {
+                // For Orders API, payments are sometimes flat inside orderStatus.payments
+                let payments = orderStatus.payments || [];
+                if (payments.length === 0 && orderStatus.transactions) {
+                     payments = orderStatus.transactions.payments || [];
+                }
+                
                 if (payments.length > 0) {
                     const paymentId = payments[payments.length - 1].id;
                     const payment = await this._getPayment(paymentId);
-                    if (payment.status === "approved") {
+                    if (payment.status === "approved" || payment.status === "accredited") {
                         return showMessageAndResolve(_t("Payment has been processed"), "info", true);
                     }
                 }
@@ -180,7 +185,7 @@ export class PaymentMercadoPago extends PaymentInterface {
             return;
         }
 
-        if (["processed", "finished", "canceled", "failed", "expired"].includes(last_status_order.status)) {
+        if (["closed", "processed", "finished", "canceled", "failed", "expired"].includes(last_status_order.status)) {
             return await handleFinishedPayment(last_status_order);
         }
 
@@ -190,7 +195,7 @@ export class PaymentMercadoPago extends PaymentInterface {
                 const s = setInterval(async () => {
                     last_status_order = await this._getOrderStatus();
                     if (
-                        ["processed", "finished", "canceled", "failed", "expired"].includes(
+                        ["closed", "processed", "finished", "canceled", "failed", "expired"].includes(
                             last_status_order.status
                         )
                     ) {
