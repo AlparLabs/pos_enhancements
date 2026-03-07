@@ -3,6 +3,7 @@
 import { Component } from "@odoo/owl";
 import { usePos } from "@point_of_sale/app/store/pos_hook";
 import { ProductScreen } from "@point_of_sale/app/screens/product_screen/product_screen";
+import { ControlButtons } from "@point_of_sale/app/screens/product_screen/control_buttons/control_buttons";
 import { useService } from "@web/core/utils/hooks";
 import { PreTicketReceipt } from "@pos_retail_pre_ticket/app/receipt/pre_ticket_receipt";
 
@@ -35,3 +36,5 @@ export class PreTicketButton extends Component {
         );
     }
 }
+
+Object.assign(ControlButtons.components, { PreTicketButton });
