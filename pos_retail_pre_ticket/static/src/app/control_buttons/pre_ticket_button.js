@@ -35,8 +35,3 @@ export class PreTicketButton extends Component {
         );
     }
 }
-
-ProductScreen.addControlButton({
-    component: PreTicketButton,
-    position: ["before", "SetSaleOrderButton"],
-});
