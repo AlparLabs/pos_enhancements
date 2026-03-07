@@ -31,7 +31,10 @@ export class PreTicketButton extends Component {
         // Use the standard POS printer service to print our custom QWeb template
         await this.printer.print(
             PreTicketReceipt,
-            { data: receiptData },
+            { 
+                data: receiptData,
+                formatCurrency: this.env.utils.formatCurrency,
+            },
             { webPrintFallback: true }
         );
     }
