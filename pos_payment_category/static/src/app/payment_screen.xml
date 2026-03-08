@@ -27,5 +27,10 @@
                 </t>
             </div>
         </xpath>
+        
+        <!-- Replace the loop array to use our new filtered getter -->
+        <xpath expr="//t[@t-foreach='payment_methods_from_config']" position="attributes">
+            <attribute name="t-foreach">displayedPaymentMethods</attribute>
+        </xpath>
     </t>
 </templates>

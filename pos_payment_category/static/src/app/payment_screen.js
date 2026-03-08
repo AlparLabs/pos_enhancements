@@ -14,16 +14,9 @@ patch(PaymentScreen.prototype, {
         });
     },
 
-    get paymentCategories() {
-        // Return all loaded categories
-        return this.pos.models["pos.payment.category"].getAll();
-    },
-
-    get payment_methods_from_config() {
-        // We override the default config array with a dynamic getter
-        const allMethods = this.pos.config.payment_method_ids
-            .slice()
-            .sort((a, b) => a.sequence - b.sequence);
+    get displayedPaymentMethods() {
+        // We provide a new getter for the UI to loop over instead of the static core list
+        const allMethods = this.payment_methods_from_config;
         
         // If a category is selected, ONLY show methods belonging to that category
         if (this.state.activePaymentCategory) {
