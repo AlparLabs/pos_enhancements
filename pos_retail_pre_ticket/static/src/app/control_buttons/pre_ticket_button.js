@@ -9,6 +9,7 @@ import { PreTicketReceipt } from "@pos_retail_pre_ticket/app/receipt/pre_ticket_
 
 export class PreTicketButton extends Component {
     static template = "pos_retail_pre_ticket.PreTicketButton";
+    static props = {};
 
     setup() {
         this.pos = usePos();

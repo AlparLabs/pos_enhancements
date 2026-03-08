@@ -8,6 +8,7 @@ import { BarTicketReceipt } from "@pos_bar_single_ticket/app/receipt/bar_ticket_
 
 export class BarTicketButton extends Component {
     static template = "pos_bar_single_ticket.BarTicketButton";
+    static props = {};
 
     setup() {
         this.pos = usePos();
