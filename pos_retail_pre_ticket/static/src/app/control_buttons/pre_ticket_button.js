@@ -26,7 +26,7 @@ export class PreTicketButton extends Component {
         }
 
         // Generate the receipt data using standard POS formatting methods
-        const receiptData = order.export_for_printing();
+        const receiptData = this.pos.orderExportForPrinting(order);
         
         // Use the standard POS printer service to print our custom QWeb template
         await this.printer.print(
