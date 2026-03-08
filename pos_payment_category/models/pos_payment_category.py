@@ -4,6 +4,7 @@ from odoo import models, fields, api
 class PosPaymentCategory(models.Model):
     _name = 'pos.payment.category'
     _description = 'POS Payment Category'
+    _inherit = ['pos.load.mixin']
     _order = 'sequence, name'
 
     name = fields.Char(string='Category Name', required=True, translate=True)
@@ -12,6 +13,14 @@ class PosPaymentCategory(models.Model):
     color = fields.Integer(string='Color')
     
     payment_method_ids = fields.One2many('pos.payment.method', 'category_id', string='Payment Methods')
+
+    @api.model
+    def _load_pos_data_domain(self, data):
+        return [('active', '=', True)]
+
+    @api.model
+    def _load_pos_data_fields(self, config_id):
+        return ['name', 'sequence', 'color']
 
 class PosPaymentMethod(models.Model):
     _inherit = 'pos.payment.method'
@@ -33,15 +42,3 @@ class PosSession(models.Model):
         models = super()._load_pos_data_models(config_id)
         models.append('pos.payment.category')
         return models
-
-class PosPaymentCategory(models.Model):
-    _inherit = 'pos.payment.category'
-
-    @api.model
-    def _load_pos_data_domain(self, data):
-        return [('active', '=', True)]
-
-    @api.model
-    def _load_pos_data_fields(self, config_id):
-        return ['name', 'sequence', 'color']
-
