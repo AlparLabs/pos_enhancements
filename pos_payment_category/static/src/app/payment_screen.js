@@ -19,9 +19,11 @@ patch(PaymentScreen.prototype, {
         return this.pos.models["pos.payment.category"].getAll();
     },
 
-    get paymentMethods() {
-        // Here we override the getter that fuels the `.paymentmethods` loop.
-        const allMethods = super.paymentMethods;
+    get payment_methods_from_config() {
+        // We override the default config array with a dynamic getter
+        const allMethods = this.pos.config.payment_method_ids
+            .slice()
+            .sort((a, b) => a.sequence - b.sequence);
         
         // If a category is selected, ONLY show methods belonging to that category
         if (this.state.activePaymentCategory) {
