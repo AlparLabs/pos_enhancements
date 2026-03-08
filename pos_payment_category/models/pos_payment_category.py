@@ -29,19 +29,19 @@ class PosSession(models.Model):
     _inherit = 'pos.session'
 
     @api.model
-    def _pos_ui_models_to_load(self):
-        models = super()._pos_ui_models_toload() if hasattr(super(), '_pos_ui_models_toload') else super()._pos_ui_models_to_load()
+    def _load_pos_data_models(self, config_id):
+        models = super()._load_pos_data_models(config_id)
         models.append('pos.payment.category')
         return models
 
-    def _loader_params_pos_payment_category(self):
-        return {
-            'search_params': {
-                'domain': [('active', '=', True)],
-                'fields': ['name', 'sequence', 'color'],
-            },
-        }
+class PosPaymentCategory(models.Model):
+    _inherit = 'pos.payment.category'
 
-    def _get_pos_ui_pos_payment_category(self, params):
-        return self.env['pos.payment.category'].search_read(**params['search_params'])
+    @api.model
+    def _load_pos_data_domain(self, data):
+        return [('active', '=', True)]
+
+    @api.model
+    def _load_pos_data_fields(self, config_id):
+        return ['name', 'sequence', 'color']
 

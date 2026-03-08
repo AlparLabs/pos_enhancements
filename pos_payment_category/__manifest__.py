@@ -18,6 +18,7 @@ will display the payment methods inside it. Uncategorized payment methods rest o
     ],
     'assets': {
         'point_of_sale._assets_pos': [
+            'pos_payment_category/static/src/app/models/pos_payment_category.js',
             'pos_payment_category/static/src/app/payment_screen.js',
             'pos_payment_category/static/src/app/payment_screen.xml',
         ],
