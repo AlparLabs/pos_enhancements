@@ -1,0 +1,3 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_pos_payment_category,pos.payment.category,model_pos_payment_category,base.group_user,1,0,0,0
+access_pos_payment_category_manager,pos.payment.category manager,model_pos_payment_category,point_of_sale.group_pos_manager,1,1,1,1
