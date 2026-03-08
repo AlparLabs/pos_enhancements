@@ -14,9 +14,16 @@ patch(PaymentScreen.prototype, {
         });
     },
 
+    get paymentCategories() {
+        return this.pos.models['pos.payment.category'] ? this.pos.models['pos.payment.category'].getAll() : [];
+    },
+
     get displayedPaymentMethods() {
         // We provide a new getter for the UI to loop over instead of the static core list
         const allMethods = this.payment_methods_from_config;
+        if (!allMethods) {
+            return [];
+        }
         
         // If a category is selected, ONLY show methods belonging to that category
         if (this.state.activePaymentCategory) {
