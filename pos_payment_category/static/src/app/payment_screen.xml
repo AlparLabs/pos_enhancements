@@ -4,25 +4,25 @@
     <t t-name="pos_payment_category.PaymentScreenMethods" t-inherit="point_of_sale.PaymentScreenMethods" t-inherit-mode="extension">
         <xpath expr="//div[hasclass('paymentmethods')]" position="before">
             <!-- Breadcrumbs / Back button when a Category is open -->
-            <div t-if="state.activePaymentCategory" class="d-flex align-items-center mb-3">
-                <button class="btn btn-secondary me-2 fs-5" t-on-click="() => this.clickPaymentCategory(state.activePaymentCategory)">
-                    <i class="fa fa-arrow-left me-2"/> 
-                    Back
-                </button>
-                <span class="fs-4 fw-bold">
-                    <t t-esc="state.activePaymentCategory.name"/>
-                </span>
+            <div t-if="state.activePaymentCategory" class="d-flex align-items-center mb-4 text-primary" style="cursor: pointer;" t-on-click="() => this.clickPaymentCategory(state.activePaymentCategory)">
+                <i class="fa fa-arrow-left me-2 fs-5 text-dark"/>
+                <span class="fs-5 me-2 text-dark">Regresar</span>
+                <span class="fs-5 fw-bold text-dark"><t t-esc="state.activePaymentCategory.name"/></span>
             </div>
 
             <!-- Top Level Payment Categories View -->
-            <div t-if="!state.activePaymentCategory" class="payment-category-container d-flex flex-wrap gap-2 mb-3">
+            <div t-if="!state.activePaymentCategory" class="paymentmethods d-flex flex-column gap-2 mb-3">
                 <t t-foreach="paymentCategories" t-as="category" t-key="category.id">
                     <button 
-                        class="btn btn-primary d-flex align-items-center justify-content-center fw-bolder" 
-                        style="height: 60px; min-width: 150px; font-size: 1.1rem;"
+                        class="btn btn-light d-flex align-items-center bg-white border rounded p-3 text-start mt-2 shadow-sm"
+                        style="cursor: pointer; transition: all 0.2s ease-in-out;"
                         t-on-click="() => this.clickPaymentCategory(category)">
-                        <i class="fa fa-folder-open me-2"/>
-                        <t t-esc="category.name" />
+                        <div class="border d-flex align-items-center justify-content-center me-3" style="width: 40px; height: 30px; border-radius: 4px;">
+                            <i class="fa fa-folder text-dark" style="font-size: 1.2rem;"/>
+                        </div>
+                        <span class="fw-bold fs-5 text-dark" style="font-family: 'Odoo Unicode Support Noto', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;">
+                            <t t-esc="category.name" />
+                        </span>
                     </button>
                 </t>
             </div>
