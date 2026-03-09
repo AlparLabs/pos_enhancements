@@ -83,4 +83,28 @@
             </xpath>
         </field>
     </record>
+
+    <!-- Inherit pos.payment tree to show category_id -->
+    <record id="view_pos_payment_tree_inherit_category" model="ir.ui.view">
+        <field name="name">pos.payment.tree.inherit.category</field>
+        <field name="model">pos.payment</field>
+        <field name="inherit_id" ref="point_of_sale.view_pos_payment_tree"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='payment_method_id']" position="after">
+                <field name="category_id" optional="show"/>
+            </xpath>
+        </field>
+    </record>
+
+    <!-- Inherit pos.payment form to show category_id -->
+    <record id="view_pos_payment_form_inherit_category" model="ir.ui.view">
+        <field name="name">pos.payment.form.inherit.category</field>
+        <field name="model">pos.payment</field>
+        <field name="inherit_id" ref="point_of_sale.view_pos_payment_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='payment_method_id']" position="after">
+                <field name="category_id"/>
+            </xpath>
+        </field>
+    </record>
 </odoo>

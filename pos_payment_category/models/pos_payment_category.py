@@ -42,3 +42,13 @@ class PosSession(models.Model):
         models = super()._load_pos_data_models(config_id)
         models.append('pos.payment.category')
         return models
+
+class PosPayment(models.Model):
+    _inherit = 'pos.payment'
+
+    category_id = fields.Many2one(
+        comodel_name='pos.payment.category',
+        related='payment_method_id.category_id',
+        string='Payment Category',
+        store=True,
+    )
