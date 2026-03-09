@@ -78,6 +78,7 @@ patch(ControlButtons.prototype, {
         if (!authorized) {
             return;
         }
-        return super.clickDiscount(...arguments);
+        await new Promise((resolve) => setTimeout(resolve, 100));
+        return super.clickDiscount();
     },
 });

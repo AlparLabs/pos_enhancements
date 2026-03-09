@@ -1,0 +1,20 @@
+/* Hide the Submit Order button (for Kitchen printers) */
+.submit-order,
+button.submit-order,
+.control-button.submit-order,
+button.btn-light.submit-order {
+  display: none !important;
+}
+
+/* Hide the Internal Note / Kitchen Note button */
+.orderline-note-button,
+button.orderline-note-button,
+.control-button.orderline-note-button {
+  display: none !important;
+}
+
+/* Additional fallback to hide control button containing the sticky note icon */
+.control-button:has(i.fa-sticky-note),
+.control-buttons .control-button:has(i.fa-sticky-note) {
+  display: none !important;
+}

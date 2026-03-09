@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates id="template" xml:space="preserve">
+    <!-- Component structure -->
+    <t t-name="pos_bar_single_ticket.BarTicketButton" owl="1">
+        <button class="control-button btn btn-light rounded-0 fw-bolder mb-2" t-on-click="() => this.click()">
+            <i class="fa fa-beer me-1" role="img" aria-label="Bar Tickets" title="Bar Tickets" />
+            <span>Bar Tickets</span>
+        </button>
+    </t>
+
+    <!-- Inject the component into the ControlButtons -->
+    <t t-name="pos_bar_single_ticket.ControlButtons" t-inherit="point_of_sale.ControlButtons" t-inherit-mode="extension">
+        <xpath expr="//button[hasclass('more-btn')]" position="before">
+            <BarTicketButton t-if="!props.showRemainingButtons and !ui.isSmall"/>
+        </xpath>
+        <xpath expr="//div[hasclass('control-buttons-modal')]" position="inside">
+            <BarTicketButton t-if="props.showRemainingButtons"/>
+        </xpath>
+    </t>
+</templates>

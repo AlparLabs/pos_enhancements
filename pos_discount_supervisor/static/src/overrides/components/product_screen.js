@@ -49,12 +49,13 @@ patch(ProductScreen.prototype, {
     },
 
     async onNumpadClick(buttonValue) {
-        if (buttonValue === "discount") {
+        const val = (buttonValue && buttonValue.detail) || (buttonValue && buttonValue.value) || buttonValue;
+        if (val === "discount") {
             const authorized = await requestSupervisorPin(this.pos, this.dialog, this.notification);
             if (!authorized) {
                 return;
             }
         }
-        return super.onNumpadClick(...arguments);
+        return super.onNumpadClick(buttonValue);
     },
 });

@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates id="template" xml:space="preserve">
+    <!-- Keep the component template itself -->
+    <t t-name="pos_retail_pre_ticket.PreTicketButton" owl="1">
+        <button class="control-button btn btn-light rounded-0 fw-bolder mb-2" t-on-click="() => this.click()">
+            <i class="fa fa-print me-1" role="img" aria-label="Pre-Ticket" title="Pre-Ticket" />
+            <span>Pre-Ticket</span>
+        </button>
+    </t>
+
+    <!-- Inject the component into the POS ControlButtons -->
+    <t t-name="pos_retail_pre_ticket.ControlButtons" t-inherit="point_of_sale.ControlButtons" t-inherit-mode="extension">
+        <xpath expr="//button[hasclass('more-btn')]" position="before">
+            <PreTicketButton t-if="!props.showRemainingButtons and !ui.isSmall"/>
+        </xpath>
+        <xpath expr="//div[hasclass('control-buttons-modal')]" position="inside">
+            <PreTicketButton t-if="props.showRemainingButtons"/>
+        </xpath>
+    </t>
+</templates>
