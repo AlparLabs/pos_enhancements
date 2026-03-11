@@ -28,9 +28,17 @@ export class PreTicketButton extends Component {
 
         // Generate the receipt data using standard POS formatting methods
         const headerData = this.pos.getReceiptHeaderData(order);
+        const exportData = order.export_for_printing(this.pos.session._base_url, headerData);
+        
+        // Ensure subtotal is calculated correctly for Odoo 18
+        const calculatedSubtotal = order.get_total_without_tax 
+            ? order.get_total_without_tax() 
+            : exportData.amount_total - (exportData.tax_details || []).reduce((sum, tax) => sum + tax.amount, 0);
+
         const receiptData = {
             ...headerData,
-            ...order.export_for_printing(this.pos.session._base_url, headerData),
+            ...exportData,
+            subtotal: exportData.subtotal || calculatedSubtotal,
         };
 
         // Use the standard POS printer service to print our custom QWeb template
