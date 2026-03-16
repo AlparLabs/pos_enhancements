@@ -16,7 +16,7 @@ patch(PaymentScreen.prototype, {
         // total, so any popup shown AFTER super would appear on an already-closed screen.
         let terminalDetails = null;
         if (paymentMethod.use_terminal_details) {
-            terminalDetails = await makeAwaitable(this.dialog, TerminalDetailsPopup, {
+            terminalDetails = await makeAwaitable(this.env.services.dialog, TerminalDetailsPopup, {
                 title: "Detalles de Terminal",
                 startingValue: {
                     lot_number: "",
