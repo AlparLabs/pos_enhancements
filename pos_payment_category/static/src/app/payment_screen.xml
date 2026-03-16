@@ -13,11 +13,11 @@
         </xpath>
 
         <!-- Replace the loop array to use our new unified getter -->
-        <xpath expr="//PaymentMethodButton" position="attributes">
+        <xpath expr="//div[hasclass('paymentmethod')]" position="attributes">
             <attribute name="t-if">!paymentMethod.is_category</attribute>
         </xpath>
 
-        <xpath expr="//PaymentMethodButton" position="before">
+        <xpath expr="//div[hasclass('paymentmethod')]" position="before">
             <t t-if="paymentMethod.is_category">
                 <!-- Our Custom Category Folder Button -->
                 <button 
