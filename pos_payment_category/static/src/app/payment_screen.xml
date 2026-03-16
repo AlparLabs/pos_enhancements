@@ -11,10 +11,10 @@
             </div>
 
             <!-- Top Level Payment Categories View -->
-            <div t-if="!state.activePaymentCategory" class="paymentmethods d-flex flex-column gap-2 mb-3">
+            <div t-if="!state.activePaymentCategory" class="paymentmethods d-flex flex-column gap-2 mb-3 overflow-y-auto w-100" style="max-height: 100%; flex-shrink: 1;">
                 <t t-foreach="paymentCategories" t-as="category" t-key="category.id">
                     <button 
-                        class="btn btn-light d-flex align-items-center bg-white border rounded p-3 text-start mt-2 shadow-sm"
+                        class="btn btn-light d-flex align-items-center bg-white border rounded p-3 text-start shadow-sm flex-shrink-0"
                         style="cursor: pointer; transition: all 0.2s ease-in-out;"
                         t-on-click="() => this.clickPaymentCategory(category)">
                         <div class="border d-flex align-items-center justify-content-center me-3" style="width: 40px; height: 30px; border-radius: 4px;">
@@ -28,7 +28,11 @@
             </div>
         </xpath>
         
-        <!-- Replace the loop array to use our new filtered getter -->
+        <!-- Replace the loop array to use our new filtered getter and add scrolling to the parent node -->
+        <xpath expr="//div[hasclass('paymentmethods')]" position="attributes">
+            <attribute name="class" add="overflow-y-auto w-100" separator=" "/>
+            <attribute name="style">max-height: 100%; flex-shrink: 1;</attribute>
+        </xpath>
         <xpath expr="//t[@t-foreach='payment_methods_from_config']" position="attributes">
             <attribute name="t-foreach">displayedPaymentMethods</attribute>
         </xpath>
