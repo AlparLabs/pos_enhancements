@@ -2,6 +2,7 @@
 <templates id="template" xml:space="preserve">
     <!-- Inherit Payment Screen Methods to inject category buttons before payment methods -->
     <t t-name="pos_payment_category.PaymentScreenMethods" t-inherit="point_of_sale.PaymentScreenMethods" t-inherit-mode="extension">
+        
         <xpath expr="//div[hasclass('paymentmethods')]" position="before">
             <!-- Breadcrumbs / Back button when a Category is open -->
             <div t-if="state.activePaymentCategory" class="d-flex align-items-center mb-4 text-primary" style="cursor: pointer;" t-on-click="() => this.clickPaymentCategory(state.activePaymentCategory)">
@@ -9,32 +10,35 @@
                 <span class="fs-5 me-2 text-dark">Regresar</span>
                 <span class="fs-5 fw-bold text-dark"><t t-esc="state.activePaymentCategory.name"/></span>
             </div>
+        </xpath>
 
-            <!-- Top Level Payment Categories View -->
-            <div t-if="!state.activePaymentCategory" class="paymentmethods d-flex flex-column gap-2 mb-3 overflow-y-auto w-100" style="flex: 1 1 0; min-height: 0;">
-                <t t-foreach="paymentCategories" t-as="category" t-key="category.id">
-                    <button 
-                        class="btn btn-light d-flex align-items-center bg-white border rounded p-3 text-start shadow-sm flex-shrink-0"
-                        style="cursor: pointer; transition: all 0.2s ease-in-out;"
-                        t-on-click="() => this.clickPaymentCategory(category)">
-                        <div class="border d-flex align-items-center justify-content-center me-3" style="width: 40px; height: 30px; border-radius: 4px;">
-                            <i class="fa fa-folder text-dark" style="font-size: 1.2rem;"/>
-                        </div>
-                        <span class="fw-bold fs-5 text-dark" style="font-family: 'Odoo Unicode Support Noto', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;">
-                            <t t-esc="category.name" />
-                        </span>
-                    </button>
-                </t>
-            </div>
-        </xpath>
-        
-        <!-- Replace the loop array to use our new filtered getter and add scrolling to the parent node -->
-        <xpath expr="//div[hasclass('paymentmethods')]" position="attributes">
-            <attribute name="class" add="overflow-y-auto w-100" separator=" "/>
-            <attribute name="style">flex: 1 1 0; min-height: 0;</attribute>
-        </xpath>
+        <!-- Replace the loop array to use our new unified getter -->
         <xpath expr="//t[@t-foreach='payment_methods_from_config']" position="attributes">
             <attribute name="t-foreach">displayedPaymentMethods</attribute>
+            <attribute name="t-as">item</attribute>
         </xpath>
+        
+        <!-- Inside the loop, branch if it's a category or a payment method -->
+        <xpath expr="//t[@t-foreach='payment_methods_from_config']/PaymentMethodButton" position="replace">
+            <t t-if="item.is_category">
+                <!-- Our Custom Category Folder Button -->
+                <button 
+                    class="btn btn-light d-flex align-items-center bg-white border rounded p-3 text-start shadow-sm mx-1 my-1 flex-shrink-0"
+                    style="cursor: pointer; transition: all 0.2s ease-in-out;"
+                    t-on-click="() => this.clickPaymentCategory(item)">
+                    <div class="border d-flex align-items-center justify-content-center me-3" style="width: 40px; height: 30px; border-radius: 4px;">
+                        <i class="fa fa-folder text-dark" style="font-size: 1.2rem;"/>
+                    </div>
+                    <span class="fw-bold fs-5 text-dark" style="font-family: 'Odoo Unicode Support Noto', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;">
+                        <t t-esc="item.name" />
+                    </span>
+                </button>
+            </t>
+            <t t-else="">
+                <!-- Render standard Odoo Payment Method Button, forwarding the item as paymentMethod prop -->
+                <PaymentMethodButton paymentMethod="item" onClick="() => this.addNewPaymentLine(item)" />
+            </t>
+        </xpath>
+
     </t>
 </templates>

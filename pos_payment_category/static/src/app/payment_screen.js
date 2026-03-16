@@ -19,21 +19,34 @@ patch(PaymentScreen.prototype, {
     },
 
     get displayedPaymentMethods() {
-        // We provide a new getter for the UI to loop over instead of the static core list
+        // We provide a single unified array for the UI to loop over instead of the static core list
+        // This prevents breaking the Odoo flexbox layout
         const allMethods = this.payment_methods_from_config;
         if (!allMethods) {
             return [];
         }
         
+        let items = [];
+        
         // If a category is selected, ONLY show methods belonging to that category
         if (this.state.activePaymentCategory) {
-            return allMethods.filter(
+            items = allMethods.filter(
                 (method) => method.category_id && method.category_id.id === this.state.activePaymentCategory.id
             );
+        } else {
+            // Include top-level categories
+            const categories = this.paymentCategories.map(cat => ({
+                ...cat,
+                is_category: true, // Marker for the XML template
+            }));
+            
+            // Include methods that don't belong to any category
+            const looseMethods = allMethods.filter((method) => !method.category_id);
+            
+            items = [...categories, ...looseMethods];
         }
 
-        // If NO category is selected, show only methods that DO NOT have a category assigned
-        return allMethods.filter((method) => !method.category_id);
+        return items;
     },
 
     clickPaymentCategory(category) {
