@@ -13,6 +13,10 @@
         </xpath>
 
         <!-- Replace the loop array to use our new unified getter -->
+        <xpath expr="//t[@t-foreach='payment_methods_from_config']" position="attributes">
+            <attribute name="t-foreach">displayedPaymentMethods</attribute>
+        </xpath>
+
         <xpath expr="//div[hasclass('paymentmethod')]" position="attributes">
             <attribute name="t-if">!paymentMethod.is_category</attribute>
         </xpath>

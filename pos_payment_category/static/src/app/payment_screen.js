@@ -18,10 +18,10 @@ patch(PaymentScreen.prototype, {
         return this.pos.models['pos.payment.category'] ? this.pos.models['pos.payment.category'].getAll() : [];
     },
 
-    get payment_methods_from_config() {
+    get displayedPaymentMethods() {
         // We provide a single unified array for the UI to loop over instead of the static core list
         // This prevents breaking the Odoo flexbox layout
-        const allMethods = super.payment_methods_from_config;
+        const allMethods = this.payment_methods_from_config;
         if (!allMethods) {
             return [];
         }
