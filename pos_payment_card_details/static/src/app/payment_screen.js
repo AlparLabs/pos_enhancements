@@ -10,28 +10,36 @@ patch(PaymentScreen.prototype, {
         // Guard: skip if no valid payment method (e.g. category object or undefined)
         if (!paymentMethod || paymentMethod.is_category) return;
 
-        const result = await super.addNewPaymentLine(...arguments);
-        
-        // If the method requires terminal details, show popup.
-        // Note: Odoo's addNewPaymentLine returns undefined, so we check
-        // for the existence of selected_paymentline instead of trusting `result`.
-        const line = this.currentOrder.selected_paymentline;
-        if (paymentMethod.use_terminal_details && line) {
-            const payload = await makeAwaitable(this.dialog, TerminalDetailsPopup, {
+        // If this payment method requires terminal details, show the popup FIRST —
+        // before calling super. Odoo's original addNewPaymentLine may auto-validate
+        // the order (and close the payment screen) if the amount fully covers the
+        // total, so any popup shown AFTER super would appear on an already-closed screen.
+        let terminalDetails = null;
+        if (paymentMethod.use_terminal_details) {
+            terminalDetails = await makeAwaitable(this.dialog, TerminalDetailsPopup, {
                 title: "Detalles de Terminal",
                 startingValue: {
-                    lot_number: line.lot_number || "",
-                    coupon_number: line.coupon_number || "",
-                    installments: line.installments || 1,
+                    lot_number: "",
+                    coupon_number: "",
+                    installments: 1,
                 }
             });
+            // If the cashier cancelled the popup, abort adding the payment line entirely
+            if (!terminalDetails) return;
+        }
 
-            if (payload) {
-                line.lot_number = payload.lot_number;
-                line.coupon_number = payload.coupon_number;
-                line.installments = payload.installments;
+        const result = await super.addNewPaymentLine(...arguments);
+
+        // Write the captured details onto the newly created payment line
+        if (terminalDetails) {
+            const line = this.currentOrder.selected_paymentline;
+            if (line) {
+                line.lot_number = terminalDetails.lot_number;
+                line.coupon_number = terminalDetails.coupon_number;
+                line.installments = terminalDetails.installments;
             }
         }
+
         return result;
     }
 });
