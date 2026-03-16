@@ -12,25 +12,24 @@ patch(PaymentScreen.prototype, {
             ...this.state,
             activePaymentCategory: null,
         });
+        
+        // Save the original config methods for filtering
+        this.original_payment_methods = [...this.payment_methods_from_config];
+        
+        // Initialize the view with categories
+        this.updateDisplayedMethods();
     },
 
     get paymentCategories() {
         return this.pos.models['pos.payment.category'] ? this.pos.models['pos.payment.category'].getAll() : [];
     },
 
-    get displayedPaymentMethods() {
-        // We provide a single unified array for the UI to loop over instead of the static core list
-        // This prevents breaking the Odoo flexbox layout
-        const allMethods = this.payment_methods_from_config;
-        if (!allMethods) {
-            return [];
-        }
-        
+    updateDisplayedMethods() {
         let items = [];
         
         // If a category is selected, ONLY show methods belonging to that category
         if (this.state.activePaymentCategory) {
-            items = allMethods.filter(
+            items = this.original_payment_methods.filter(
                 (method) => method.category_id && method.category_id[0] === this.state.activePaymentCategory.id
             );
         } else {
@@ -41,12 +40,13 @@ patch(PaymentScreen.prototype, {
             }));
             
             // Include methods that don't belong to any category
-            const looseMethods = allMethods.filter((method) => !method.category_id);
+            const looseMethods = this.original_payment_methods.filter((method) => !method.category_id);
             
             items = [...categories, ...looseMethods];
         }
 
-        return items;
+        // Overwrite the property used by Odoo 18's PaymentScreen XML loop
+        this.payment_methods_from_config = items;
     },
 
     clickPaymentCategory(category) {
@@ -56,5 +56,8 @@ patch(PaymentScreen.prototype, {
         } else {
             this.state.activePaymentCategory = category;
         }
+        
+        // Re-compute the property so Odoo re-renders the list
+        this.updateDisplayedMethods();
     },
 });
