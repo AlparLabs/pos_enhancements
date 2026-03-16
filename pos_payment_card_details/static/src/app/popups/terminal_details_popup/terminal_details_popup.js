@@ -1,9 +1,11 @@
 /** @odoo-module **/
 
 import { Component, useState } from "@odoo/owl";
+import { Dialog } from "@web/core/dialog/dialog";
 
 export class TerminalDetailsPopup extends Component {
     static template = "pos_payment_card_details.TerminalDetailsPopup";
+    static components = { Dialog };
     static props = {
         // Injected by makeAwaitable
         getPayload: Function,

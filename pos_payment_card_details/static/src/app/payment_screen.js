@@ -7,48 +7,30 @@ import { patch } from "@web/core/utils/patch";
 
 patch(PaymentScreen.prototype, {
     async addNewPaymentLine(paymentMethod) {
-        if (!paymentMethod || paymentMethod.is_category) {
-            return;
-        }
+        // Guard: skip if no valid payment method (e.g. category object or undefined)
+        if (!paymentMethod || paymentMethod.is_category) return;
 
+        // If this payment method requires terminal details, show the popup FIRST —
+        // before calling super. Odoo's original addNewPaymentLine may auto-validate
+        // the order (and close the payment screen) if the amount fully covers the
+        // total, so any popup shown AFTER super would appear on an already-closed screen.
         let terminalDetails = null;
         if (paymentMethod.use_terminal_details) {
-            // makeAwaitable seems to fail silently in this version.
-            // In Odoo 18, dialog.add() natively returns a Promise that 
-            // resolves when the dialog is closed.
-            try {
-                // To get a payload back from a standard dialog, we pass a callback
-                await new Promise((resolve) => {
-                    this.env.services.dialog.add(TerminalDetailsPopup, {
-                        title: "Detalles de Terminal",
-                        startingValue: {
-                            lot_number: "",
-                            coupon_number: "",
-                            installments: 1,
-                        },
-                        getPayload: (payload) => {
-                            terminalDetails = payload;
-                        },
-                        close: () => {
-                            // Dialog's close method will be injected, we just resolve our promise
-                            resolve();
-                        }
-                    }, {
-                        onClose: () => resolve() // fallback if closed by other means
-                    });
-                });
-            } catch (err) {
-                console.error("Error opening popup:", err);
-            }
-
-            if (!terminalDetails) {
-                // Cashier cancelled or closed the modal
-                return;
-            }
+            terminalDetails = await makeAwaitable(this.env.services.dialog, TerminalDetailsPopup, {
+                title: "Detalles de Terminal",
+                startingValue: {
+                    lot_number: "",
+                    coupon_number: "",
+                    installments: 1,
+                }
+            });
+            // If the cashier cancelled the popup, abort adding the payment line
+            if (!terminalDetails) return;
         }
 
         const result = await super.addNewPaymentLine(...arguments);
 
+        // Write the captured details onto the newly created payment line
         if (terminalDetails) {
             const line = this.currentOrder.selected_paymentline;
             if (line) {
