@@ -7,44 +7,50 @@ import { patch } from "@web/core/utils/patch";
 
 patch(PaymentScreen.prototype, {
     async addNewPaymentLine(paymentMethod) {
-        console.log("addNewPaymentLine called with:", paymentMethod);
-        // Guard: skip if no valid payment method (e.g. category object or undefined)
         if (!paymentMethod || paymentMethod.is_category) {
-            console.log("Skipping: is category or undefined");
             return;
         }
 
-        console.log("use_terminal_details is:", paymentMethod.use_terminal_details);
-        
         let terminalDetails = null;
         if (paymentMethod.use_terminal_details) {
-            console.log("Attempting to open TerminalDetailsPopup");
+            // makeAwaitable seems to fail silently in this version.
+            // In Odoo 18, dialog.add() natively returns a Promise that 
+            // resolves when the dialog is closed.
             try {
-                // Revert to this.dialog just in case that was correct all along
-                terminalDetails = await makeAwaitable(this.dialog || this.env.services.dialog, TerminalDetailsPopup, {
-                    title: "Detalles de Terminal",
-                    startingValue: {
-                        lot_number: "",
-                        coupon_number: "",
-                        installments: 1,
-                    }
+                // To get a payload back from a standard dialog, we pass a callback
+                await new Promise((resolve) => {
+                    this.env.services.dialog.add(TerminalDetailsPopup, {
+                        title: "Detalles de Terminal",
+                        startingValue: {
+                            lot_number: "",
+                            coupon_number: "",
+                            installments: 1,
+                        },
+                        getPayload: (payload) => {
+                            terminalDetails = payload;
+                        },
+                        close: () => {
+                            // Dialog's close method will be injected, we just resolve our promise
+                            resolve();
+                        }
+                    }, {
+                        onClose: () => resolve() // fallback if closed by other means
+                    });
                 });
-                console.log("Popup closed, payload:", terminalDetails);
             } catch (err) {
                 console.error("Error opening popup:", err);
             }
+
             if (!terminalDetails) {
-                console.log("Popup cancelled, aborting payment line");
+                // Cashier cancelled or closed the modal
                 return;
             }
         }
 
-        console.log("Calling super.addNewPaymentLine");
         const result = await super.addNewPaymentLine(...arguments);
 
         if (terminalDetails) {
             const line = this.currentOrder.selected_paymentline;
-            console.log("Payment line added:", line);
             if (line) {
                 line.lot_number = terminalDetails.lot_number;
                 line.coupon_number = terminalDetails.coupon_number;
