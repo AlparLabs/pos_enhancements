@@ -12,54 +12,45 @@ patch(PaymentScreen.prototype, {
             ...this.state,
             activePaymentCategory: null,
         });
-        
-        // Save the original config methods for filtering
-        this.original_payment_methods = [...this.payment_methods_from_config];
-        
-        // Initialize the view with categories
-        this.updateDisplayedMethods();
     },
 
     get paymentCategories() {
-        return this.pos.models['pos.payment.category'] ? this.pos.models['pos.payment.category'].getAll() : [];
+        return this.pos.models['pos.payment.category']?.getAll() ?? [];
     },
 
-    updateDisplayedMethods() {
-        let items = [];
-        
-        // If a category is selected, ONLY show methods belonging to that category
+    get filteredPaymentMethods() {
+        const allMethods = this.payment_methods_from_config;
+
         if (this.state.activePaymentCategory) {
-            items = this.original_payment_methods.filter(
-                (method) => method.category_id && method.category_id[0] === this.state.activePaymentCategory.original_id
+            // Only show methods belonging to the selected category
+            return allMethods.filter(
+                (m) => m.category_id && m.category_id[0] === this.state.activePaymentCategory.original_id
             );
-        } else {
-            // Include top-level categories
-            const categories = this.paymentCategories.map(cat => ({
-                ...cat,
-                original_id: cat.id,
-                id: `category_${cat.id}`, // the xml uses t-key="paymentMethod.id"
-                is_category: true, // Marker for the XML template
-            }));
-            
-            // Include methods that don't belong to any category
-            const looseMethods = this.original_payment_methods.filter((method) => !method.category_id);
-            
-            items = [...categories, ...looseMethods];
         }
 
-        // Overwrite the property used by Odoo 18's PaymentScreen XML loop
-        this.payment_methods_from_config = items;
+        // Top-level view: categories as folder objects + uncategorized methods
+        const cats = this.paymentCategories.map((cat) => ({
+            id: `category_${cat.id}`,
+            original_id: cat.id,
+            name: cat.name,
+            is_category: true,
+        }));
+        const loose = allMethods.filter((m) => !m.category_id);
+        return [...cats, ...loose];
     },
 
     clickPaymentCategory(category) {
         // Toggle the category selection on and off
-        if (this.state.activePaymentCategory && this.state.activePaymentCategory.original_id === category.original_id) {
+        if (this.state.activePaymentCategory?.id === category.id) {
             this.state.activePaymentCategory = null;
         } else {
             this.state.activePaymentCategory = category;
         }
-        
-        // Re-compute the property so Odoo re-renders the list
-        this.updateDisplayedMethods();
+    },
+
+    // Guard addNewPaymentLine against being called with a category object
+    async addNewPaymentLine(paymentMethod) {
+        if (paymentMethod.is_category) return;
+        return super.addNewPaymentLine(...arguments);
     },
 });

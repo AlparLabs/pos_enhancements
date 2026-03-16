@@ -2,7 +2,7 @@
 <templates id="template" xml:space="preserve">
     <!-- Inherit Payment Screen Methods to inject category buttons before payment methods -->
     <t t-name="pos_payment_category.PaymentScreenMethods" t-inherit="point_of_sale.PaymentScreenMethods" t-inherit-mode="extension">
-        
+
         <xpath expr="//div[hasclass('paymentmethods')]" position="before">
             <!-- Breadcrumbs / Back button when a Category is open -->
             <div t-if="state.activePaymentCategory" class="d-flex align-items-center mb-4 text-primary" style="cursor: pointer;" t-on-click="() => this.clickPaymentCategory(state.activePaymentCategory)">
@@ -12,14 +12,21 @@
             </div>
         </xpath>
 
+        <!-- Replace the loop array to use our filtered getter -->
+        <xpath expr="//t[@t-foreach='payment_methods_from_config']" position="attributes">
+            <attribute name="t-foreach">filteredPaymentMethods</attribute>
+        </xpath>
+
+        <!-- Hide the native payment method button for category items -->
         <xpath expr="//div[hasclass('paymentmethod')]" position="attributes">
             <attribute name="t-if">!paymentMethod.is_category</attribute>
         </xpath>
 
+        <!-- Render a folder button before the native div for category items -->
         <xpath expr="//div[hasclass('paymentmethod')]" position="before">
             <t t-if="paymentMethod.is_category">
                 <!-- Our Custom Category Folder Button -->
-                <button 
+                <button
                     class="btn btn-light d-flex align-items-center bg-white border rounded p-3 text-start shadow-sm mx-1 my-1 flex-shrink-0"
                     style="cursor: pointer; transition: all 0.2s ease-in-out;"
                     t-on-click="() => this.clickPaymentCategory(paymentMethod)">
