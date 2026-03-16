@@ -1,9 +1,9 @@
 /** @odoo-module **/
 
-import { Payment } from "@point_of_sale/app/store/models";
+import { PosPayment } from "@point_of_sale/app/models/pos_payment";
 import { patch } from "@web/core/utils/patch";
 
-patch(Payment.prototype, {
+patch(PosPayment.prototype, {
     setup() {
         super.setup(...arguments);
         this.lot_number = this.lot_number || "";
