@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <templates id="template" xml:space="preserve">
     <t t-name="pos_payment_card_details.OrderReceipt" t-inherit="point_of_sale.OrderReceipt" t-inherit-mode="extension">
-        <xpath expr="//t[@t-foreach='receipt.paymentlines']//div[hasclass('pos-receipt-amount')]" position="after">
+        <xpath expr="//div[hasclass('paymentlines')]" position="inside">
             <t t-if="line.lot_number or line.coupon_number">
                 <div class="pos-receipt-left-padding" style="font-size: 80%; color: #555;">
                     <t t-if="line.lot_number">Lote: <t t-esc="line.lot_number"/> </t>
