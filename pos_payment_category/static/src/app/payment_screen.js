@@ -24,7 +24,7 @@ patch(PaymentScreen.prototype, {
         if (this.state.activePaymentCategory) {
             // Only show methods belonging to the selected category
             return allMethods.filter(
-                (m) => m.category_id && m.category_id[0] === this.state.activePaymentCategory.original_id
+                (m) => m.category_id && m.category_id.id === this.state.activePaymentCategory.original_id
             );
         }
 
