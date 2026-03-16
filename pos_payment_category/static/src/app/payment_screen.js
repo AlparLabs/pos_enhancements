@@ -48,9 +48,9 @@ patch(PaymentScreen.prototype, {
         }
     },
 
-    // Guard addNewPaymentLine against being called with a category object
+    // Guard addNewPaymentLine against being called with a category object or undefined
     async addNewPaymentLine(paymentMethod) {
-        if (paymentMethod.is_category) return;
+        if (!paymentMethod || paymentMethod.is_category) return;
         return super.addNewPaymentLine(...arguments);
     },
 });
