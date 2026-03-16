@@ -1,12 +1,20 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <templates id="template" xml:space="preserve">
     <t t-name="pos_payment_card_details.OrderReceipt" t-inherit="point_of_sale.OrderReceipt" t-inherit-mode="extension">
-        <xpath expr="//div[hasclass('paymentlines')]" position="inside">
+        <!--
+            In Odoo 18, the payment line loop is:
+              <div class="paymentlines" t-foreach="props.data.paymentlines" t-as="line" t-key="line_index">
+                  <t t-esc="line.name" />
+                  <span t-esc="..." class="pos-receipt-right-align"/>
+              </div>
+            We use position="after" on the amount span to inject our details right below it.
+        -->
+        <xpath expr="//div[hasclass('paymentlines')]//span[hasclass('pos-receipt-right-align')]" position="after">
             <t t-if="line.lot_number or line.coupon_number">
-                <div class="pos-receipt-left-padding" style="font-size: 80%; color: #555;">
-                    <t t-if="line.lot_number">Lote: <t t-esc="line.lot_number"/> </t>
-                    <t t-if="line.coupon_number">Cupón: <t t-esc="line.coupon_number"/> </t>
-                    <t t-if="line.installments and line.installments > 1">Cuotas: <t t-esc="line.installments"/> </t>
+                <div class="w-100" style="font-size: 80%; color: #555; padding-left: 0.5rem;">
+                    <t t-if="line.lot_number">Lote: <t t-esc="line.lot_number"/>  </t>
+                    <t t-if="line.coupon_number">Cupón: <t t-esc="line.coupon_number"/>  </t>
+                    <t t-if="line.installments and line.installments > 1">Cuotas: <t t-esc="line.installments"/></t>
                 </div>
             </t>
         </xpath>

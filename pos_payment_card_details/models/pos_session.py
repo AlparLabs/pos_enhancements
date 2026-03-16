@@ -1,9 +1,4 @@
-from odoo import models, api
-
-class PosSession(models.Model):
-    _inherit = 'pos.session'
-
-    def _loader_params_pos_payment_method(self):
-        result = super()._loader_params_pos_payment_method()
-        result['search_params']['fields'].append('use_terminal_details')
-        return result
+# -*- coding: utf-8 -*-
+# This file is intentionally empty.
+# In Odoo 18, payment method field loading is handled via _load_pos_data_fields
+# on the pos.payment.method model directly. See models/pos_payment_method.py.

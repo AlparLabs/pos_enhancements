@@ -7,3 +7,8 @@ class PosPaymentMethod(models.Model):
         string='Requires Card Details',
         help='If checked, the POS will ask for Lot Number, Coupon, and Installments when using this payment method.'
     )
+
+    def _load_pos_data_fields(self, config_id):
+        fields = super()._load_pos_data_fields(config_id)
+        fields.append('use_terminal_details')
+        return fields
