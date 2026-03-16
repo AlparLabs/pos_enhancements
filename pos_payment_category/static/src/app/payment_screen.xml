@@ -13,30 +13,24 @@
         </xpath>
 
         <!-- Replace the loop array to use our new unified getter -->
-        <xpath expr="//t[@t-foreach='payment_methods_from_config']" position="attributes">
-            <attribute name="t-foreach">displayedPaymentMethods</attribute>
-            <attribute name="t-as">item</attribute>
+        <xpath expr="//PaymentMethodButton" position="attributes">
+            <attribute name="t-if">!paymentMethod.is_category</attribute>
         </xpath>
-        
-        <!-- Inside the loop, branch if it's a category or a payment method -->
-        <xpath expr="//t[@t-foreach='payment_methods_from_config']/PaymentMethodButton" position="replace">
-            <t t-if="item.is_category">
+
+        <xpath expr="//PaymentMethodButton" position="before">
+            <t t-if="paymentMethod.is_category">
                 <!-- Our Custom Category Folder Button -->
                 <button 
                     class="btn btn-light d-flex align-items-center bg-white border rounded p-3 text-start shadow-sm mx-1 my-1 flex-shrink-0"
                     style="cursor: pointer; transition: all 0.2s ease-in-out;"
-                    t-on-click="() => this.clickPaymentCategory(item)">
+                    t-on-click="() => this.clickPaymentCategory(paymentMethod)">
                     <div class="border d-flex align-items-center justify-content-center me-3" style="width: 40px; height: 30px; border-radius: 4px;">
                         <i class="fa fa-folder text-dark" style="font-size: 1.2rem;"/>
                     </div>
                     <span class="fw-bold fs-5 text-dark" style="font-family: 'Odoo Unicode Support Noto', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;">
-                        <t t-esc="item.name" />
+                        <t t-esc="paymentMethod.name" />
                     </span>
                 </button>
-            </t>
-            <t t-else="">
-                <!-- Render standard Odoo Payment Method Button, forwarding the item as paymentMethod prop -->
-                <PaymentMethodButton paymentMethod="item" onClick="() => this.addNewPaymentLine(item)" />
             </t>
         </xpath>
 
