@@ -4,6 +4,22 @@ import { Component, useState } from "@odoo/owl";
 
 export class TerminalDetailsPopup extends Component {
     static template = "pos_payment_card_details.TerminalDetailsPopup";
+    static props = {
+        // Injected by makeAwaitable
+        getPayload: Function,
+        close: Function,
+        // Custom
+        title: { type: String, optional: true },
+        startingValue: {
+            type: Object,
+            optional: true,
+            shape: {
+                lot_number: { type: String, optional: true },
+                coupon_number: { type: String, optional: true },
+                installments: { type: Number, optional: true },
+            },
+        },
+    };
 
     setup() {
         super.setup();
