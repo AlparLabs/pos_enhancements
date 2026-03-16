@@ -7,32 +7,44 @@ import { patch } from "@web/core/utils/patch";
 
 patch(PaymentScreen.prototype, {
     async addNewPaymentLine(paymentMethod) {
+        console.log("addNewPaymentLine called with:", paymentMethod);
         // Guard: skip if no valid payment method (e.g. category object or undefined)
-        if (!paymentMethod || paymentMethod.is_category) return;
-
-        // If this payment method requires terminal details, show the popup FIRST —
-        // before calling super. Odoo's original addNewPaymentLine may auto-validate
-        // the order (and close the payment screen) if the amount fully covers the
-        // total, so any popup shown AFTER super would appear on an already-closed screen.
-        let terminalDetails = null;
-        if (paymentMethod.use_terminal_details) {
-            terminalDetails = await makeAwaitable(this.env.services.dialog, TerminalDetailsPopup, {
-                title: "Detalles de Terminal",
-                startingValue: {
-                    lot_number: "",
-                    coupon_number: "",
-                    installments: 1,
-                }
-            });
-            // If the cashier cancelled the popup, abort adding the payment line entirely
-            if (!terminalDetails) return;
+        if (!paymentMethod || paymentMethod.is_category) {
+            console.log("Skipping: is category or undefined");
+            return;
         }
 
+        console.log("use_terminal_details is:", paymentMethod.use_terminal_details);
+        
+        let terminalDetails = null;
+        if (paymentMethod.use_terminal_details) {
+            console.log("Attempting to open TerminalDetailsPopup");
+            try {
+                // Revert to this.dialog just in case that was correct all along
+                terminalDetails = await makeAwaitable(this.dialog || this.env.services.dialog, TerminalDetailsPopup, {
+                    title: "Detalles de Terminal",
+                    startingValue: {
+                        lot_number: "",
+                        coupon_number: "",
+                        installments: 1,
+                    }
+                });
+                console.log("Popup closed, payload:", terminalDetails);
+            } catch (err) {
+                console.error("Error opening popup:", err);
+            }
+            if (!terminalDetails) {
+                console.log("Popup cancelled, aborting payment line");
+                return;
+            }
+        }
+
+        console.log("Calling super.addNewPaymentLine");
         const result = await super.addNewPaymentLine(...arguments);
 
-        // Write the captured details onto the newly created payment line
         if (terminalDetails) {
             const line = this.currentOrder.selected_paymentline;
+            console.log("Payment line added:", line);
             if (line) {
                 line.lot_number = terminalDetails.lot_number;
                 line.coupon_number = terminalDetails.coupon_number;
