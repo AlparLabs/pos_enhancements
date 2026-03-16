@@ -12,9 +12,11 @@ patch(PaymentScreen.prototype, {
 
         const result = await super.addNewPaymentLine(...arguments);
         
-        // If the method requires terminal details, show popup
+        // If the method requires terminal details, show popup.
+        // Note: Odoo's addNewPaymentLine returns undefined, so we check
+        // for the existence of selected_paymentline instead of trusting `result`.
         const line = this.currentOrder.selected_paymentline;
-        if (result && paymentMethod.use_terminal_details && line) {
+        if (paymentMethod.use_terminal_details && line) {
             const payload = await makeAwaitable(this.dialog, TerminalDetailsPopup, {
                 title: "Detalles de Terminal",
                 startingValue: {
@@ -28,10 +30,6 @@ patch(PaymentScreen.prototype, {
                 line.lot_number = payload.lot_number;
                 line.coupon_number = payload.coupon_number;
                 line.installments = payload.installments;
-            } else {
-                // If cancelled, maybe we shouldn't have added the line?
-                // Depending on requirements, we can keep it or delete it.
-                // We'll keep it but without details.
             }
         }
         return result;
