@@ -7,11 +7,14 @@ import { patch } from "@web/core/utils/patch";
 
 patch(PaymentScreen.prototype, {
     async addNewPaymentLine(paymentMethod) {
+        // Guard: skip if no valid payment method (e.g. category object or undefined)
+        if (!paymentMethod || paymentMethod.is_category) return;
+
         const result = await super.addNewPaymentLine(...arguments);
         
         // If the method requires terminal details, show popup
-        if (result && paymentMethod.use_terminal_details) {
-            const line = this.currentOrder.selected_paymentline;
+        const line = this.currentOrder.selected_paymentline;
+        if (result && paymentMethod.use_terminal_details && line) {
             const payload = await makeAwaitable(this.dialog, TerminalDetailsPopup, {
                 title: "Detalles de Terminal",
                 startingValue: {
