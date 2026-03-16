@@ -11,7 +11,7 @@
             </div>
 
             <!-- Top Level Payment Categories View -->
-            <div t-if="!state.activePaymentCategory" class="paymentmethods d-flex flex-column gap-2 mb-3 overflow-y-auto w-100" style="max-height: 100%; flex-shrink: 1;">
+            <div t-if="!state.activePaymentCategory" class="paymentmethods d-flex flex-column gap-2 mb-3 overflow-y-auto w-100" style="flex: 1 1 0; min-height: 0;">
                 <t t-foreach="paymentCategories" t-as="category" t-key="category.id">
                     <button 
                         class="btn btn-light d-flex align-items-center bg-white border rounded p-3 text-start shadow-sm flex-shrink-0"
@@ -31,7 +31,7 @@
         <!-- Replace the loop array to use our new filtered getter and add scrolling to the parent node -->
         <xpath expr="//div[hasclass('paymentmethods')]" position="attributes">
             <attribute name="class" add="overflow-y-auto w-100" separator=" "/>
-            <attribute name="style">max-height: 100%; flex-shrink: 1;</attribute>
+            <attribute name="style">flex: 1 1 0; min-height: 0;</attribute>
         </xpath>
         <xpath expr="//t[@t-foreach='payment_methods_from_config']" position="attributes">
             <attribute name="t-foreach">displayedPaymentMethods</attribute>

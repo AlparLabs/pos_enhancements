@@ -1,9 +1,8 @@
 /** @odoo-module **/
 
-import { AbstractAwaitablePopup } from "@point_of_sale/app/popup/abstract_awaitable_popup";
-import { useState } from "@odoo/owl";
+import { Component, useState } from "@odoo/owl";
 
-export class TerminalDetailsPopup extends AbstractAwaitablePopup {
+export class TerminalDetailsPopup extends Component {
     static template = "pos_payment_card_details.TerminalDetailsPopup";
 
     setup() {
@@ -15,11 +14,17 @@ export class TerminalDetailsPopup extends AbstractAwaitablePopup {
         });
     }
 
-    getPayload() {
-        return {
+    confirm() {
+        this.props.getPayload({
             lot_number: this.state.lot_number,
             coupon_number: this.state.coupon_number,
             installments: parseInt(this.state.installments) || 1,
-        };
+        });
+        this.props.close();
+    }
+
+    cancel() {
+        this.props.close();
     }
 }
+
