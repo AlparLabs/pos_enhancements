@@ -25,17 +25,12 @@
         <!-- Render a folder button before the native div for category items -->
         <xpath expr="//div[hasclass('paymentmethod')]" position="before">
             <t t-if="paymentMethod.is_category">
-                <!-- Our Custom Category Folder Button -->
+                <!-- Category Folder Button — same base classes as the native button to preserve scroll layout -->
                 <button
-                    class="btn btn-light d-flex align-items-center bg-white border rounded p-3 text-start shadow-sm mx-1 my-1 flex-shrink-0"
-                    style="cursor: pointer; transition: all 0.2s ease-in-out;"
+                    class="button paymentmethod btn btn-light btn-lg lh-lg flex-fill d-flex align-items-center gap-2"
                     t-on-click="() => this.clickPaymentCategory(paymentMethod)">
-                    <div class="border d-flex align-items-center justify-content-center me-3" style="width: 40px; height: 30px; border-radius: 4px;">
-                        <i class="fa fa-folder text-dark" style="font-size: 1.2rem;"/>
-                    </div>
-                    <span class="fw-bold fs-5 text-dark" style="font-family: 'Odoo Unicode Support Noto', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;">
-                        <t t-esc="paymentMethod.name" />
-                    </span>
+                    <i class="fa fa-folder text-muted"/>
+                    <span class="fw-bold"><t t-esc="paymentMethod.name"/></span>
                 </button>
             </t>
         </xpath>
