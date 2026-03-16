@@ -30,12 +30,14 @@ patch(PaymentScreen.prototype, {
         // If a category is selected, ONLY show methods belonging to that category
         if (this.state.activePaymentCategory) {
             items = this.original_payment_methods.filter(
-                (method) => method.category_id && method.category_id[0] === this.state.activePaymentCategory.id
+                (method) => method.category_id && method.category_id[0] === this.state.activePaymentCategory.original_id
             );
         } else {
             // Include top-level categories
             const categories = this.paymentCategories.map(cat => ({
                 ...cat,
+                original_id: cat.id,
+                id: `category_${cat.id}`, // the xml uses t-key="paymentMethod.id"
                 is_category: true, // Marker for the XML template
             }));
             
@@ -51,7 +53,7 @@ patch(PaymentScreen.prototype, {
 
     clickPaymentCategory(category) {
         // Toggle the category selection on and off
-        if (this.state.activePaymentCategory && this.state.activePaymentCategory.id === category.id) {
+        if (this.state.activePaymentCategory && this.state.activePaymentCategory.original_id === category.original_id) {
             this.state.activePaymentCategory = null;
         } else {
             this.state.activePaymentCategory = category;
