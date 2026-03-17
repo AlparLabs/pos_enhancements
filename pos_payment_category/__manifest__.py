@@ -1,6 +1,6 @@
 {
     'name': 'POS Payment Category',
-    'version': '18.0.1.0.0',
+    'version': '18.0.1.0.2',
     'category': 'Sales/Point of Sale',
     'summary': 'Group payment methods into categories (e.g., Terminals, QR) for a cleaner POS UI.',
     'description': """
@@ -21,6 +21,7 @@ will display the payment methods inside it. Uncategorized payment methods rest o
             'pos_payment_category/static/src/app/models/pos_payment_category.js',
             'pos_payment_category/static/src/app/payment_screen.js',
             'pos_payment_category/static/src/app/payment_screen.xml',
+            'pos_payment_category/static/src/app/payment_screen.scss',
         ],
     },
     'installable': True,

@@ -15,33 +15,42 @@ patch(PaymentScreen.prototype, {
     },
 
     get paymentCategories() {
-        return this.pos.models['pos.payment.category'] ? this.pos.models['pos.payment.category'].getAll() : [];
+        return this.pos.models['pos.payment.category']?.getAll() ?? [];
     },
 
-    get displayedPaymentMethods() {
-        // We provide a new getter for the UI to loop over instead of the static core list
+    get filteredPaymentMethods() {
         const allMethods = this.payment_methods_from_config;
-        if (!allMethods) {
-            return [];
-        }
-        
-        // If a category is selected, ONLY show methods belonging to that category
+
         if (this.state.activePaymentCategory) {
+            // Only show methods belonging to the selected category
             return allMethods.filter(
-                (method) => method.category_id && method.category_id.id === this.state.activePaymentCategory.id
+                (m) => m.category_id && m.category_id.id === this.state.activePaymentCategory.original_id
             );
         }
 
-        // If NO category is selected, show only methods that DO NOT have a category assigned
-        return allMethods.filter((method) => !method.category_id);
+        // Top-level view: categories as folder objects + uncategorized methods
+        const cats = this.paymentCategories.map((cat) => ({
+            id: `category_${cat.id}`,
+            original_id: cat.id,
+            name: cat.name,
+            is_category: true,
+        }));
+        const loose = allMethods.filter((m) => !m.category_id);
+        return [...cats, ...loose];
     },
 
     clickPaymentCategory(category) {
         // Toggle the category selection on and off
-        if (this.state.activePaymentCategory && this.state.activePaymentCategory.id === category.id) {
+        if (this.state.activePaymentCategory?.id === category.id) {
             this.state.activePaymentCategory = null;
         } else {
             this.state.activePaymentCategory = category;
         }
+    },
+
+    // Guard addNewPaymentLine against being called with a category object or undefined
+    async addNewPaymentLine(paymentMethod) {
+        if (!paymentMethod || paymentMethod.is_category) return;
+        return super.addNewPaymentLine(...arguments);
     },
 });
