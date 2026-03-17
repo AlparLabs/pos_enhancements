@@ -29,7 +29,7 @@ patch(PaymentScreen.prototype, {
             if (!terminalDetails) {
                 // User cancelled — remove the payment line we just added
                 if (line) {
-                    this.currentOrder.removePaymentline(line);
+                    this.currentOrder.remove_paymentline(line);
                 }
                 return;
             }
