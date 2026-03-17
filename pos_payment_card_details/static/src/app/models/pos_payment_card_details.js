@@ -12,6 +12,14 @@ patch(PosPayment.prototype, {
         this.installments = vals.installments || 1;
     },
 
+    export_as_JSON() {
+        const json = super.export_as_JSON(...arguments);
+        json.lot_number = this.lot_number;
+        json.coupon_number = this.coupon_number;
+        json.installments = this.installments;
+        return json;
+    },
+
     export_for_printing() {
         const result = super.export_for_printing(...arguments);
         result.lot_number = this.lot_number;
