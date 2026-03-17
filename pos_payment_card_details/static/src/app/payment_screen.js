@@ -30,13 +30,18 @@ patch(PaymentScreen.prototype, {
 
         const result = await super.addNewPaymentLine(...arguments);
 
-        // Write the captured details onto the newly created payment line
+        // Write the captured details onto the newly created payment line.
+        // In Odoo 18, PosPayment extends Base (a reactive model). Fields must
+        // be set via update() so the reactive tracking picks them up and
+        // syncs them to the backend automatically.
         if (terminalDetails) {
             const line = this.currentOrder.selected_paymentline;
             if (line) {
-                line.lot_number = terminalDetails.lot_number;
-                line.coupon_number = terminalDetails.coupon_number;
-                line.installments = terminalDetails.installments;
+                line.update({
+                    lot_number: terminalDetails.lot_number,
+                    coupon_number: terminalDetails.coupon_number,
+                    installments: terminalDetails.installments,
+                });
             }
         }
 
