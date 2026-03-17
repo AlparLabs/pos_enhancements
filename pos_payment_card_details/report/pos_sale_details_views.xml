@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
     <template id="report_saledetails_card_details" inherit_id="point_of_sale.report_saledetails">
-        <!-- We append our card transactions table at the end of the report, before the final closing div/br -->
-        <xpath expr="//div[hasclass('text-center')][last()]" position="before">
+        <!-- We append our card transactions table at the end of the report -->
+        <xpath expr="//div[hasclass('page')]" position="inside">
             <t t-if="card_details_by_payment_method and len(card_details_by_payment_method) > 0">
                 <br/>
                 <h3>Card Transactions</h3>
