@@ -10,13 +10,14 @@ patch(PaymentScreen.prototype, {
         // Guard: skip if no valid payment method (e.g. category object or undefined)
         if (!paymentMethod || paymentMethod.is_category) return;
 
-        // If this payment method requires terminal details, show the popup FIRST —
-        // before calling super. Odoo's original addNewPaymentLine may auto-validate
-        // the order (and close the payment screen) if the amount fully covers the
-        // total, so any popup shown AFTER super would appear on an already-closed screen.
-        let terminalDetails = null;
+        // Call super FIRST so the payment line is fully created (pos_order_id, etc.)
+        const result = await super.addNewPaymentLine(...arguments);
+
+        // After super, show the popup if this payment method requires terminal details
         if (paymentMethod.use_terminal_details) {
-            terminalDetails = await makeAwaitable(this.env.services.dialog, TerminalDetailsPopup, {
+            const line = this.currentOrder.selected_paymentline;
+
+            const terminalDetails = await makeAwaitable(this.env.services.dialog, TerminalDetailsPopup, {
                 title: "Detalles de Terminal",
                 startingValue: {
                     lot_number: "",
@@ -24,18 +25,17 @@ patch(PaymentScreen.prototype, {
                     installments: 1,
                 }
             });
-            // If the cashier cancelled the popup, abort adding the payment line
-            if (!terminalDetails) return;
-        }
 
-        const result = await super.addNewPaymentLine(...arguments);
+            if (!terminalDetails) {
+                // User cancelled — remove the payment line we just added
+                if (line) {
+                    this.currentOrder.removePaymentline(line);
+                }
+                return;
+            }
 
-        // Write the captured details onto the newly created payment line.
-        // In Odoo 18, PosPayment extends Base (a reactive model). Fields must
-        // be set via update() so the reactive tracking picks them up and
-        // syncs them to the backend automatically.
-        if (terminalDetails) {
-            const line = this.currentOrder.selected_paymentline;
+            // Write the captured details via update() so the reactive
+            // Base model tracking will sync them to the backend.
             if (line) {
                 line.update({
                     lot_number: terminalDetails.lot_number,
