@@ -7,16 +7,20 @@ import { patch } from "@web/core/utils/patch";
 
 patch(PaymentScreen.prototype, {
     async addNewPaymentLine(paymentMethod) {
-        // Guard: skip if no valid payment method (e.g. category object or undefined)
+        // Guard: skip if no valid payment method
         if (!paymentMethod || paymentMethod.is_category) return;
 
-        // If this payment method requires terminal details, show the popup FIRST —
-        // before calling super. Odoo's original addNewPaymentLine may auto-validate
-        // the order (and close the payment screen) if the amount fully covers the
-        // total, so any popup shown AFTER super would appear on an already-closed screen.
-        let terminalDetails = null;
+        // Call super FIRST so the payment line is fully created
+        const result = await super.addNewPaymentLine(...arguments);
+
+        // After super, show the popup if this payment method requires terminal details
         if (paymentMethod.use_terminal_details) {
-            terminalDetails = await makeAwaitable(this.env.services.dialog, TerminalDetailsPopup, {
+
+            // CORRECCIÓN: Obtener la línea de forma segura en Odoo 18
+            const order = this.currentOrder;
+            const line = order.get_selected_paymentline?.() || order.payment_ids[order.payment_ids.length - 1];
+
+            const terminalDetails = await makeAwaitable(this.env.services.dialog, TerminalDetailsPopup, {
                 title: "Detalles de Terminal",
                 startingValue: {
                     lot_number: "",
@@ -24,15 +28,16 @@ patch(PaymentScreen.prototype, {
                     installments: 1,
                 }
             });
-            // If the cashier cancelled the popup, abort adding the payment line
-            if (!terminalDetails) return;
-        }
 
-        const result = await super.addNewPaymentLine(...arguments);
+            if (!terminalDetails) {
+                // User cancelled — remove the payment line we just added
+                if (line) {
+                    order.remove_paymentline(line);
+                }
+                return;
+            }
 
-        // Write the captured details onto the newly created payment line
-        if (terminalDetails) {
-            const line = this.currentOrder.selected_paymentline;
+            // Set the captured details directly on the object.
             if (line) {
                 line.lot_number = terminalDetails.lot_number;
                 line.coupon_number = terminalDetails.coupon_number;

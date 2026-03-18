@@ -1,6 +1,6 @@
 {
     'name': 'POS Payment Card Details',
-    'version': '18.0.1.0.0',
+    'version': '18.0.1.0.1',
     'category': 'Sales/Point of Sale',
     'summary': 'Add Lot Number, Coupon, and Installments to POS payments for banking conciliation.',
     'description': """
@@ -17,6 +17,7 @@ This is useful for banking conciliation where payments from physical terminals m
     'data': [
         'views/pos_payment_method_views.xml',
         'views/pos_payment_views.xml',
+        # 'report/pos_sale_details_views.xml',  # stashed
     ],
     'assets': {
         'point_of_sale._assets_pos': [
