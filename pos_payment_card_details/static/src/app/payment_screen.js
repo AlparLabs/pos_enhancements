@@ -7,15 +7,18 @@ import { patch } from "@web/core/utils/patch";
 
 patch(PaymentScreen.prototype, {
     async addNewPaymentLine(paymentMethod) {
-        // Guard: skip if no valid payment method (e.g. category object or undefined)
+        // Guard: skip if no valid payment method
         if (!paymentMethod || paymentMethod.is_category) return;
 
-        // Call super FIRST so the payment line is fully created (pos_order_id, etc.)
+        // Call super FIRST so the payment line is fully created
         const result = await super.addNewPaymentLine(...arguments);
 
         // After super, show the popup if this payment method requires terminal details
         if (paymentMethod.use_terminal_details) {
-            const line = this.currentOrder.selected_paymentline;
+
+            // CORRECCIÓN: Obtener la línea de forma segura en Odoo 18
+            const order = this.currentOrder;
+            const line = order.get_selected_paymentline?.() || order.payment_ids[order.payment_ids.length - 1];
 
             const terminalDetails = await makeAwaitable(this.env.services.dialog, TerminalDetailsPopup, {
                 title: "Detalles de Terminal",
@@ -29,14 +32,12 @@ patch(PaymentScreen.prototype, {
             if (!terminalDetails) {
                 // User cancelled — remove the payment line we just added
                 if (line) {
-                    this.currentOrder.remove_paymentline(line);
+                    order.remove_paymentline(line);
                 }
                 return;
             }
 
             // Set the captured details directly on the object.
-            // We do NOT use line.update() because it silently drops fields that
-            // aren't loaded in the base schema via _load_pos_data_fields.
             if (line) {
                 line.lot_number = terminalDetails.lot_number;
                 line.coupon_number = terminalDetails.coupon_number;
