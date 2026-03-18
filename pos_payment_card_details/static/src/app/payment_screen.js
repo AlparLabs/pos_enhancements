@@ -34,14 +34,13 @@ patch(PaymentScreen.prototype, {
                 return;
             }
 
-            // Write the captured details via update() so the reactive
-            // Base model tracking will sync them to the backend.
+            // Set the captured details directly on the object.
+            // We do NOT use line.update() because it silently drops fields that
+            // aren't loaded in the base schema via _load_pos_data_fields.
             if (line) {
-                line.update({
-                    lot_number: terminalDetails.lot_number,
-                    coupon_number: terminalDetails.coupon_number,
-                    installments: terminalDetails.installments,
-                });
+                line.lot_number = terminalDetails.lot_number;
+                line.coupon_number = terminalDetails.coupon_number;
+                line.installments = terminalDetails.installments;
             }
         }
 
