@@ -1,0 +1,29 @@
+{
+    'name': 'POS Restaurant Courses Backport',
+    'version': '18.0.1.0.0',
+    'category': 'Point of Sale',
+    'summary': 'Backport Odoo 19 Courses feature to Odoo 18',
+    'depends': ['pos_restaurant'],
+    'data': [
+        'security/ir.model.access.csv',
+        'views/pos_course_views.xml',
+    ],
+    'assets': {
+        'point_of_sale._assets_pos': [
+            'pos_restaurant_courses/static/src/app/models/restaurant_order_course.js',
+            'pos_restaurant_courses/static/src/app/models/pos_order.js',
+            'pos_restaurant_courses/static/src/app/models/pos_orderline.js',
+            'pos_restaurant_courses/static/src/app/store/pos_store.js',
+            'pos_restaurant_courses/static/src/app/components/order_course/order_course.js',
+            'pos_restaurant_courses/static/src/app/components/order_course/order_course.xml',
+            'pos_restaurant_courses/static/src/app/components/order_course/order_course.css',
+            'pos_restaurant_courses/static/src/app/screens/product_screen/order_summary/order_summary.xml',
+            'pos_restaurant_courses/static/src/app/screens/product_screen/order_summary/order_widget_patch.js',
+            'pos_restaurant_courses/static/src/app/screens/product_screen/control_buttons/control_buttons.xml',
+            'pos_restaurant_courses/static/src/app/store/order_change_receipt_patch.js',
+            'pos_restaurant_courses/static/src/app/store/order_change_receipt_template.xml',
+        ],
+    },
+    'installable': True,
+    'license': 'LGPL-3',
+}

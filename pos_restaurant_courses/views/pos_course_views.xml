@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="pos_course_view_form" model="ir.ui.view">
+        <name>pos.course.view.form</name>
+        <model>pos.course</model>
+        <arch type="xml">
+            <form string="POS Course">
+                <sheet>
+                    <group>
+                        <field name="name"/>
+                        <field name="sequence"/>
+                    </group>
+                    <notebook>
+                        <page string="Categories" name="categories">
+                            <field name="category_ids">
+                                <list>
+                                    <field name="name"/>
+                                </list>
+                            </field>
+                        </page>
+                    </notebook>
+                </sheet>
+            </form>
+        </arch>
+    </record>
+
+    <record id="pos_course_view_tree" model="ir.ui.view">
+        <name>pos.course.view.list</name>
+        <model>pos.course</model>
+        <arch type="xml">
+            <list string="POS Courses" editable="bottom">
+                <field name="sequence" widget="handle"/>
+                <field name="name"/>
+            </list>
+        </arch>
+    </record>
+
+    <record id="pos_course_action" model="ir.actions.act_window">
+        <name>Courses</name>
+        <res_model>pos.course</res_model>
+        <view_mode>list,form</view_mode>
+    </record>
+
+    <menuitem id="menu_pos_course"
+              name="Courses"
+              parent="point_of_sale.menu_point_config_product"
+              action="pos_course_action"
+              sequence="20"/>
+</odoo>

@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates id="template" xml:space="preserve">
+    <t t-name="pos_restaurant_courses.OrderChangeReceipt" t-inherit="point_of_sale.OrderChangeReceipt" t-inherit-mode="extension">
+        <xpath expr="//div[@t-foreach='changedlines']" position="replace">
+            <t t-foreach="changedByCourse" t-as="group" t-key="group.id">
+                <div class="pos-receipt-title text-center mb-1" t-if="group.name" 
+                     style="font-size: 110%; border-bottom: 1px dashed black; background-color: #eee;">
+                    --- <t t-esc="group.name"/> ---
+                </div>
+                <div t-foreach="group.lines" t-as="line" t-key="line_index" style="font-size: 120%;">
+                    <div t-attf-class="orderline #{line.isCombo ? 'mx-5 px-2' : 'mx-1'}">
+                        <div class="d-flex medium">
+                            <span class="me-3" t-esc="line.quantity"/>
+                            <span class="product-name" t-esc="line.name"/>
+                        </div>
+                        <t t-if="line.note">
+                            <div class="pos-receipt-note ms-3 small">
+                                <t t-esc="line.note" />
+                            </div>
+                        </t>
+                        <t t-if="line.customer_note">
+                            <div class="pos-receipt-note ms-3 small">
+                                <t t-esc="line.customer_note" />
+                            </div>
+                        </t>
+                    </div>
+                </div>
+            </t>
+        </xpath>
+    </t>
+</templates>

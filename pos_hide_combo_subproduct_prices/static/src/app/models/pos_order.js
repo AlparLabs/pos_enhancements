@@ -34,13 +34,15 @@ patch(PosOrder.prototype, {
         
         for (const [uuid, lineData] of Object.entries(changes)) {
             // Identify lines that should be grouped together.
-            // We group by product name, internal note, and customer note.
+            // We group by product name, internal note, customer note, and course_id.
             // We include internalNote/customerNote because items with different 
             // instructions should remain separate for the kitchen.
+            const orderline = this.models["pos.order.line"].getBy("uuid", uuid);
             const key = JSON.stringify({
-                name: lineData.productName,
+                productName: lineData.name,
                 internalNote: lineData.internalNote || "",
                 customerNote: lineData.customerNote || "",
+                course_id: orderline?.course_id?.uuid || "",
             });
 
             if (grouped[key]) {
@@ -48,7 +50,7 @@ patch(PosOrder.prototype, {
             } else {
                 // Clone the first line of the group and use it as the base.
                 // We keep the first UUID encountered as the key for the resulting object.
-                grouped[key] = { ...lineData };
+                grouped[key] = { ...lineData, course_id: orderline?.course_id };
                 // We also store the original UUID to maintain Odoo's expected structure
                 // where keys are line-related identifiers, although any unique key
                 // would likely work for the template.
