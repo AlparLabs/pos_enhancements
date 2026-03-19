@@ -1,9 +1,9 @@
 /** @odoo-module **/
 
-import { Order } from "@point_of_sale/app/models/pos_order";
+import { PosOrder } from "@point_of_sale/app/models/pos_order";
 import { patch } from "@web/core/utils/patch";
 
-patch(Order.prototype, {
+patch(PosOrder.prototype, {
     /**
      * @override
      * Groups identical products in the kitchen receipt (Order Change Receipt).
