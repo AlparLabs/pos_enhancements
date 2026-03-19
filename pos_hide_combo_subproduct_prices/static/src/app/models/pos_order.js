@@ -30,26 +30,28 @@ patch(PosOrder.prototype, {
      * @returns {Array|Object} Grouped and sorted changes.
      */
     _groupKitchenChanges(changes) {
-        const isArray = Array.isArray(changes);
-        const iterableChanges = isArray ? changes : Object.values(changes);
-        
+        if (!changes || Object.keys(changes).length === 0) {
+            return changes;
+        }
+
         const grouped = {};
         
-        for (const lineData of iterableChanges) {
-            // Identify lines that should be grouped together.
-            // If lineData has `uuid` or `id`, use it. Otherwise try to match by name.
-            const uuidMatch = lineData.uuid || lineData.id || lineData.line_uuid;
-            let orderline = null;
-            if (uuidMatch) {
-                // In Odoo 18 models are usually indexed by uuid or id
-                orderline = this.models["pos.order.line"].getBy("uuid", uuidMatch) || this.models["pos.order.line"].getBy("id", uuidMatch);
-            }
-            if (!orderline) {
-                orderline = this.lines.find((l) => l.get_product().display_name === lineData.name || l.get_full_product_name() === lineData.name);
+        // changes is usually an Object { uuid: { name: '...', quantity: 1, ... } }
+        for (const [uuid, lineData] of Object.entries(changes)) {
+            // Find the orderline using the UUID (which is the key of the changes object)
+            // In Odoo 18, this should be the primary key in the UI
+            const orderline = this.models["pos.order.line"].getBy("uuid", uuid) 
+                            || this.models["pos.order.line"].getBy("id", uuid)
+                            || this.lines.find(l => l.uuid === uuid || l.id === uuid);
+
+            // Fallback to name match if UUID search fails (shouldn't happen)
+            let finalOrderline = orderline;
+            if (!finalOrderline) {
+                finalOrderline = this.lines.find((l) => l.get_product().display_name === lineData.name || l.get_full_product_name() === lineData.name);
             }
 
-            const course_uuid = orderline?.course_id?.uuid || "";
-            const category = orderline?.product_id?.pos_categ_ids?.[0];
+            const course_uuid = finalOrderline?.course_id?.uuid || "";
+            const category = finalOrderline?.product_id?.pos_categ_ids?.[0];
             const categorySequence = category?.sequence || 999;
             const categoryName = category?.name || "Z";
 
@@ -65,17 +67,19 @@ patch(PosOrder.prototype, {
             } else {
                 grouped[key] = { 
                     ...lineData, 
-                    course_id: orderline?.course_id,
+                    course_id: finalOrderline?.course_id,
                     pos_category_sequence: categorySequence,
-                    pos_category_name: categoryName
+                    pos_category_name: categoryName,
+                    _first_uuid: uuid // Track the first UUID of this group to use as a key
                 };
             }
         }
 
-        let result = Object.values(grouped);
+        // Convert grouped object to sorted list
+        let resultList = Object.values(grouped);
         
         // Sort by Category Sequence, then Category Name, then Product Name
-        result.sort((a, b) => {
+        resultList.sort((a, b) => {
             if (a.pos_category_sequence !== b.pos_category_sequence) {
                 return a.pos_category_sequence - b.pos_category_sequence;
             }
@@ -85,17 +89,14 @@ patch(PosOrder.prototype, {
             return a.name.localeCompare(b.name);
         });
 
-        // Return the same type as input (Odoo 18 get_changes usually uses Arrays)
-        if (isArray) {
-            return result;
-        } else {
-            const objResult = {};
-            // Using the original line's uuid or id as key if needed, or simply string index.
-            result.forEach((item, index) => {
-                const uuid = item.uuid || item.id || index;
-                objResult[uuid] = item;
-            });
-            return objResult;
-        }
+        // Map back to object with the first encounter UUID as key
+        const finalResult = {};
+        resultList.forEach((item) => {
+            const uuid = item._first_uuid;
+            delete item._first_uuid;
+            finalResult[uuid] = item;
+        });
+
+        return finalResult;
     }
 });
