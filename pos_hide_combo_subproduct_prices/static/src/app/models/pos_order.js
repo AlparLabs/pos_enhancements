@@ -25,47 +25,77 @@ patch(PosOrder.prototype, {
     },
 
     /**
-     * Helper to group change objects by product name and notes.
-     * @param {Object} changes - The changes object from get_changes().
-     * @returns {Object} Grouped changes.
+     * Helper to group change objects by product name and notes and sort by Category.
+     * @param {Array|Object} changes - The changes object from get_changes().
+     * @returns {Array|Object} Grouped and sorted changes.
      */
     _groupKitchenChanges(changes) {
+        const isArray = Array.isArray(changes);
+        const iterableChanges = isArray ? changes : Object.values(changes);
+        
         const grouped = {};
         
-        for (const [uuid, lineData] of Object.entries(changes)) {
+        for (const lineData of iterableChanges) {
             // Identify lines that should be grouped together.
-            // We group by product name, internal note, customer note, and course_id.
-            // We include internalNote/customerNote because items with different 
-            // instructions should remain separate for the kitchen.
-            const orderline = this.models["pos.order.line"].getBy("uuid", uuid);
+            // If lineData has `uuid` or `id`, use it. Otherwise try to match by name.
+            const uuidMatch = lineData.uuid || lineData.id || lineData.line_uuid;
+            let orderline = null;
+            if (uuidMatch) {
+                // In Odoo 18 models are usually indexed by uuid or id
+                orderline = this.models["pos.order.line"].getBy("uuid", uuidMatch) || this.models["pos.order.line"].getBy("id", uuidMatch);
+            }
+            if (!orderline) {
+                orderline = this.lines.find((l) => l.get_product().display_name === lineData.name || l.get_full_product_name() === lineData.name);
+            }
+
+            const course_uuid = orderline?.course_id?.uuid || "";
+            const category = orderline?.product_id?.pos_categ_ids?.[0];
+            const categorySequence = category?.sequence || 999;
+            const categoryName = category?.name || "Z";
+
             const key = JSON.stringify({
                 productName: lineData.name,
                 internalNote: lineData.internalNote || "",
                 customerNote: lineData.customerNote || "",
-                course_id: orderline?.course_id?.uuid || "",
+                course_uuid: course_uuid,
             });
 
             if (grouped[key]) {
                 grouped[key].quantity += lineData.quantity;
             } else {
-                // Clone the first line of the group and use it as the base.
-                // We keep the first UUID encountered as the key for the resulting object.
-                grouped[key] = { ...lineData, course_id: orderline?.course_id };
-                // We also store the original UUID to maintain Odoo's expected structure
-                // where keys are line-related identifiers, although any unique key
-                // would likely work for the template.
-                grouped[key]._original_uuid = uuid;
+                grouped[key] = { 
+                    ...lineData, 
+                    course_id: orderline?.course_id,
+                    pos_category_sequence: categorySequence,
+                    pos_category_name: categoryName
+                };
             }
         }
 
-        // Re-map grouped results back to an object indexed by some identifier.
-        // We use the first UUID of each group as the key.
-        const result = {};
-        for (const [key, data] of Object.entries(grouped)) {
-            result[data._original_uuid] = data;
-            delete data._original_uuid;
-        }
+        let result = Object.values(grouped);
+        
+        // Sort by Category Sequence, then Category Name, then Product Name
+        result.sort((a, b) => {
+            if (a.pos_category_sequence !== b.pos_category_sequence) {
+                return a.pos_category_sequence - b.pos_category_sequence;
+            }
+            if (a.pos_category_name !== b.pos_category_name) {
+                return a.pos_category_name.localeCompare(b.pos_category_name);
+            }
+            return a.name.localeCompare(b.name);
+        });
 
-        return result;
+        // Return the same type as input (Odoo 18 get_changes usually uses Arrays)
+        if (isArray) {
+            return result;
+        } else {
+            const objResult = {};
+            // Using the original line's uuid or id as key if needed, or simply string index.
+            result.forEach((item, index) => {
+                const uuid = item.uuid || item.id || index;
+                objResult[uuid] = item;
+            });
+            return objResult;
+        }
     }
 });
