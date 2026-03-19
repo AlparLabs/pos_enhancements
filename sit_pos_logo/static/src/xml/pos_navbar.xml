@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates id="template" xml:space="preserve">
+
+    <!-- Heredar el navbar para reemplazar el logo -->
+    <t t-name="sit_pos_logo.Navbar" t-inherit="point_of_sale.Navbar" t-inherit-mode="extension">
+        <xpath expr="//img[@class='pos-logo pos-logo mw-100']" position="replace">
+            <img t-if="pos.config.use_custom_logo and pos.config.pos_custom_logo" 
+                 class="pos-logo mw-100" 
+                 t-att-height="pos.config.pos_logo_height || 42"
+                 t-att-width="pos.config.pos_logo_width || 150"
+                 t-on-click="() => debug.toggleWidget()" 
+                 t-attf-src="/web/image/pos.config/#{pos.config.id}/pos_custom_logo" 
+                 alt="Logo POS" />
+            <img t-elif="pos.company.logo" 
+                 class="pos-logo mw-100" 
+                 height="42"
+                 t-on-click="() => debug.toggleWidget()" 
+                 t-attf-src="/web/image/res.company/#{pos.company.id}/logo" 
+                 alt="Logo" />
+            <span t-else="" 
+                  class="company-name-fallback text-uppercase fw-bold"
+                  t-on-click="() => debug.toggleWidget()" 
+                  t-esc="pos.company.name"/>
+        </xpath>
+    </t>
+
+</templates>

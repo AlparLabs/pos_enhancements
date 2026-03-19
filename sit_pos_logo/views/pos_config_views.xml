@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- Vista heredada para agregar campos de logo personalizado en pos.config -->
+    <record id="pos_config_view_form_custom_logo" model="ir.ui.view">
+        <field name="name">pos.config.form.custom.logo</field>
+        <field name="model">pos.config</field>
+        <field name="inherit_id" ref="point_of_sale.pos_config_view_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//div[@class='row mt16 o_settings_container'][last()]" position="after">
+                <group string="Logo Personalizado" name="custom_logo" class="mt-3">
+                    <group string="Configuracion del Logo">
+                        <field name="use_custom_logo"/>
+                        <field name="pos_custom_logo" 
+                               widget="binary" 
+                               filename="pos_custom_logo_filename"
+                               invisible="not use_custom_logo"/>
+                        <field name="pos_custom_logo_filename" invisible="1"/>
+                        <field name="pos_logo_width" 
+                               invisible="not use_custom_logo"/>
+                        <field name="pos_logo_height" 
+                               invisible="not use_custom_logo"/>
+                        <div class="oe_avatar" invisible="not use_custom_logo">
+                            <field name="pos_custom_logo" widget="image" 
+                                   class="oe_avatar" 
+                                   readonly="1"
+                                   options="{'preview_image': 'pos_custom_logo', 'size': [150, 50]}"/>
+                        </div>
+                        <div class="alert alert-info" role="alert" invisible="use_custom_logo">
+                            <p>
+                                <strong>Logo por defecto:</strong> Se usara el logo de la empresa configurado en 
+                                <em>Configuracion - Empresas</em>.
+                            </p>
+                        </div>
+                    </group>
+                </group>
+            </xpath>
+        </field>
+    </record>
+
+</odoo>
