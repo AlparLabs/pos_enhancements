@@ -1,19 +1,27 @@
 <templates id="template" xml:space="preserve">
     <t t-name="pos_restaurant_courses.OrderWidget" t-inherit="point_of_sale.OrderWidget" t-inherit-mode="extension">
         <xpath expr="//div[hasclass('order-container')]" position="replace">
-            <div class="order-container flex-grow-1 overflow-y-auto">
+            <div t-ref="scrollable" t-att-style="props.style" t-att-class="props.class" class="order-container d-flex flex-column flex-grow-1 overflow-y-auto text-start">
                 <t t-if="pos.config.module_pos_restaurant and pos.getOrder()?.hasCourses()">
                     <t t-foreach="pos.getOrder().courses" t-as="course" t-key="course.uuid">
                         <OrderCourse course="course" course_index="course_index">
                             <t t-slot-scope="course_scope">
-                                <Orderline line="course_scope.line" />
+                                <Orderline t-props="getLineProps(course_scope.line)" />
                             </t>
                         </OrderCourse>
                     </t>
                 </t>
                 <t t-else="">
-                    <t t-foreach="props.lines" t-as="line" t-key="line.id">
-                        <Orderline line="line" />
+                    <t t-if="!props.lines.length and props.emptyCart">
+                        <t t-component="props.emptyCart"/>
+                    </t>
+                    <t t-else="">
+                        <t t-foreach="props.lines" t-as="line" t-key="line.id">
+                            <Orderline t-props="getLineProps(line)"/>
+                            <t t-if="props.lines.length === 1 and line.productName === 'Tips'">
+                                <t t-component="props.emptyCart"/>
+                            </t>
+                        </t>
                     </t>
                 </t>
             </div>
