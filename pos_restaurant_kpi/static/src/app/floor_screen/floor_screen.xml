@@ -9,7 +9,7 @@
                 </div>
                 <div class="kpi-item d-flex flex-column align-items-center px-3">
                     <span class="text-muted smaller fw-bolder text-uppercase" style="font-size: 0.7rem;">Avg. Consumption</span>
-                    <span class="fs-4 fw-bolder text-success" t-esc="pos.format_currency(avgConsumption)"/>
+                    <span class="fs-4 fw-bolder text-success" t-esc="pos.env.utils.formatCurrency(avgConsumption)"/>
                 </div>
             </div>
         </xpath>
