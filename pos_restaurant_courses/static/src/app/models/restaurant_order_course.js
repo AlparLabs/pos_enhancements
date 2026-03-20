@@ -1,11 +1,19 @@
 /** @odoo-module **/
 
+import { uuidv4 } from "@point_of_sale/utils";
 import { registry } from "@web/core/registry";
 import { Base } from "@point_of_sale/app/models/related_models";
 import { _t } from "@web/core/l10n/translation";
 
 export class RestaurantOrderCourse extends Base {
     static pythonModel = "restaurant.order.course";
+
+    setup() {
+        super.setup(...arguments);
+        if (!this.uuid) {
+            this.uuid = uuidv4();
+        }
+    }
 
     get name() {
         return this.course_id?.name || _t("Course") + " " + this.index;
