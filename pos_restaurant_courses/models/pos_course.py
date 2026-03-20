@@ -19,6 +19,8 @@ class PosCourse(models.Model):
 
     @api.model
     def _load_pos_data_domain(self, data):
+        if not data.get('pos.config') or not data['pos.config'].get('data'):
+            return [('id', '=', False)]
         config_id = self.env['pos.config'].browse(data['pos.config']['data'][0]['id'])
         pos_categ = config_id.limit_categories and config_id.iface_available_categ_ids.ids or []
         if not pos_categ:

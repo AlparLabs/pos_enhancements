@@ -7,16 +7,8 @@ class PosOrder(models.Model):
 
     @api.model
     def _load_pos_data_fields(self, config_id):
-        # Odoo 18 pos.order might not have _load_pos_data_fields in the base module (returns [] from mixin).
-        # We ensure essential fields are present so the POS can display the synchronized order correctly.
         base_fields = super()._load_pos_data_fields(config_id)
-        if not base_fields:
-            base_fields = [
-                'name', 'amount_total', 'amount_tax', 'amount_paid', 'amount_return',
-                'pos_reference', 'state', 'session_id', 'partner_id', 'lines',
-                'payment_ids', 'fiscal_position_id', 'uuid', 'date_order',
-                'table_id', 'customer_count',
-            ]
+        # Odoo 18 does not define any fields for pos.order in _load_pos_data_fields by default.
         return list(set(base_fields + ["course_ids"]))
 
     def read_pos_data(self, data, config_id):
