@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="pos_category_view_form_inherit_kitchen_grouping" model="ir.ui.view">
+        <field name="name">pos.category.form.inherit.kitchen.grouping</field>
+        <field name="model">pos.category</field>
+        <field name="inherit_id" ref="point_of_sale.product_pos_category_form_view"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='sequence']" position="after">
+                <field name="kitchen_sequence" />
+            </xpath>
+        </field>
+    </record>
+    
+    <record id="pos_category_view_tree_inherit_kitchen_grouping" model="ir.ui.view">
+        <field name="name">pos.category.tree.inherit.kitchen.grouping</field>
+        <field name="model">pos.category</field>
+        <field name="inherit_id" ref="point_of_sale.product_pos_category_tree_view"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='sequence']" position="after">
+                <field name="kitchen_sequence" optional="show" />
+            </xpath>
+        </field>
+    </record>
+</odoo>
