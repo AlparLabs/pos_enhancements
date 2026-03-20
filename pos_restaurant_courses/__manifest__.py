@@ -13,6 +13,7 @@
             'pos_restaurant_courses/static/src/app/models/restaurant_order_course.js',
             'pos_restaurant_courses/static/src/app/models/pos_order.js',
             'pos_restaurant_courses/static/src/app/models/pos_orderline.js',
+            'pos_restaurant_courses/static/src/app/models/restaurant_table_patch.js',
             'pos_restaurant_courses/static/src/app/store/pos_store.js',
             'pos_restaurant_courses/static/src/app/components/order_course/order_course.js',
             'pos_restaurant_courses/static/src/app/components/order_course/order_course.xml',

@@ -8,6 +8,26 @@ patch(PosOrder.prototype, {
         super.setup(...arguments);
         this.uiState.selected_course_uuid = undefined;
     },
+    async add_product(product, options) {
+        options = options || {};
+        if (this.hasCourses()) {
+            let course = this.getSelectedCourse();
+            if (!course) {
+                course = this.getLastCourse();
+            }
+            if (course) {
+                options = { ...options, course_id: course };
+                this.selectCourse(course);
+            }
+        }
+        return super.add_product(product, options);
+    },
+    get taxTotals() {
+        if (!this.payment_ids) {
+            this.payment_ids = [];
+        }
+        return super.taxTotals;
+    },
     cleanCourses() {
         if (!this.hasCourses()) {
             return;
