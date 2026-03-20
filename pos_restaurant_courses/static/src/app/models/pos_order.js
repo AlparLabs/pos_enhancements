@@ -8,6 +8,12 @@ patch(PosOrder.prototype, {
         super.setup(...arguments);
         this.uiState.selected_course_uuid = undefined;
     },
+    get taxTotals() {
+        if (!this.payment_ids) {
+            this.payment_ids = [];
+        }
+        return super.taxTotals;
+    },
     cleanCourses() {
         if (!this.hasCourses()) {
             return;
