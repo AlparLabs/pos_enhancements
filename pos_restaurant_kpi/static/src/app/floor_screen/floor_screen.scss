@@ -1,0 +1,14 @@
+.kpi-bar {
+    border-left: 1px solid #dee2e6;
+    height: 100%;
+    .kpi-item {
+        border-right: 1px solid #eee;
+        &:last-child {
+            border-right: none;
+        }
+        .text-muted {
+            letter-spacing: 0.05rem;
+            color: #6c757d !important;
+        }
+    }
+}

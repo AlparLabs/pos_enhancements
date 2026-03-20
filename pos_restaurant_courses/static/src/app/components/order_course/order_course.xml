@@ -1,0 +1,16 @@
+<templates id="template" xml:space="preserve">
+    <t t-name="pos_restaurant_courses.OrderCourse">
+        <div t-att-class="{'mb-1' : course.isEmpty()}">
+            <div class="order-course-name p-2 text-truncate d-flex"
+                 t-att-style="course.isSelected() ? 'background-color: #d1ecf1; border-left: 4px solid #0c5460;' : 'background-color: #f8f9fa; border-bottom: 1px solid #dee2e6;'"
+                 t-att-class="{'cursor-pointer': !course.fired}"
+                 t-on-click="(event) => this.clickCourse(event, course)">
+                <span class="fw-bolder" t-out="course.name"/>
+                <span t-if="course.fired" class="rounded text-bg-info fs-6 px-2 ms-auto" style="font-size: 0.8em;">Fired</span>
+            </div>
+            <t t-foreach="comboSortedLines" t-as="line" t-key="line.uuid">
+                <t t-slot="default" line="line" />
+            </t>
+        </div>
+    </t>
+</templates>
