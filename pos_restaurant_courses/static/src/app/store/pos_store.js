@@ -5,9 +5,9 @@ import { patch } from "@web/core/utils/patch";
 import { _t } from "@web/core/l10n/translation";
 
 patch(PosStore.prototype, {
-    setOrder(order) {
+    set_order(order) {
         order?.ensureCourseSelection();
-        super.setOrder(order);
+        super.set_order(...arguments);
     },
     addCourse({ backendCourse } = {}) {
         const order = this.get_order();

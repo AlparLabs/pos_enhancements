@@ -6,9 +6,6 @@ import { patch } from "@web/core/utils/patch";
 patch(PosOrder.prototype, {
     setup() {
         super.setup(...arguments);
-    },
-    initState() {
-        super.initState();
         this.uiState.selected_course_uuid = undefined;
     },
     cleanCourses() {
@@ -70,7 +67,7 @@ patch(PosOrder.prototype, {
     selectCourse(course) {
         if (course) {
             this.uiState.selected_course_uuid = course.uuid;
-            this.deselectOrderline();
+            this.deselect_orderline();
         } else {
             this.uiState.selected_course_uuid = undefined;
         }
