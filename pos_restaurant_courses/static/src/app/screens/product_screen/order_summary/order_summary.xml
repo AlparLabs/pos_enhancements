@@ -6,24 +6,24 @@
                     <t t-foreach="env.services.pos.get_order().courses" t-as="course" t-key="course.uuid">
                         <OrderCourse course="course" course_index="course_index">
                             <t t-slot-scope="course_scope">
-                                <Orderline t-props="getLineProps(course_scope.line)" />
+                                <t t-if="props.slots?.default" t-slot="default" line="course_scope.line"/>
+                                <Orderline t-else="" line="course_scope.line" />
                             </t>
                         </OrderCourse>
                     </t>
                 </t>
                 <t t-else="">
-                    <t t-if="!props.lines.length and props.emptyCart">
-                        <t t-component="props.emptyCart"/>
-                    </t>
-                    <t t-else="">
-                        <t t-foreach="props.lines" t-as="line" t-key="line.id">
-                            <Orderline t-props="getLineProps(line)"/>
-                            <t t-if="props.lines.length === 1 and line.productName === 'Tips'">
-                                <t t-component="props.emptyCart"/>
-                            </t>
-                        </t>
+                    <t t-foreach="props.lines" t-as="line" t-key="line_index">
+                        <t t-if="props.slots?.default" t-slot="default" line="line"/>
+                        <Orderline t-else="" line="line" />
                     </t>
                 </t>
+                <div class="mt-1 bg-opacity-75" t-attf-class="{{ props.screenName == 'ReceiptScreen' ? 'p-0' : 'p-2 border-bottom border-top border-opacity-75'}}" t-if="props.generalNote">
+                    <b class="fw-bolder">General Note</b>
+                    <t t-foreach="props.generalNote.split('\n')" t-as="subNote" t-key="subNote_index">
+                        <br/>• <t t-esc="subNote"/>
+                    </t>
+                </div>
             </div>
         </xpath>
     </t>
