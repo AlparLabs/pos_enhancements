@@ -75,6 +75,21 @@ patch(PosOrder.prototype, {
             this.uiState.selected_course_uuid = undefined;
         }
     },
+    removeCourse(course) {
+        const courseLines = this.get_orderlines().filter((l) => l.course_id?.uuid === course.uuid);
+        for (const line of courseLines) {
+            line.course_id = false;
+        }
+        this.course_ids.splice(
+            this.course_ids.findIndex((c) => c.uuid === course.uuid),
+            1
+        );
+        course.delete();
+        if (this.uiState.selected_course_uuid === course.uuid) {
+            this.uiState.selected_course_uuid = false;
+            this.ensureCourseSelection();
+        }
+    },
     getSelectedCourse() {
         if (!this.uiState.selected_course_uuid) {
             return;

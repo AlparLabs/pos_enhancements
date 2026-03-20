@@ -2,8 +2,8 @@
     <t t-name="pos_restaurant_courses.OrderWidget" t-inherit="point_of_sale.OrderWidget" t-inherit-mode="extension">
         <xpath expr="//div[hasclass('order-container')]" position="replace">
             <div t-ref="scrollable" t-att-style="props.style" t-att-class="props.class" class="order-container d-flex flex-column flex-grow-1 overflow-y-auto text-start">
-                <t t-if="pos.config.module_pos_restaurant and pos.getOrder()?.hasCourses()">
-                    <t t-foreach="pos.getOrder().courses" t-as="course" t-key="course.uuid">
+                <t t-if="env.services.pos.config.module_pos_restaurant and env.services.pos.get_order()?.hasCourses()">
+                    <t t-foreach="env.services.pos.get_order().courses" t-as="course" t-key="course.uuid">
                         <OrderCourse course="course" course_index="course_index">
                             <t t-slot-scope="course_scope">
                                 <Orderline t-props="getLineProps(course_scope.line)" />
