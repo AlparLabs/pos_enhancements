@@ -1,7 +1,7 @@
 <templates id="template" xml:space="preserve">
     <t t-name="pos_restaurant_courses.OrderChangeReceipt" t-inherit="point_of_sale.OrderChangeReceipt" t-inherit-mode="extension">
         <xpath expr="//div[@t-foreach='changedlines']" position="replace">
-            <t t-foreach="changedByCourse" t-as="group" t-key="group.id">
+            <t t-foreach="changedlines.changedByCourse" t-as="group" t-key="group.id">
                 <div class="pos-receipt-title text-center mb-1" t-if="group.name" 
                      style="font-size: 110%; border-bottom: 1px dashed black; background-color: #eee;">
                     --- <t t-esc="group.name"/> ---
