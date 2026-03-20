@@ -18,8 +18,9 @@ class PosCourse(models.Model):
     ]
 
     @api.model
-    def _load_pos_data_domain(self, data, config):
-        pos_categ = config.limit_categories and config.iface_available_categ_ids.ids or []
+    def _load_pos_data_domain(self, data):
+        config_id = self.env['pos.config'].browse(data['pos.config']['data'][0]['id'])
+        pos_categ = config_id.limit_categories and config_id.iface_available_categ_ids.ids or []
         if not pos_categ:
             available_categ_ids = self.env['pos.category'].search([]).ids
         else:
@@ -27,5 +28,5 @@ class PosCourse(models.Model):
         return [('category_ids', 'in', available_categ_ids)]
 
     @api.model
-    def _load_pos_data_fields(self, config):
+    def _load_pos_data_fields(self, config_id):
         return ['name', 'sequence', 'category_ids']
