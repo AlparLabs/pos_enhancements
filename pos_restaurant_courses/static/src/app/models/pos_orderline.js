@@ -7,7 +7,7 @@ patch(PosOrderline.prototype, {
     setup() {
         super.setup(...arguments);
     },
-    canBeMergedWith(orderline) {
+    can_be_merged_with(orderline) {
         if (this.course_id) {
             if (this.course_id.uuid !== orderline.course_id?.uuid) {
                 return false;
@@ -15,6 +15,6 @@ patch(PosOrderline.prototype, {
         } else if (orderline.course_id?.uuid) {
             return false;
         }
-        return super.canBeMergedWith(orderline);
+        return super.can_be_merged_with(orderline);
     },
 });
