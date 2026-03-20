@@ -15,7 +15,7 @@ patch(PosStore.prototype, {
             return;
         }
         const nextIdx = order.getNextCourseIndex();
-        const course = this.data.models["restaurant.order.course"].create({
+        const course = this.models["restaurant.order.course"].create({
             order_id: order,
             index: nextIdx,
             course_id: backendCourse ? backendCourse : false,
@@ -26,7 +26,7 @@ patch(PosStore.prototype, {
             // Assign existing order lines to the first course
             order.get_orderlines().forEach((line) => (line.course_id = course));
             // Create a second empty course and select it
-            selectedCourse = this.data.models["restaurant.order.course"].create({
+            selectedCourse = this.models["restaurant.order.course"].create({
                 order_id: order,
                 index: order.getNextCourseIndex(),
                 name: _t("Course ") + order.getNextCourseIndex(),
@@ -34,21 +34,5 @@ patch(PosStore.prototype, {
         }
         order.selectCourse(selectedCourse);
         return course;
-    },
-    // In Odoo 18, addLineToCurrentOrder might be slightly different.
-    // We override it to ensure new lines get assigned to the selected course.
-    async addLineToCurrentOrder(vals, opts = {}) {
-        const order = this.get_order();
-        if (order && order.hasCourses()) {
-            let course = order.getSelectedCourse();
-            if (!course) {
-                course = order.getLastCourse();
-            }
-            if (course) {
-                vals = { ...vals, course_id: course };
-                order.selectCourse(course);
-            }
-        }
-        return await super.addLineToCurrentOrder(vals, opts);
     },
 });
