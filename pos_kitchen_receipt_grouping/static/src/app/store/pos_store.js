@@ -80,7 +80,15 @@ patch(PosStore.prototype, {
                         lines: [],
                     };
                 }
-                categoryMap[categName].lines.push({ ...change, name: displayName });
+                
+                const key = `${change.product_id}_${displayName}_${change.note || ''}_${change.customer_note || ''}`;
+                const existing = categoryMap[categName].lines.find(l => l.key === key);
+                
+                if (existing) {
+                    existing.quantity += change.quantity;
+                } else {
+                    categoryMap[categName].lines.push({ ...change, name: displayName, key: key });
+                }
             }
 
             return Object.values(categoryMap).sort((a, b) => a.sequence - b.sequence);

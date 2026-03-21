@@ -63,7 +63,15 @@ patch(PosOrder.prototype, {
                         lines: []
                     };
                 }
-                groups[categoryName].lines.push(change);
+                
+                const key = `${change.product_id}_${change.name}_${change.note || ''}_${change.customer_note || ''}`;
+                let existingLine = groups[categoryName].lines.find(l => l.key === key);
+                
+                if (existingLine) {
+                    existingLine.quantity += change.quantity;
+                } else {
+                    groups[categoryName].lines.push({ ...change, key: key });
+                }
             }
             
             return Object.values(groups).sort((a, b) => a.sequence - b.sequence);
