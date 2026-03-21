@@ -25,12 +25,12 @@
                                 <span class="product-name" t-esc="line.name"/>
                             </div>
                             <t t-if="line.note">
-                                <div class="pos-receipt-note ms-3 small">
+                                <div class="pos-receipt-note ms-3">
                                     <t t-esc="line.note"/>
                                 </div>
                             </t>
                             <t t-if="line.customer_note">
-                                <div class="pos-receipt-note ms-3 small">
+                                <div class="pos-receipt-note ms-3">
                                     <t t-esc="line.customer_note"/>
                                 </div>
                             </t>
@@ -47,12 +47,12 @@
                             <span class="product-name" t-esc="line.name"/>
                         </div>
                         <t t-if="line.note">
-                            <div class="pos-receipt-note ms-3 small">
+                            <div class="pos-receipt-note ms-3">
                                 <t t-esc="line.note"/>
                             </div>
                         </t>
                         <t t-if="line.customer_note">
-                            <div class="pos-receipt-note ms-3 small">
+                            <div class="pos-receipt-note ms-3">
                                 <t t-esc="line.customer_note"/>
                             </div>
                         </t>

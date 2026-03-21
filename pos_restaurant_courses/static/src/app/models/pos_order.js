@@ -8,6 +8,9 @@ patch(PosOrder.prototype, {
         super.setup(...arguments);
         this.uiState.selected_course_uuid = undefined;
     },
+    get course_ids() {
+        return this["<-restaurant.order.course.order_id"] || [];
+    },
     async add_product(product, options) {
         options = options || {};
         if (this.hasCourses()) {
@@ -57,9 +60,6 @@ patch(PosOrder.prototype, {
         removedCourses.forEach((course) => {
             course.delete();
         });
-        if (cleanedCourses.length !== originalLength) {
-            this.course_ids = cleanedCourses;
-        }
     },
     get courses() {
         return this.course_ids.toSorted((a, b) => a.index - b.index);
@@ -97,10 +97,6 @@ patch(PosOrder.prototype, {
         for (const line of courseLines) {
             line.course_id = false;
         }
-        this.course_ids.splice(
-            this.course_ids.findIndex((c) => c.uuid === course.uuid),
-            1
-        );
         course.delete();
         if (this.uiState.selected_course_uuid === course.uuid) {
             this.uiState.selected_course_uuid = false;
