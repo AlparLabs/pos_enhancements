@@ -5,7 +5,7 @@
         <field name="model">pos.category</field>
         <field name="inherit_id" ref="point_of_sale.product_pos_category_form_view"/>
         <field name="arch" type="xml">
-            <xpath expr="//field[@name='sequence']" position="after">
+            <xpath expr="//field[@name='name']" position="after">
                 <field name="kitchen_sequence" />
             </xpath>
         </field>
