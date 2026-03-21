@@ -60,5 +60,29 @@
                 </div>
             </t>
         </xpath>
+        <xpath expr="//div[@class='pos-receipt-title']" position="replace">
+            <div class="pos-receipt-title">
+                <t t-if="changes.diningModeUpdate">
+                    <t t-if="changes.takeaway">Comer aquí -&gt; Para llevar</t>
+                    <t t-else="">Para llevar -&gt; Comer aquí</t>
+                </t>
+                <t t-else="">
+                    <t t-if="changes.takeaway">Para llevar</t>
+                    <t t-else="">Comer aquí</t>
+                </t>
+            </div>
+        </xpath>
+        <xpath expr="//div[@class='o-employee-name']" position="replace">
+            <div class="o-employee-name" style="font-size: 78%;">
+                <span><t t-esc="changes.config_name"/> : <t t-esc="changes.time"/></span><br/>
+                <span>Por: <t t-esc="changes.employee_name"/></span>
+            </div>
+        </xpath>
+        <xpath expr="//span[@class='my-4']" position="replace">
+            <span class="my-4" style="font-size: 120%;">
+                <t t-if="changes.table_name">Mesa <strong><t t-esc="changes.table_name"/></strong></t>
+                <t t-if="changes.tracking_number" class="fw-light my-3"> # <strong><t t-esc="changes.tracking_number"/></strong></t>
+            </span>
+        </xpath>
     </t>
 </templates>

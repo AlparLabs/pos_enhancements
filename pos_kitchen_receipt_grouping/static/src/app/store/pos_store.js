@@ -3,6 +3,15 @@
 import { PosStore } from "@point_of_sale/app/store/pos_store";
 import { patch } from "@web/core/utils/patch";
 
+// Traducción de etiquetas de recibos de cocina al español
+const RECEIPT_LABELS = {
+    "New": "Nuevo",
+    "Note": "Nota",
+    "Cancelled": "Cancelado",
+    "Cancel": "Cancelar",
+    "Message": "Mensaje",
+};
+
 // Helper: Get a product's first POS category with name and kitchen_sequence
 function getProductCategory(product, models) {
     if (!product || !product.pos_categ_ids || product.pos_categ_ids.length === 0) {
@@ -81,6 +90,17 @@ patch(PosStore.prototype, {
             lines.changedByCategory = groupChangesByCategory(lines);
         }
 
-        return super.getRenderedReceipt(order, title, lines, fullReceipt, diningModeUpdate);
+        return super.getRenderedReceipt(order, RECEIPT_LABELS[title] || title, lines, fullReceipt, diningModeUpdate);
+    },
+
+    preparePrintingData(order, changes) {
+        // Call the original method to get the English-keyed object
+        const original = super.preparePrintingData(order, changes);
+        // Re-key using Spanish translations
+        const translated = {};
+        for (const [key, value] of Object.entries(original)) {
+            translated[RECEIPT_LABELS[key] || key] = value;
+        }
+        return translated;
     },
 });
