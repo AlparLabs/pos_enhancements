@@ -1,0 +1,16 @@
+# -*- coding: utf-8 -*-
+{
+    'name': 'POS Restaurant Auto Guest Count',
+    'version': '18.0.1.0.0',
+    'category': 'Sales/Point of Sale',
+    'summary': 'Automatically prompt for guest count when selecting a table.',
+    'depends': ['pos_restaurant'],
+    'data': [],
+    'assets': {
+        'point_of_sale._assets_pos': [
+            'pos_restaurant_auto_guest_count/static/src/app/overrides/models/pos_store.js',
+        ],
+    },
+    'installable': True,
+    'license': 'LGPL-3',
+}
