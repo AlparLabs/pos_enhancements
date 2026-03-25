@@ -19,6 +19,16 @@ export class BarTicketButton extends Component {
         return this.pos.get_order();
     }
 
+    get hasPrintableLines() {
+        const order = this.currentOrder;
+        if (!order || order.get_orderlines().length === 0) {
+            return false;
+        }
+        return order.get_orderlines().some((line) => {
+            return this._shouldSplitLine(line) && !line.bar_ticket_printed;
+        });
+    }
+
     async click() {
         const order = this.currentOrder;
         if (!order || order.get_orderlines().length === 0) {
@@ -29,7 +39,7 @@ export class BarTicketButton extends Component {
         const headerData = this.pos.getReceiptHeaderData(order);
 
         for (const line of lines) {
-            if (this._shouldSplitLine(line)) {
+            if (this._shouldSplitLine(line) && !line.bar_ticket_printed) {
                 // Determine how many tickets to print
                 const qty = Math.max(1, Math.abs(line.get_quantity()));
                 
@@ -59,6 +69,9 @@ export class BarTicketButton extends Component {
                         { webPrintFallback: true }
                     );
                 }
+
+                // Mark the line as printed to prevent re-printing
+                line.bar_ticket_printed = true;
             }
         }
     }

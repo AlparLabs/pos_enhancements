@@ -19,6 +19,7 @@ Example: 3 Mojitos → 3 separate bar tickets, each showing qty 1.
     ],
     'assets': {
         'point_of_sale._assets_pos': [
+            'pos_bar_single_ticket/static/src/app/models/pos_order_line.js',
             'pos_bar_single_ticket/static/src/app/control_buttons/bar_ticket_button.js',
             'pos_bar_single_ticket/static/src/app/control_buttons/bar_ticket_button.xml',
             'pos_bar_single_ticket/static/src/app/receipt/bar_ticket_receipt.js',
