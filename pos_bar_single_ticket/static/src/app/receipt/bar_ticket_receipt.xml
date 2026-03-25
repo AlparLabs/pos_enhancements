@@ -2,14 +2,8 @@
 <templates id="template" xml:space="preserve">
     <t t-name="pos_bar_single_ticket.BarTicketReceipt">
         <div class="pos-receipt">
-            <ReceiptHeader data="props.data.headerData" />
-            
-            <div t-if="props.data.table" class="pos-receipt-title text-center my-3" style="font-size: 150%; font-weight: bold;">
-                Table <t t-esc="props.data.table" />
-            </div>
-            
-            <div class="pos-receipt-title text-center my-3" style="font-size: 110%;">
-                <t t-if="props.data.cashier" t-esc="props.data.cashier"/>
+            <div class="pos-receipt-title text-center my-3" style="font-size: 150%; font-weight: bold;">
+                <t t-esc="props.data.pos_name" />
             </div>
 
             <hr style="border-top: 2px dashed black;"/>

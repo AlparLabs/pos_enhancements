@@ -52,6 +52,8 @@ export class BarTicketButton extends Component {
                         ...line.getDisplayData(),
                         quantity: 1, 
                     }],
+                    // Add POS name for the simplified receipt
+                    pos_name: this.pos.config.name,
                     // Hide financial subtotals
                     amount_total: 0,
                     subtotal: 0,

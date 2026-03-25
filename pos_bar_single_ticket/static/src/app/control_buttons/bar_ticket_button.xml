@@ -6,8 +6,8 @@
                 t-att-class="this.hasPrintableLines ? 'btn-success highlight' : 'btn-light'" 
                 t-att-disabled="!this.hasPrintableLines" 
                 t-on-click="() => this.click()">
-            <i class="fa fa-beer me-1" role="img" aria-label="Bar Tickets" title="Bar Tickets" />
-            <span>Bar Tickets</span>
+            <i class="fa fa-beer me-1" role="img" aria-label="Tickets Barra" title="Tickets Barra" />
+            <span>Tickets Barra</span>
         </button>
     </t>
 
