@@ -20,10 +20,13 @@
             
             <hr style="border-top: 2px dashed black;"/>
             
-            <div class="pos-receipt-title text-center my-2">
+            <div class="pos-receipt-title text-center mt-2 mb-4">
                 <div t-esc="props.data.date" />
                 <div t-esc="props.data.name" />
             </div>
+            <!-- Extra padding to prevent the printer from cutting off the order number -->
+            <br/>
+            <br/>
         </div>
     </t>
 </templates>
