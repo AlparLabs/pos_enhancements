@@ -1,6 +1,6 @@
 {
     'name': 'POS Discount Supervisor Clearance',
-    'version': '18.0.1.0.0',
+    'version': '19.0.1.0.0',
     'category': 'Sales/Point of Sale',
     'summary': 'Requires supervisor clearance (PIN/Barcode) for POS discounts.',
     'description': """

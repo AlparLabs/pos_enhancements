@@ -1,3 +1,4 @@
+from typing import Any
 from odoo import api, fields, models
 
 
@@ -14,7 +15,7 @@ class PosCategory(models.Model):
     )
 
     @api.model
-    def _load_pos_data_fields(self, config_id):
+    def _load_pos_data_fields(self, config_id: Any) -> list[str]:
         fields = super()._load_pos_data_fields(config_id)
         fields.append('x_print_single_ticket')
         return fields

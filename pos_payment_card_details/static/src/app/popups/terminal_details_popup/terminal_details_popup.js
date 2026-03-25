@@ -3,24 +3,24 @@
 import { Component, useState } from "@odoo/owl";
 import { Dialog } from "@web/core/dialog/dialog";
 
+/**
+ * @typedef {Object} TerminalDetailsPopupProps
+ * @property {Function} [getPayload]
+ * @property {Function} [close]
+ * @property {string} [title]
+ * @property {Object} [startingValue]
+ */
+
 export class TerminalDetailsPopup extends Component {
     static template = "pos_payment_card_details.TerminalDetailsPopup";
     static components = { Dialog };
+    
+    /** @type {TerminalDetailsPopupProps} */
     static props = {
-        // Injected by makeAwaitable
-        getPayload: Function,
-        close: Function,
-        // Custom
+        getPayload: { type: Function, optional: true },
+        close: { type: Function, optional: true },
         title: { type: String, optional: true },
-        startingValue: {
-            type: Object,
-            optional: true,
-            shape: {
-                lot_number: { type: String, optional: true },
-                coupon_number: { type: String, optional: true },
-                installments: { type: Number, optional: true },
-            },
-        },
+        startingValue: { type: Object, optional: true },
     };
 
     setup() {

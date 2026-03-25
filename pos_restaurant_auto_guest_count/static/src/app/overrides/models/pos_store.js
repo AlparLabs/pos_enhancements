@@ -6,6 +6,9 @@ import { _t } from "@web/core/l10n/translation";
 patch(PosStore.prototype, {
     /**
      * @override
+     * @param {Object} table
+     * @param {string|null} orderUuid
+     * @returns {Promise<any>}
      */
     async setTableFromUi(table, orderUuid = null) {
         await super.setTableFromUi(...arguments);
@@ -20,6 +23,7 @@ patch(PosStore.prototype, {
     },
     /**
      * Shows the guest count popup.
+     * @param {Object} order
      */
     askCustomerCount(order) {
         this.dialog.add(NumberPopup, {

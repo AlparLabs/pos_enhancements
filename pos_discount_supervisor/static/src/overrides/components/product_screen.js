@@ -10,6 +10,12 @@ import { makeAwaitable } from "@point_of_sale/app/store/make_awaitable_dialog";
 import { _t } from "@web/core/l10n/translation";
 
 // Same helper as control_buttons.js — checks `_role` (underscore prefix), not `role`
+/**
+ * @param {Object} pos
+ * @param {Object} dialog
+ * @param {Object} notification
+ * @returns {Promise<boolean>}
+ */
 async function requestSupervisorPin(pos, dialog, notification) {
     if (!pos.config.module_pos_hr) {
         return true;

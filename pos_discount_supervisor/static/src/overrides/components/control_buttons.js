@@ -19,6 +19,11 @@ import { _t } from "@web/core/l10n/translation";
  * Both cases result in `_role === 'manager'` on the employee object in the POS.
  *
  * If pos_hr is not enabled, or no managers are configured, the action is allowed freely.
+ *
+ * @param {Object} pos
+ * @param {Object} dialog
+ * @param {Object} notification
+ * @returns {Promise<boolean>}
  */
 async function requestSupervisorPin(pos, dialog, notification) {
     // 1. If pos_hr employee login is not enabled for this POS config, allow freely

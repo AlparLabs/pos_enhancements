@@ -1,11 +1,12 @@
 # -*- coding: utf-8 -*-
+from typing import Any
 from odoo import models, fields, api
 
 class ReportSaleDetails(models.AbstractModel):
     _inherit = 'report.point_of_sale.report_saledetails'
 
     @api.model
-    def get_sale_details(self, date_start=False, date_stop=False, config_ids=False, session_ids=False):
+    def get_sale_details(self, date_start: Any = False, date_stop: Any = False, config_ids: Any = False, session_ids: Any = False) -> dict[str, Any]:
         # Call super to get the original report data
         data = super().get_sale_details(date_start, date_stop, config_ids, session_ids)
         

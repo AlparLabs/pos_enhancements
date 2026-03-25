@@ -11,7 +11,7 @@ export class PreTicketReceipt extends Component {
         Orderline,
     };
     static props = {
-        data: Object,
-        formatCurrency: Function,
+        data: { type: Object },
+        formatCurrency: { type: Function },
     };
 }

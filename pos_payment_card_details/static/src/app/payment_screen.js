@@ -6,6 +6,10 @@ import { makeAwaitable } from "@point_of_sale/app/store/make_awaitable_dialog";
 import { patch } from "@web/core/utils/patch";
 
 patch(PaymentScreen.prototype, {
+    /**
+     * @param {Object} paymentMethod
+     * @returns {Promise<any>}
+     */
     async addNewPaymentLine(paymentMethod) {
         // Guard: skip if no valid payment method
         if (!paymentMethod || paymentMethod.is_category) return;

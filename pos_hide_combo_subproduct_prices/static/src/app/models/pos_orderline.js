@@ -13,6 +13,9 @@ import { formatCurrency } from "@point_of_sale/app/models/utils/currency";
  * parent line so it shows the full value instead of being blank.
  */
 patch(PosOrderline.prototype, {
+    /**
+     * @returns {Object}
+     */
     getDisplayData() {
         const data = super.getDisplayData(...arguments);
 

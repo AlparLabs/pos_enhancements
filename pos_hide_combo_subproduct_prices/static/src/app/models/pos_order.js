@@ -9,6 +9,7 @@ patch(PosOrder.prototype, {
      * Groups identical products in the kitchen receipt (Order Change Receipt).
      * This prevents multiple lines like "+1 Coca-Cola" when adding multiple combos
      * that contain the same product.
+     * @returns {Object}
      */
     get_changes() {
         const changes = super.get_changes(...arguments);

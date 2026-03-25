@@ -34,6 +34,14 @@ function isComboParent(product) {
 }
 
 patch(PosStore.prototype, {
+    /**
+     * @param {Object} order
+     * @param {string} title
+     * @param {Object} lines
+     * @param {boolean} fullReceipt
+     * @param {boolean} diningModeUpdate
+     * @returns {Promise<any>}
+     */
     async getRenderedReceipt(order, title, lines, fullReceipt = false, diningModeUpdate) {
         const orderlines = order.get_orderlines();
 
@@ -101,6 +109,11 @@ patch(PosStore.prototype, {
         return super.getRenderedReceipt(order, RECEIPT_LABELS[title] || title, lines, fullReceipt, diningModeUpdate);
     },
 
+    /**
+     * @param {Object} order
+     * @param {Object} changes
+     * @returns {Object}
+     */
     preparePrintingData(order, changes) {
         // Call the original method to get the English-keyed object
         const original = super.preparePrintingData(order, changes);

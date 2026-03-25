@@ -16,10 +16,16 @@ export class PreTicketButton extends Component {
         this.printer = useService("printer");
     }
 
+    /**
+     * @returns {Object|null}
+     */
     get currentOrder() {
         return this.pos.get_order();
     }
 
+    /**
+     * @returns {Promise<void>}
+     */
     async click() {
         const order = this.currentOrder;
         if (!order || order.get_orderlines().length === 0) {
