@@ -2,9 +2,10 @@
 <templates id="template" xml:space="preserve">
     <!-- Component structure -->
     <t t-name="pos_bar_single_ticket.BarTicketButton" owl="1">
-        <button class="control-button btn rounded-0 fw-bolder mb-2" 
-                t-att-class="this.hasPrintableLines ? 'btn-success highlight' : 'btn-light'" 
-                t-att-disabled="!this.hasPrintableLines" 
+        <button class="control-button btn rounded-0 fw-bolder mb-2"
+                t-att-class="this.hasPrintableLines ? 'btn-success highlight' : 'btn-light'"
+                t-att-disabled="!this.hasPrintableLines"
+                t-if="!this.isOrderFinalized"
                 t-on-click="() => this.click()">
             <i class="fa fa-beer me-1" role="img" aria-label="Tickets Barra" title="Tickets Barra" />
             <span>Tickets Barra</span>
