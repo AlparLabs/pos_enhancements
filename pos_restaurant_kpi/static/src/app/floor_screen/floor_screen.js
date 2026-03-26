@@ -51,7 +51,7 @@ patch(FloorScreen.prototype, {
         // Approximation: count unique sessions or total done orders divided by total tables
         const doneOrders = this.pos.models["pos.order"]
             .filter((order) => order.state !== "draft" && order.state !== "cancel" && order.table_id).length;
-        return (doneOrders / totalTables).toFixed(1);
+        return parseFloat((doneOrders / totalTables).toFixed(1));
     },
     get openAmount() {
         return this.pos.models["pos.order"]
