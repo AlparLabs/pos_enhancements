@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates id="template" xml:space="preserve">
+    <t t-name="pos_restaurant_kpi.KpiDashboardModal">
+        <div class="modal-dialog">
+            <div class="popup popup-text shadow-lg rounded-4 border-0" style="max-width: 600px; width: 90%;">
+                <header class="title d-flex justify-content-between align-items-center bg-primary text-white p-3 rounded-top-4">
+                    <h4 class="mb-0 fw-bold"><i class="fa fa-bar-chart me-2"/> Dashboard de Rendimiento</h4>
+                    <button class="btn btn-close btn-close-white shadow-none" aria-label="Close" t-on-click="props.close"></button>
+                </header>
+                <main class="body text-start p-4 bg-light">
+                    <div class="row w-100 g-4 m-0">
+                        <div class="col-6">
+                            <div class="card p-4 shadow-sm border-0 bg-white rounded-4 h-100 text-center transition-all hover-up">
+                                <h6 class="text-muted fw-bold text-uppercase mb-2" style="font-size: 0.85rem; letter-spacing: 0.5px;">Ocupación Actual</h6>
+                                <h2 class="text-primary fw-bolder mb-0" style="font-size: 2.5rem;" t-esc="(props.occupancyRate || 0) + '%'"/>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="card p-4 shadow-sm border-0 bg-white rounded-4 h-100 text-center transition-all hover-up">
+                                <h6 class="text-muted fw-bold text-uppercase mb-2" style="font-size: 0.85rem; letter-spacing: 0.5px;">Rotación de Mesas</h6>
+                                <h2 class="text-info fw-bolder mb-0" style="font-size: 2.5rem;" t-esc="props.turnoverRate || 0"/>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="card p-4 shadow-sm border-0 bg-white rounded-4 h-100 text-center transition-all hover-up">
+                                <h6 class="text-muted fw-bold text-uppercase mb-2" style="font-size: 0.85rem; letter-spacing: 0.5px;">$ En Curso</h6>
+                                <h2 class="text-success fw-bolder mb-0" style="font-size: 2.5rem;" t-esc="env.utils.formatCurrency(props.openAmount || 0)"/>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="card p-4 shadow-sm border-0 bg-white rounded-4 h-100 text-center transition-all hover-up">
+                                <h6 class="text-muted fw-bold text-uppercase mb-2" style="font-size: 0.85rem; letter-spacing: 0.5px;">Tiempo Prom. Mesa</h6>
+                                <h2 class="text-warning fw-bolder mb-0" style="font-size: 2.5rem;" t-esc="(props.avgTableTime || 0) + ' min'"/>
+                            </div>
+                        </div>
+                    </div>
+                </main>
+                <footer class="footer p-3 bg-white border-top rounded-bottom-4 text-center">
+                    <button class="button btn btn-primary w-50 py-2 fs-5 fw-bold rounded-pill shadow-sm" t-on-click="props.close">Cerrar</button>
+                </footer>
+            </div>
+        </div>
+    </t>
+</templates>
