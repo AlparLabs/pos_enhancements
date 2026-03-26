@@ -19,6 +19,17 @@ export class BarTicketButton extends Component {
         return this.pos.get_order();
     }
 
+    get hasPrintableLines() {
+        const order = this.currentOrder;
+        if (!order || order.get_orderlines().length === 0) {
+            return false;
+        }
+        return order.get_orderlines().some((line) => {
+            const printed = line.bar_ticket_printed_qty || 0;
+            return this._shouldSplitLine(line) && line.get_quantity() > printed;
+        });
+    }
+
     async click() {
         const order = this.currentOrder;
         if (!order || order.get_orderlines().length === 0) {
@@ -29,9 +40,10 @@ export class BarTicketButton extends Component {
         const headerData = this.pos.getReceiptHeaderData(order);
 
         for (const line of lines) {
-            if (this._shouldSplitLine(line)) {
+            const printed = line.bar_ticket_printed_qty || 0;
+            if (this._shouldSplitLine(line) && line.get_quantity() > printed) {
                 // Determine how many tickets to print
-                const qty = Math.max(1, Math.abs(line.get_quantity()));
+                const qtyToPrint = line.get_quantity() - printed;
                 
                 // Formulate isolated receipt payload for this specific line
                 const isolatedReceiptData = {
@@ -42,6 +54,8 @@ export class BarTicketButton extends Component {
                         ...line.getDisplayData(),
                         quantity: 1, 
                     }],
+                    // Add POS name for the simplified receipt
+                    pos_name: this.pos.config.name,
                     // Hide financial subtotals
                     amount_total: 0,
                     subtotal: 0,
@@ -49,7 +63,7 @@ export class BarTicketButton extends Component {
                 };
 
                 // Fire N separate print jobs for this line
-                for (let i = 0; i < qty; i++) {
+                for (let i = 0; i < qtyToPrint; i++) {
                     await this.printer.print(
                         BarTicketReceipt,
                         { 
@@ -58,6 +72,17 @@ export class BarTicketButton extends Component {
                         },
                         { webPrintFallback: true }
                     );
+                }
+
+                // Mark the line as printed to prevent re-printing
+                line.bar_ticket_printed_qty = printed + qtyToPrint;
+                
+                // Mimic Order button to prevent silent deletions (pos_restaurant logic)
+                if (typeof line.set_dirty === 'function') {
+                    line.set_dirty(false);
+                }
+                if ('saved_quantity' in line) {
+                    line.saved_quantity = line.get_quantity();
                 }
             }
         }
