@@ -1,24 +1,22 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <templates id="template" xml:space="preserve">
-    <!-- Component structure -->
-    <t t-name="pos_bar_single_ticket.BarTicketButton" owl="1">
-        <button class="control-button btn rounded-0 fw-bolder mb-2"
-                t-att-class="this.hasPrintableLines ? 'btn-success highlight' : 'btn-light'"
-                t-att-disabled="!this.hasPrintableLines"
-                t-if="!this.isOrderFinalized"
+    <!-- Supervisor-only Bar Ticket Reprint Button -->
+    <t t-name="pos_bar_single_ticket.BarReprintButton" owl="1">
+        <button class="control-button btn rounded-0 fw-bolder mb-2 btn-warning"
+                t-if="!this.isOrderFinalized and this.hasReprintableLines"
                 t-on-click="() => this.click()">
-            <i class="fa fa-beer me-1" role="img" aria-label="Tickets Barra" title="Tickets Barra" />
-            <span>Tickets Barra</span>
+            <i class="fa fa-print me-1" role="img" aria-label="Reimprimir Tickets Barra" title="Reimprimir Tickets Barra" />
+            <span>Reimprimir Barra</span>
         </button>
     </t>
 
     <!-- Inject the component into the ControlButtons -->
     <t t-name="pos_bar_single_ticket.ControlButtons" t-inherit="point_of_sale.ControlButtons" t-inherit-mode="extension">
         <xpath expr="//button[hasclass('more-btn')]" position="before">
-            <BarTicketButton t-if="!props.showRemainingButtons and !ui.isSmall"/>
+            <BarReprintButton t-if="!props.showRemainingButtons and !ui.isSmall"/>
         </xpath>
         <xpath expr="//div[hasclass('control-buttons-modal')]" position="inside">
-            <BarTicketButton t-if="props.showRemainingButtons"/>
+            <BarReprintButton t-if="props.showRemainingButtons"/>
         </xpath>
     </t>
 </templates>
