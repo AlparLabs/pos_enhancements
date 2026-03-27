@@ -1,6 +1,63 @@
 /** @odoo-module **/
 
+/* global Sha1 */
+
 import { BarTicketReceipt } from "@pos_bar_single_ticket/app/receipt/bar_ticket_receipt";
+import { NumberPopup } from "@point_of_sale/app/utils/input_popups/number_popup";
+import { makeAwaitable } from "@point_of_sale/app/store/make_awaitable_dialog";
+import { _t } from "@web/core/l10n/translation";
+
+/**
+ * Requests supervisor PIN verification before allowing a reprint.
+ * Shared between BarReprintButton (product screen) and TicketScreen reprint.
+ * @param {object} pos   – result of usePos()
+ * @param {object} dialog – result of useService("dialog")
+ * @param {object} notification – result of useService("notification")
+ * @returns {Promise<boolean>}
+ */
+export async function requestSupervisorPin(pos, dialog, notification) {
+    // If pos_hr employee login is not enabled, allow freely
+    if (!pos.config.module_pos_hr) {
+        return true;
+    }
+
+    // If the current cashier is already a manager, allow freely
+    const cashier = pos.get_cashier();
+    if (cashier?._role === "manager") {
+        return true;
+    }
+
+    // Find all manager employees
+    const employees = pos.models["hr.employee"] || [];
+    const managers = employees.filter((e) => e._role === "manager");
+
+    // If no managers configured, allow freely (degraded mode)
+    if (!managers.length) {
+        return true;
+    }
+
+    // Prompt for supervisor PIN
+    const inputPin = await makeAwaitable(dialog, NumberPopup, {
+        formatDisplayedValue: (x) => x.replace(/./g, "•"),
+        title: _t("PIN de Supervisor Requerido"),
+    });
+
+    if (!inputPin) {
+        return false;
+    }
+
+    const hashedPin = Sha1.hash(inputPin);
+    const authorized = managers.some((m) => m._pin && m._pin === hashedPin);
+
+    if (!authorized) {
+        notification.add(_t("PIN incorrecto. Reimpresión no autorizada."), {
+            type: "warning",
+            title: _t("Acceso Denegado"),
+        });
+        return false;
+    }
+    return true;
+}
 
 /**
  * Returns true if the given orderline belongs to a POS category
