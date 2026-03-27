@@ -61,17 +61,31 @@ export async function requestSupervisorPin(pos, dialog, notification) {
 
 /**
  * Returns true if the given orderline belongs to a POS category
- * that has the "Print Single Ticket" flag enabled.
+ * that has the "Print Single Ticket" flag enabled and is available
+ * in the current POS configuration.
  * @param {import("@point_of_sale/app/models/pos_order_line").PosOrderline} line
+ * @param {object} pos  – result of usePos()
  * @returns {boolean}
  */
-export function shouldSplitLine(line) {
+export function shouldSplitLine(line, pos) {
     const product = line.get_product();
     if (!product) {
         return false;
     }
     const categories = product.pos_categ_ids || [];
-    return categories.some((categ) => categ.x_print_single_ticket);
+    return categories.some((categ) => {
+        if (!categ || !categ.x_print_single_ticket) {
+            return false;
+        }
+        // If the POS limits categories, only apply if the category is allowed
+        if (pos?.config?.limit_categories && pos.config.iface_available_categ_ids) {
+            const categId = categ.id || categ;
+            if (!pos.config.iface_available_categ_ids.includes(categId)) {
+                return false;
+            }
+        }
+        return true;
+    });
 }
 
 /**
@@ -114,7 +128,7 @@ export async function printBarTicketsForOrder(order, pos, printer, env) {
 
     for (const line of order.get_orderlines()) {
         // Skip if already printed at payment time
-        if (!shouldSplitLine(line) || line.bar_ticket_paid_and_printed) {
+        if (!shouldSplitLine(line, pos) || line.bar_ticket_paid_and_printed) {
             continue;
         }
 
@@ -158,7 +172,7 @@ export async function reprintBarTicketsForOrder(order, pos, printer, env) {
     const headerData = pos.getReceiptHeaderData(order);
 
     for (const line of order.get_orderlines()) {
-        if (!shouldSplitLine(line)) {
+        if (!shouldSplitLine(line, pos)) {
             continue;
         }
 
