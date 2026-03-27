@@ -77,10 +77,12 @@ export function shouldSplitLine(line, pos) {
         if (!categ || !categ.x_print_single_ticket) {
             return false;
         }
-        // If the POS limits categories, only apply if the category is allowed
-        if (pos?.config?.limit_categories && pos.config.iface_available_categ_ids) {
-            const categId = categ.id || categ;
-            if (!pos.config.iface_available_categ_ids.includes(categId)) {
+        // If the POS limits categories, only apply if the category is allowed.
+        // iface_available_categ_ids holds record objects in Odoo 18, so we must
+        // extract their .id before comparing — includes() on objects never matches integers.
+        if (pos?.config?.limit_categories && pos.config.iface_available_categ_ids?.length) {
+            const allowedIds = pos.config.iface_available_categ_ids.map((c) => c.id ?? c);
+            if (!allowedIds.includes(categ.id)) {
                 return false;
             }
         }
