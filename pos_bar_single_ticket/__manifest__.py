@@ -30,6 +30,8 @@ Example: 3 Mojitos → 3 separate bar tickets printed at checkout.
             'pos_bar_single_ticket/static/src/app/control_buttons/bar_ticket_button.js',
             'pos_bar_single_ticket/static/src/app/control_buttons/bar_ticket_button.xml',
             'pos_bar_single_ticket/static/src/app/screens/payment_screen.js',
+            'pos_bar_single_ticket/static/src/app/screens/ticket_screen/ticket_screen.js',
+            'pos_bar_single_ticket/static/src/app/screens/ticket_screen/ticket_screen.xml',
         ],
     },
     'installable': True,
