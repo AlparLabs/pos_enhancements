@@ -41,7 +41,7 @@ export class BarReprintButton extends Component {
             return false;
         }
         return order.get_orderlines().some(
-            (line) => shouldSplitLine(line) && line.bar_ticket_paid_and_printed
+            (line) => shouldSplitLine(line, this.pos) && line.bar_ticket_paid_and_printed
         );
     }
 

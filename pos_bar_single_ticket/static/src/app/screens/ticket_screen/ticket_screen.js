@@ -30,7 +30,7 @@ patch(TicketScreen.prototype, {
         if (!order || !order.get_orderlines) {
             return false;
         }
-        return order.get_orderlines().some((line) => shouldSplitLine(line));
+        return order.get_orderlines().some((line) => shouldSplitLine(line, this._barTicketPos));
     },
 
     /**
