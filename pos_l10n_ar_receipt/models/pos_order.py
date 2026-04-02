@@ -63,6 +63,9 @@ class PosOrder(models.Model):
         """
         _logger.info("l10n_ar_receipt [Python]: get_l10n_ar_receipt_data_by_move called for move id=%s", account_move_id)
 
+        if isinstance(account_move_id, (list, tuple)):
+            account_move_id = account_move_id[0]
+        
         move = self.env['account.move'].sudo().browse(account_move_id)
         if not move.exists():
             _logger.warning("l10n_ar_receipt [Python]: account.move id=%s does not exist", account_move_id)

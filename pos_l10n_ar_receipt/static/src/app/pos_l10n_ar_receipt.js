@@ -15,7 +15,10 @@ import { OrderReceipt } from "@point_of_sale/app/screens/receipt_screen/receipt/
 // Falls back to searching by pos_reference if the raw id isn't there yet.
 // ─────────────────────────────────────────────────────────────────────────────
 async function fetchArData(orm, order) {
-    const invoiceId = order.raw?.account_move;
+    let invoiceId = order.raw?.account_move;
+    if (Array.isArray(invoiceId)) {
+        invoiceId = invoiceId[0];
+    }
 
     if (invoiceId) {
         // Preferred path: read directly from the account.move we already know.
