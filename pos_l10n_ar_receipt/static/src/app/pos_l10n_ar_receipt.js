@@ -8,10 +8,41 @@ import { PosOrder } from "@point_of_sale/app/models/pos_order";
 import { OrderReceipt } from "@point_of_sale/app/screens/receipt_screen/receipt/order_receipt";
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Helper: fetch AFIP data from server for a given order
+// Helper: fetch AFIP data from server.
+//
+// Strategy: use order.raw.account_move (the invoice ID already populated after
+// sync) if available — this is the most direct and timing-safe approach.
+// Falls back to searching by pos_reference if the raw id isn't there yet.
 // ─────────────────────────────────────────────────────────────────────────────
-async function fetchArData(orm, posReference) {
-    return await orm.call("pos.order", "get_l10n_ar_receipt_data", [posReference]);
+async function fetchArData(orm, order) {
+    const invoiceId = order.raw?.account_move;
+
+    if (invoiceId) {
+        // Preferred path: read directly from the account.move we already know.
+        console.log("[l10n_ar_receipt] Fetching AFIP data for invoice id:", invoiceId);
+        const data = await orm.call(
+            "pos.order",
+            "get_l10n_ar_receipt_data_by_move",
+            [invoiceId]
+        );
+        console.log("[l10n_ar_receipt] Received AR data:", data);
+        return data;
+    }
+
+    // Fallback: search by pos_reference (used from ReceiptScreen button on
+    // past orders where raw.account_move might not be in memory).
+    if (order.pos_reference) {
+        console.log("[l10n_ar_receipt] Fetching AFIP data by pos_reference:", order.pos_reference);
+        const data = await orm.call(
+            "pos.order",
+            "get_l10n_ar_receipt_data",
+            [order.pos_reference]
+        );
+        console.log("[l10n_ar_receipt] Received AR data (fallback):", data);
+        return data;
+    }
+
+    return false;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -20,27 +51,26 @@ async function fetchArData(orm, posReference) {
 // In Odoo 18 the full flow is:
 //   validateOrder()
 //     └─ _finalizeValidation()
-//          ├─ syncAllOrders()          ← invoice created here
+//          ├─ syncAllOrders()          ← invoice created, raw.account_move set
 //          └─ afterOrderValidation()   ← printReceipt() + navigate here
 //
-// We intercept here so the invoice already exists when we fetch AR data,
-// store it on the order, and let the original method print the receipt.
+// By the time afterOrderValidation runs, order.raw.account_move is already
+// populated by the sync response, so fetchArData can use it directly.
 // ─────────────────────────────────────────────────────────────────────────────
 patch(PaymentScreen.prototype, {
     async afterOrderValidation(hasOrderChange) {
         const order = this.currentOrder;
 
-        if (order && order.is_to_invoice() && order.pos_reference) {
+        if (order && order.is_to_invoice()) {
             try {
-                const data = await fetchArData(
-                    this.env.services.orm,
-                    order.pos_reference
-                );
+                const data = await fetchArData(this.env.services.orm, order);
                 if (data) {
                     order.l10n_ar_data = data;
+                } else {
+                    console.warn("[l10n_ar_receipt] No AR data returned (invoice may not have CAE yet)");
                 }
             } catch (e) {
-                console.warn("Could not fetch AFIP receipt data:", e);
+                console.warn("[l10n_ar_receipt] Could not fetch AFIP receipt data:", e);
             }
         }
 
@@ -51,8 +81,8 @@ patch(PaymentScreen.prototype, {
 // ─────────────────────────────────────────────────────────────────────────────
 // Patch 2: PosOrder.export_for_printing
 //
-// Merge l10n_ar_data (set by Patch 1) into the receipt data object that
-// printReceipt() passes to the OrderReceipt OWL component.
+// Merge l10n_ar_data into the receipt data object that printReceipt() passes
+// to the OrderReceipt OWL component. Called for both auto-print and manual print.
 // ─────────────────────────────────────────────────────────────────────────────
 patch(PosOrder.prototype, {
     export_for_printing(baseUrl, headerData) {
@@ -67,52 +97,36 @@ patch(PosOrder.prototype, {
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Patch 3: ReceiptScreen — add "Imprimir Factura" button
+// Patch 3: ReceiptScreen — "Imprimir Factura" button
 //
-// Adds a setup hook that registers `doPrintArInvoice` (a useTrackedAsync so
-// the button shows a spinner while loading), which fetches fresh AR data and
-// prints via the hardware receipt printer.
+// Fetches fresh AR data on demand (guarantees the AFIP CAE is already populated,
+// since the user clicks the button after witnessing the receipt screen).
 // ─────────────────────────────────────────────────────────────────────────────
 patch(ReceiptScreen.prototype, {
     setup() {
         super.setup();
-
-        // useTrackedAsync gives the button the same loading/success/error
-        // states as the core "Print Full Receipt" button.
         this.doPrintArInvoice = useTrackedAsync(
             this._printArInvoiceReceipt.bind(this)
         );
     },
 
-    /**
-     * Fetch fresh AFIP data and print the receipt enriched with invoice details.
-     * This is the handler for the "Imprimir Factura" button on the ReceiptScreen.
-     */
     async _printArInvoiceReceipt() {
         const order = this.currentOrder;
         if (!order) {
             return;
         }
 
-        // Fetch fresh AR data (covers the case where afterOrderValidation
-        // was called offline, or the user navigated back to the screen).
         try {
-            const data = await fetchArData(
-                this.env.services.orm,
-                order.pos_reference
-            );
+            const data = await fetchArData(this.env.services.orm, order);
             if (data) {
                 order.l10n_ar_data = data;
             }
         } catch (e) {
-            console.warn("Could not fetch AFIP receipt data for manual print:", e);
+            console.warn("[l10n_ar_receipt] Could not fetch AFIP receipt data for manual print:", e);
         }
 
-        // Build receipt data — export_for_printing (patched above) merges
-        // l10n_ar_data automatically.
         const receiptData = this.pos.orderExportForPrinting(order);
 
-        // Print through the receipt printer (same service used by printReceipt).
         await this.pos.printer.print(
             OrderReceipt,
             {
