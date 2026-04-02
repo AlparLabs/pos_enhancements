@@ -44,20 +44,27 @@ class PosOrder(models.Model):
     @api.model
     def get_l10n_ar_receipt_data(self, pos_reference):
         """
-        Called securely by the POS UI right after pushing the order, 
-        to retrieve the real-time AFIP data.
+        Called by the POS UI right after pushing the order (when is_to_invoice is True),
+        to retrieve AFIP-specific fields for the receipt.
+
+        Returns ONLY the Argentine localization fields, not the full order export,
+        so that the JS patch can safely Object.assign them onto the receipt data
+        without overwriting core receipt fields (orderlines, name, taxTotals, etc.).
         """
         order = self.search([('pos_reference', '=', pos_reference)], limit=1)
-        if order and order.account_move:
-            return self._export_for_ui(order)
-        return False
+        if not order or not order.account_move:
+            return False
 
-    @api.model
-    def create_from_ui(self, orders, draft=False):
-        """
-        Override create_from_ui to ensure the invoice is created synchronously
-        if possible, so the receipt gets the data immediately.
-        """
-        res = super(PosOrder, self).create_from_ui(orders, draft=draft)
-        # Standard Odoo usually returns a list of dictionaries with 'id' and 'pos_reference'
-        return res
+        move = order.account_move
+        return {
+            'l10n_ar_afip_auth_code': move.l10n_ar_afip_auth_code,
+            'l10n_ar_afip_auth_code_due': move.l10n_ar_afip_auth_code_due,
+            'l10n_ar_afip_qr_code': move.l10n_ar_afip_qr_code,
+            'l10n_latam_document_number': move.l10n_latam_document_number,
+            'l10n_latam_document_type_name': move.l10n_latam_document_type_id.name,
+            'l10n_latam_document_type_code': move.l10n_latam_document_type_id.code,
+            'l10n_ar_letter': move.l10n_ar_letter,
+            'l10n_ar_company_cuit': order.company_id.vat,
+            'l10n_ar_company_responsibility': order.company_id.l10n_ar_afip_responsibility_type_id.name,
+            'l10n_ar_tax_details': self._get_l10n_ar_tax_details(move),
+        }
