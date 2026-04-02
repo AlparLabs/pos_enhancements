@@ -3,7 +3,7 @@
     <t t-name="pos_l10n_ar_receipt.OrderReceipt" t-inherit="point_of_sale.OrderReceipt" t-inherit-mode="extension">
         
         <!-- Add Argentine Invoice Header -->
-        <xpath expr="//div[hasclass('pos-receipt-contact')]" position="after">
+        <xpath expr="//ReceiptHeader" position="after">
             <div t-if="props.data.l10n_latam_document_type_name" class="pos-receipt-center-align" style="font-weight: bold; margin-top: 5px;">
                 <t t-esc="props.data.l10n_latam_document_type_name"/> - ORIGINAL - COD (<t t-esc="props.data.l10n_latam_document_type_code"/>)
             </div>
