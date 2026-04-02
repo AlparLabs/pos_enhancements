@@ -42,6 +42,17 @@ class PosOrder(models.Model):
         return tax_details
 
     @api.model
+    def get_l10n_ar_receipt_data(self, pos_reference):
+        """
+        Called securely by the POS UI right after pushing the order, 
+        to retrieve the real-time AFIP data.
+        """
+        order = self.search([('pos_reference', '=', pos_reference)], limit=1)
+        if order and order.account_move:
+            return self._export_for_ui(order)
+        return False
+
+    @api.model
     def create_from_ui(self, orders, draft=False):
         """
         Override create_from_ui to ensure the invoice is created synchronously
