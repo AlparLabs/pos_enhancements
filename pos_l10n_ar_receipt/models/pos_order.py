@@ -78,16 +78,33 @@ class PosOrder(models.Model):
         Build and return the dict of Argentine AFIP fields for the receipt.
         Only returns the AR-specific fields — does NOT include standard order
         fields, so Object.assign in JS won't overwrite core receipt data.
+
+        NOTE: All values must be JSON-serializable (str, int, float, bool, list,
+        dict, None). Date/Datetime fields must be converted to strings manually
+        when building a dict in a custom RPC method (unlike standard ORM reads,
+        the JSON-RPC layer does NOT auto-serialize Python date objects).
         """
-        return {
-            'l10n_ar_afip_auth_code': move.l10n_ar_afip_auth_code,
-            'l10n_ar_afip_auth_code_due': move.l10n_ar_afip_auth_code_due,
-            'l10n_ar_afip_qr_code': move.l10n_ar_afip_qr_code,
-            'l10n_latam_document_number': move.l10n_latam_document_number,
-            'l10n_latam_document_type_name': move.l10n_latam_document_type_id.name,
-            'l10n_latam_document_type_code': move.l10n_latam_document_type_id.code,
-            'l10n_ar_letter': move.l10n_ar_letter,
-            'l10n_ar_company_cuit': order.company_id.vat,
-            'l10n_ar_company_responsibility': order.company_id.l10n_ar_afip_responsibility_type_id.name,
-            'l10n_ar_tax_details': self._get_l10n_ar_tax_details(move),
-        }
+        try:
+            # Date fields must be stringified — Python date objects are not
+            # JSON-serializable and will crash the RPC call with an Odoo Server Error.
+            auth_code_due = False
+            if move.l10n_ar_afip_auth_code_due:
+                auth_code_due = move.l10n_ar_afip_auth_code_due.strftime('%d/%m/%Y')
+
+            return {
+                'l10n_ar_afip_auth_code': move.l10n_ar_afip_auth_code or False,
+                'l10n_ar_afip_auth_code_due': auth_code_due,
+                'l10n_ar_afip_qr_code': move.l10n_ar_afip_qr_code or False,
+                'l10n_latam_document_number': move.l10n_latam_document_number or False,
+                'l10n_latam_document_type_name': move.l10n_latam_document_type_id.name or False,
+                'l10n_latam_document_type_code': move.l10n_latam_document_type_id.code or False,
+                'l10n_ar_letter': move.l10n_ar_letter or False,
+                'l10n_ar_company_cuit': order.company_id.vat or False,
+                'l10n_ar_company_responsibility': order.company_id.l10n_ar_afip_responsibility_type_id.name or False,
+                'l10n_ar_tax_details': self._get_l10n_ar_tax_details(move),
+            }
+        except Exception as e:
+            import logging
+            _logger = logging.getLogger(__name__)
+            _logger.error("l10n_ar_receipt: Error building receipt data for move %s: %s", move.id, e, exc_info=True)
+            return False
