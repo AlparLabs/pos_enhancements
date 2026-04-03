@@ -52,57 +52,43 @@ class PosOrder(models.Model):
 
     @api.model
     def get_l10n_ar_receipt_data_by_move(self, account_move_id):
-        """
-        Primary RPC method called from the POS frontend.
-        Receives the account.move ID directly (already in order.raw.account_move
-        after the sync response) and returns ONLY the AR-specific receipt fields.
+        try:
+            _logger.info("l10n_ar_receipt [Python]: get_l10n_ar_receipt_data_by_move called for move id=%s", account_move_id)
 
-        Uses sudo() because the POS cashier user has no ACL on account.move.
-        All values MUST be JSON-serializable: Date fields become strings,
-        empty Many2one fields become False (not empty recordsets).
-        """
-        _logger.info("l10n_ar_receipt [Python]: get_l10n_ar_receipt_data_by_move called for move id=%s", account_move_id)
+            if isinstance(account_move_id, (list, tuple)):
+                account_move_id = account_move_id[0]
+            
+            move = self.env['account.move'].sudo().browse(account_move_id)
+            if not move.exists():
+                _logger.warning("l10n_ar_receipt [Python]: account.move id=%s does not exist", account_move_id)
+                return False
 
-        if isinstance(account_move_id, (list, tuple)):
-            account_move_id = account_move_id[0]
-        
-        move = self.env['account.move'].sudo().browse(account_move_id)
-        if not move.exists():
-            _logger.warning("l10n_ar_receipt [Python]: account.move id=%s does not exist", account_move_id)
-            return False
+            auth_code_due = False
+            if move.l10n_ar_afip_auth_code_due:
+                auth_code_due = move.l10n_ar_afip_auth_code_due.strftime('%d/%m/%Y')
 
-        _logger.info(
-            "l10n_ar_receipt [Python]: move found: %s | auth_code=%s | auth_code_due=%s | doc_number=%s",
-            move.name,
-            move.l10n_ar_afip_auth_code,
-            move.l10n_ar_afip_auth_code_due,
-            move.l10n_latam_document_number,
-        )
+            company = move.company_id
 
-        # Convert Date to string — Python date objects are NOT JSON-serializable.
-        # Odoo's standard read() handles this automatically, but custom RPC methods don't.
-        auth_code_due = False
-        if move.l10n_ar_afip_auth_code_due:
-            auth_code_due = move.l10n_ar_afip_auth_code_due.strftime('%d/%m/%Y')
+            data = {
+                'l10n_ar_afip_auth_code': move.l10n_ar_afip_auth_code or False,
+                'l10n_ar_afip_auth_code_due': auth_code_due,
+                'l10n_ar_afip_qr_code': getattr(move, 'l10n_ar_afip_qr_code', False) or False,
+                'l10n_latam_document_number': getattr(move, 'l10n_latam_document_number', False) or False,
+                'l10n_latam_document_type_name': move.l10n_latam_document_type_id.name if move.l10n_latam_document_type_id else False,
+                'l10n_latam_document_type_code': move.l10n_latam_document_type_id.code if move.l10n_latam_document_type_id else False,
+                'l10n_ar_letter': getattr(move, 'l10n_ar_letter', False) or False,
+                'l10n_ar_company_cuit': company.vat or False,
+                'l10n_ar_company_responsibility': company.l10n_ar_afip_responsibility_type_id.name if company.l10n_ar_afip_responsibility_type_id else False,
+                'l10n_ar_tax_details': self._get_l10n_ar_tax_details(move),
+            }
 
-        # Get company from the move itself — no need to search pos.order again.
-        company = move.company_id
-
-        data = {
-            'l10n_ar_afip_auth_code': move.l10n_ar_afip_auth_code or False,
-            'l10n_ar_afip_auth_code_due': auth_code_due,
-            'l10n_ar_afip_qr_code': move.l10n_ar_afip_qr_code or False,
-            'l10n_latam_document_number': move.l10n_latam_document_number or False,
-            'l10n_latam_document_type_name': move.l10n_latam_document_type_id.name or False,
-            'l10n_latam_document_type_code': move.l10n_latam_document_type_id.code or False,
-            'l10n_ar_letter': move.l10n_ar_letter or False,
-            'l10n_ar_company_cuit': company.vat or False,
-            'l10n_ar_company_responsibility': company.l10n_ar_afip_responsibility_type_id.name or False,
-            'l10n_ar_tax_details': self._get_l10n_ar_tax_details(move),
-        }
-
-        _logger.info("l10n_ar_receipt [Python]: returning data=%s", data)
-        return data
+            _logger.info("l10n_ar_receipt [Python]: returning data=%s", data)
+            return data
+        except Exception as e:
+            import traceback
+            error_details = traceback.format_exc()
+            _logger.error("l10n_ar_receipt [Python]: Exception in get_l10n_ar_receipt_data_by_move: %s", error_details)
+            return {'error_message': str(e), 'error_traceback': error_details}
 
     @api.model
     def get_l10n_ar_receipt_data(self, pos_reference):

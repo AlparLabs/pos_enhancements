@@ -28,6 +28,11 @@ async function fetchArData(orm, order) {
             "get_l10n_ar_receipt_data_by_move",
             [invoiceId]
         );
+        if (data && data.error_message) {
+            console.error("[l10n_ar_receipt] PYTHON ERROR:", data.error_message);
+            console.error(data.error_traceback);
+            return false;
+        }
         console.log("[l10n_ar_receipt] Received AR data:", data);
         return data;
     }
@@ -41,6 +46,11 @@ async function fetchArData(orm, order) {
             "get_l10n_ar_receipt_data",
             [order.pos_reference]
         );
+        if (data && data.error_message) {
+            console.error("[l10n_ar_receipt] PYTHON ERROR:", data.error_message);
+            console.error(data.error_traceback);
+            return false;
+        }
         console.log("[l10n_ar_receipt] Received AR data (fallback):", data);
         return data;
     }
