@@ -4,8 +4,8 @@
         
         <!-- Add Argentine Invoice Header -->
         <xpath expr="//ReceiptHeader" position="after">
-            <div t-if="props.data.l10n_latam_document_type_name" class="pos-receipt-center-align" style="font-weight: bold; margin-top: 5px;">
-                <t t-esc="props.data.l10n_latam_document_type_name"/> - ORIGINAL - COD (<t t-esc="props.data.l10n_latam_document_type_code"/>)
+            <div t-if="props.data.l10n_latam_document_type_name" class="pos-receipt-center-align" style="font-weight: bold; margin-top: 5px; text-transform: uppercase;">
+                <t t-esc="props.data.l10n_latam_document_type_name.replace('Facturas', 'Factura')"/>
             </div>
             <div t-if="props.data.l10n_latam_document_number" class="pos-receipt-center-align" style="font-weight: bold;">
                 Nº DE FACTURA: <t t-esc="props.data.l10n_latam_document_number"/>
@@ -24,7 +24,7 @@
                 
                 <!-- QR Code -->
                 <div t-if="props.data.l10n_ar_afip_qr_code" class="pos-receipt-center-align" style="margin-bottom: 5px;">
-                    <img t-att-src="'/report/barcode/QR/' + props.data.l10n_ar_afip_qr_code" style="width: 100px; height: 100px;" alt="QR Code AFIP"/>
+                    <img t-att-src="'/report/barcode/QR/' + props.data.l10n_ar_afip_qr_code" style="width: 200px; height: 200px;" alt="QR Code AFIP"/>
                 </div>
 
                 <!-- CAE Details -->
@@ -40,7 +40,7 @@
 
         <!-- Optional: Breakdown of taxes if it's Factura A -->
         <xpath expr="//div[hasclass('pos-receipt-amount')]" position="after">
-            <div t-if="props.data.l10n_ar_letter === 'A' and props.data.l10n_ar_tax_details" class="pos-receipt-taxes" style="font-size: 0.8em; margin-top: 5px;">
+            <div t-if="props.data.l10n_ar_letter === 'A' and props.data.l10n_ar_tax_details" class="pos-receipt-ar-taxes" style="font-size: 0.8em; margin-top: 5px;">
                 <t t-foreach="props.data.l10n_ar_tax_details" t-as="tax" t-key="tax_index">
                     <div class="d-flex justify-content-between">
                         <span><t t-esc="tax.name"/></span>
@@ -50,7 +50,7 @@
             </div>
 
             <!-- Transparency Regime Logic for B (Law 27.743) -->
-            <div t-if="props.data.l10n_ar_custom_tax_summary and props.data.l10n_ar_custom_tax_summary.length > 0" class="pos-receipt-taxes" style="font-size: 0.8em; margin-top: 10px; border-top: 1px dashed black; padding-top: 5px;">
+            <div t-if="props.data.l10n_ar_custom_tax_summary and props.data.l10n_ar_custom_tax_summary.length > 0" class="pos-receipt-ar-taxes" style="font-size: 0.8em; margin-top: 10px; border-top: 1px dashed black; padding-top: 5px;">
                 <div style="font-weight: bold; text-align: center; margin-bottom: 5px; font-size: 0.9em; padding-bottom: 5px; border-bottom: 1px solid black;">
                     Régimen de Transparencia Fiscal al Consumidor (Ley 27.743)
                 </div>
@@ -61,6 +61,11 @@
                     </div>
                 </t>
             </div>
+        </xpath>
+
+        <!-- Hide Subtotal + Taxes for Factura B -->
+        <xpath expr="//div[hasclass('pos-receipt-taxes')]" position="attributes">
+            <attribute name="t-attf-class">pos-receipt-taxes {{ props.data.l10n_ar_letter === 'B' ? 'd-none' : '' }}</attribute>
         </xpath>
 
     </t>
