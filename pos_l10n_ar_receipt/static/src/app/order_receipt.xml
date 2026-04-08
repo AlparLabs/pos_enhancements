@@ -48,6 +48,19 @@
                     </div>
                 </t>
             </div>
+
+            <!-- Transparency Regime Logic for B (Law 27.743) -->
+            <div t-if="props.data.l10n_ar_custom_tax_summary and props.data.l10n_ar_custom_tax_summary.length > 0" class="pos-receipt-taxes" style="font-size: 0.8em; margin-top: 10px; border-top: 1px dashed black; padding-top: 5px;">
+                <div style="font-weight: bold; text-align: center; margin-bottom: 5px; font-size: 0.9em; padding-bottom: 5px; border-bottom: 1px solid black;">
+                    Régimen de Transparencia Fiscal al Consumidor (Ley 27.743)
+                </div>
+                <t t-foreach="props.data.l10n_ar_custom_tax_summary" t-as="detail" t-key="detail.name">
+                    <div class="d-flex justify-content-between">
+                        <span><t t-esc="detail.name"/></span>
+                        <span><t t-esc="detail.formatted_tax_amount_currency"/></span>
+                    </div>
+                </t>
+            </div>
         </xpath>
 
     </t>

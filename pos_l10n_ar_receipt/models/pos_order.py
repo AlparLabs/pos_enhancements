@@ -30,6 +30,7 @@ class PosOrder(models.Model):
                 'l10n_ar_company_cuit': order.company_id.vat,
                 'l10n_ar_company_responsibility': order.company_id.l10n_ar_afip_responsibility_type_id.name,
                 'l10n_ar_tax_details': self._get_l10n_ar_tax_details(move),
+                'l10n_ar_custom_tax_summary': move._l10n_ar_get_invoice_custom_tax_summary_for_report() if hasattr(move, '_l10n_ar_get_invoice_custom_tax_summary_for_report') else [],
             })
         return result
 
@@ -80,6 +81,7 @@ class PosOrder(models.Model):
                 'l10n_ar_company_cuit': company.vat or False,
                 'l10n_ar_company_responsibility': company.l10n_ar_afip_responsibility_type_id.name if company.l10n_ar_afip_responsibility_type_id else False,
                 'l10n_ar_tax_details': self._get_l10n_ar_tax_details(move),
+                'l10n_ar_custom_tax_summary': move._l10n_ar_get_invoice_custom_tax_summary_for_report() if hasattr(move, '_l10n_ar_get_invoice_custom_tax_summary_for_report') else [],
             }
 
             _logger.info("l10n_ar_receipt [Python]: returning data=%s", data)
