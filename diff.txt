@@ -1,0 +1,1125 @@
+﻿diff --git a/pos_bar_single_ticket/__manifest__.py b/pos_bar_single_ticket/__manifest__.py
+index 7470ac3..ea56a9c 100644
+--- a/pos_bar_single_ticket/__manifest__.py
++++ b/pos_bar_single_ticket/__manifest__.py
+@@ -1,14 +1,18 @@
+ {
+     'name': 'POS Bar Single Ticket',
+-    'version': '19.0.1.0.0',
++    'version': '18.0.1.1.0',
+     'category': 'Sales/Point of Sale',
+-    'summary': 'Print one ticket per unit for selected POS categories (bar tickets).',
++    'summary': 'Print bar tickets only at payment time; supervisor PIN required for reprints.',
+     'description': """
+ When a POS category has "Print Single Ticket" enabled, each unit of product
+-in that category generates an individual kitchen/bar ticket instead of a
+-single ticket with the total quantity.
++in that category generates an individual bar ticket printed ONLY when the order
++is validated (client pays). This prevents staff from triggering reprints by
++deleting and re-adding products.
+ 
+-Example: 3 Mojitos ÔåÆ 3 separate bar tickets, each showing qty 1.
++A "Reimprimir Barra" button (warning colour) appears after payment to allow
++supervisors to force-reprint tickets after verifying their PIN.
++
++Example: 3 Mojitos ÔåÆ 3 separate bar tickets printed at checkout.
+     """,
+     'author': 'AlparData',
+     'website': 'https://www.alpardata.com.ar',
+@@ -19,10 +23,15 @@ Example: 3 Mojitos ÔåÆ 3 separate bar tickets, each showing qty 1.
+     ],
+     'assets': {
+         'point_of_sale._assets_pos': [
+-            'pos_bar_single_ticket/static/src/app/control_buttons/bar_ticket_button.js',
+-            'pos_bar_single_ticket/static/src/app/control_buttons/bar_ticket_button.xml',
++            'pos_bar_single_ticket/static/src/app/models/pos_order_line.js',
+             'pos_bar_single_ticket/static/src/app/receipt/bar_ticket_receipt.js',
+             'pos_bar_single_ticket/static/src/app/receipt/bar_ticket_receipt.xml',
++            'pos_bar_single_ticket/static/src/app/utils/bar_ticket_utils.js',
++            'pos_bar_single_ticket/static/src/app/control_buttons/bar_ticket_button.js',
++            'pos_bar_single_ticket/static/src/app/control_buttons/bar_ticket_button.xml',
++            'pos_bar_single_ticket/static/src/app/screens/payment_screen.js',
++            'pos_bar_single_ticket/static/src/app/screens/ticket_screen/ticket_screen.js',
++            'pos_bar_single_ticket/static/src/app/screens/ticket_screen/ticket_screen.xml',
+         ],
+     },
+     'installable': True,
+diff --git a/pos_bar_single_ticket/models/pos_category.py b/pos_bar_single_ticket/models/pos_category.py
+index 00fc3ec..342762f 100644
+--- a/pos_bar_single_ticket/models/pos_category.py
++++ b/pos_bar_single_ticket/models/pos_category.py
+@@ -1,4 +1,3 @@
+-from typing import Any
+ from odoo import api, fields, models
+ 
+ 
+@@ -15,7 +14,7 @@ class PosCategory(models.Model):
+     )
+ 
+     @api.model
+-    def _load_pos_data_fields(self, config_id: Any) -> list[str]:
++    def _load_pos_data_fields(self, config_id):
+         fields = super()._load_pos_data_fields(config_id)
+         fields.append('x_print_single_ticket')
+         return fields
+diff --git a/pos_bar_single_ticket/static/src/app/control_buttons/bar_ticket_button.js b/pos_bar_single_ticket/static/src/app/control_buttons/bar_ticket_button.js
+index 67446f3..60f5f12 100644
+--- a/pos_bar_single_ticket/static/src/app/control_buttons/bar_ticket_button.js
++++ b/pos_bar_single_ticket/static/src/app/control_buttons/bar_ticket_button.js
+@@ -4,74 +4,69 @@ import { Component } from "@odoo/owl";
+ import { usePos } from "@point_of_sale/app/store/pos_hook";
+ import { ControlButtons } from "@point_of_sale/app/screens/product_screen/control_buttons/control_buttons";
+ import { useService } from "@web/core/utils/hooks";
+-import { BarTicketReceipt } from "@pos_bar_single_ticket/app/receipt/bar_ticket_receipt";
++import { _t } from "@web/core/l10n/translation";
++import {
++    shouldSplitLine,
++    reprintBarTicketsForOrder,
++    requestSupervisorPin,
++} from "@pos_bar_single_ticket/app/utils/bar_ticket_utils";
+ 
+-export class BarTicketButton extends Component {
+-    static template = "pos_bar_single_ticket.BarTicketButton";
++export class BarReprintButton extends Component {
++    static template = "pos_bar_single_ticket.BarReprintButton";
+     static props = {};
+ 
+     setup() {
+         this.pos = usePos();
+         this.printer = useService("printer");
++        this.notification = useService("notification");
++        this.dialog = useService("dialog");
+     }
+ 
+     get currentOrder() {
+         return this.pos.get_order();
+     }
+ 
+-    async click() {
++    get isOrderFinalized() {
+         const order = this.currentOrder;
+-        if (!order || order.get_orderlines().length === 0) {
+-            return;
+-        }
+-
+-        const lines = order.get_orderlines();
+-        const headerData = this.pos.getReceiptHeaderData(order);
+-
+-        for (const line of lines) {
+-            if (this._shouldSplitLine(line)) {
+-                // Determine how many tickets to print
+-                const qty = Math.max(1, Math.abs(line.get_quantity()));
+-                
+-                // Formulate isolated receipt payload for this specific line
+-                const isolatedReceiptData = {
+-                    ...headerData,
+-                    ...order.export_for_printing(this.pos.session._base_url, headerData),
+-                    // Override orderlines so it's JUST this single unit
+-                    orderlines: [{
+-                        ...line.getDisplayData(),
+-                        quantity: 1, 
+-                    }],
+-                    // Hide financial subtotals
+-                    amount_total: 0,
+-                    subtotal: 0,
+-                    tax_details: [],
+-                };
++        return !order || order.finalized || order.state === "done";
++    }
+ 
+-                // Fire N separate print jobs for this line
+-                for (let i = 0; i < qty; i++) {
+-                    await this.printer.print(
+-                        BarTicketReceipt,
+-                        { 
+-                            data: isolatedReceiptData,
+-                            formatCurrency: this.env.utils.formatCurrency,
+-                        },
+-                        { webPrintFallback: true }
+-                    );
+-                }
+-            }
++    /**
++     * Show the button only when the order has at least one bar-ticket line
++     * that has already been paid-and-printed (i.e., reprint makes sense).
++     */
++    get hasReprintableLines() {
++        const order = this.currentOrder;
++        if (!order || order.get_orderlines().length === 0) {
++            return false;
+         }
++        return order.get_orderlines().some(
++            (line) => shouldSplitLine(line, this.pos) && line.bar_ticket_paid_and_printed
++        );
+     }
+ 
+-    _shouldSplitLine(line) {
+-        const product = line.get_product();
+-        if (!product) {
+-            return false;
++    async click() {
++        const authorized = await requestSupervisorPin(
++            this.pos,
++            this.dialog,
++            this.notification
++        );
++        if (!authorized) {
++            return;
+         }
+-        const categories = product.pos_categ_ids || [];
+-        // `categories` in Odoo 18 are objects loaded from `pos_available_models`.
+-        return categories.some((categ) => categ.x_print_single_ticket);
++
++        await reprintBarTicketsForOrder(
++            this.currentOrder,
++            this.pos,
++            this.printer,
++            this.env
++        );
++
++        this.notification.add(_t("Tickets Barra reimpresos."), {
++            type: "success",
++            title: _t("Reimpresi├│n OK"),
++        });
+     }
+ }
+ 
+-Object.assign(ControlButtons.components, { BarTicketButton });
++Object.assign(ControlButtons.components, { BarReprintButton });
+diff --git a/pos_bar_single_ticket/static/src/app/control_buttons/bar_ticket_button.xml b/pos_bar_single_ticket/static/src/app/control_buttons/bar_ticket_button.xml
+index f7538dd..04d3321 100644
+--- a/pos_bar_single_ticket/static/src/app/control_buttons/bar_ticket_button.xml
++++ b/pos_bar_single_ticket/static/src/app/control_buttons/bar_ticket_button.xml
+@@ -1,20 +1,22 @@
+ <?xml version="1.0" encoding="UTF-8"?>
+ <templates id="template" xml:space="preserve">
+-    <!-- Component structure -->
+-    <t t-name="pos_bar_single_ticket.BarTicketButton" owl="1">
+-        <button class="control-button btn btn-light rounded-0 fw-bolder mb-2" t-on-click="() => this.click()">
+-            <i class="fa fa-beer me-1" role="img" aria-label="Bar Tickets" title="Bar Tickets" />
+-            <span>Bar Tickets</span>
++    <!-- Supervisor-only Bar Ticket Reprint Button -->
++    <t t-name="pos_bar_single_ticket.BarReprintButton" owl="1">
++        <button class="control-button btn rounded-0 fw-bolder mb-2 btn-warning"
++                t-if="!this.isOrderFinalized and this.hasReprintableLines"
++                t-on-click="() => this.click()">
++            <i class="fa fa-print me-1" role="img" aria-label="Reimprimir Tickets Barra" title="Reimprimir Tickets Barra" />
++            <span>Reimprimir Barra</span>
+         </button>
+     </t>
+ 
+     <!-- Inject the component into the ControlButtons -->
+     <t t-name="pos_bar_single_ticket.ControlButtons" t-inherit="point_of_sale.ControlButtons" t-inherit-mode="extension">
+         <xpath expr="//button[hasclass('more-btn')]" position="before">
+-            <BarTicketButton t-if="!props.showRemainingButtons and !ui.isSmall"/>
++            <BarReprintButton t-if="!props.showRemainingButtons and !ui.isSmall"/>
+         </xpath>
+         <xpath expr="//div[hasclass('control-buttons-modal')]" position="inside">
+-            <BarTicketButton t-if="props.showRemainingButtons"/>
++            <BarReprintButton t-if="props.showRemainingButtons"/>
+         </xpath>
+     </t>
+ </templates>
+diff --git a/pos_bar_single_ticket/static/src/app/models/pos_order_line.js b/pos_bar_single_ticket/static/src/app/models/pos_order_line.js
+new file mode 100644
+index 0000000..df2b025
+--- /dev/null
++++ b/pos_bar_single_ticket/static/src/app/models/pos_order_line.js
+@@ -0,0 +1,30 @@
++/** @odoo-module **/
++
++import { PosOrderline } from "@point_of_sale/app/models/pos_order_line";
++import { patch } from "@web/core/utils/patch";
++
++/**
++ * Adds `bar_ticket_paid_and_printed` to each order line.
++ *
++ * This flag is set to true ONLY when the order is validated (payment confirmed).
++ * It is never reset by deleting/re-adding a product, because it lives on the
++ * line object that is serialized and persisted across the session.
++ *
++ * The flag also drives the supervisor reprint button: if true, the order has
++ * already been printed at least once and a supervisor PIN is required.
++ */
++patch(PosOrderline.prototype, {
++    setup(_defaultObj, options) {
++        super.setup(...arguments);
++        this.bar_ticket_paid_and_printed = this.bar_ticket_paid_and_printed || false;
++    },
++    init_from_JSON(json) {
++        super.init_from_JSON(...arguments);
++        this.bar_ticket_paid_and_printed = json.bar_ticket_paid_and_printed || false;
++    },
++    export_as_JSON() {
++        const json = super.export_as_JSON(...arguments);
++        json.bar_ticket_paid_and_printed = this.bar_ticket_paid_and_printed;
++        return json;
++    },
++});
+diff --git a/pos_bar_single_ticket/static/src/app/receipt/bar_ticket_receipt.js b/pos_bar_single_ticket/static/src/app/receipt/bar_ticket_receipt.js
+index 7f381ee..a5e1447 100644
+--- a/pos_bar_single_ticket/static/src/app/receipt/bar_ticket_receipt.js
++++ b/pos_bar_single_ticket/static/src/app/receipt/bar_ticket_receipt.js
+@@ -3,19 +3,11 @@
+ import { Component } from "@odoo/owl";
+ import { ReceiptHeader } from "@point_of_sale/app/screens/receipt_screen/receipt/receipt_header/receipt_header";
+ 
+-/**
+- * @typedef {Object} BarTicketReceiptProps
+- * @property {Object} data
+- * @property {Function} formatCurrency
+- */
+-
+ export class BarTicketReceipt extends Component {
+     static template = "pos_bar_single_ticket.BarTicketReceipt";
+     static components = { ReceiptHeader };
+-    
+-    /** @type {BarTicketReceiptProps} */
+     static props = {
+-        data: { type: Object, required: true },
+-        formatCurrency: { type: Function, required: true },
++        data: Object,
++        formatCurrency: Function,
+     };
+ }
+diff --git a/pos_bar_single_ticket/static/src/app/receipt/bar_ticket_receipt.xml b/pos_bar_single_ticket/static/src/app/receipt/bar_ticket_receipt.xml
+index 9b1c05b..2a5e082 100644
+--- a/pos_bar_single_ticket/static/src/app/receipt/bar_ticket_receipt.xml
++++ b/pos_bar_single_ticket/static/src/app/receipt/bar_ticket_receipt.xml
+@@ -2,14 +2,8 @@
+ <templates id="template" xml:space="preserve">
+     <t t-name="pos_bar_single_ticket.BarTicketReceipt">
+         <div class="pos-receipt">
+-            <ReceiptHeader data="props.data.headerData" />
+-            
+-            <div t-if="props.data.table" class="pos-receipt-title text-center my-3" style="font-size: 150%; font-weight: bold;">
+-                Table <t t-esc="props.data.table" />
+-            </div>
+-            
+-            <div class="pos-receipt-title text-center my-3" style="font-size: 110%;">
+-                <t t-if="props.data.cashier" t-esc="props.data.cashier"/>
++            <div class="pos-receipt-title text-center my-3" style="font-size: 150%; font-weight: bold;">
++                <t t-esc="props.data.pos_name" />
+             </div>
+ 
+             <hr style="border-top: 2px dashed black;"/>
+@@ -26,10 +20,13 @@
+             
+             <hr style="border-top: 2px dashed black;"/>
+             
+-            <div class="pos-receipt-title text-center my-2">
++            <div class="pos-receipt-title text-center mt-2 mb-4">
+                 <div t-esc="props.data.date" />
+                 <div t-esc="props.data.name" />
+             </div>
++            <!-- Extra padding to prevent the printer from cutting off the order number -->
++            <br/>
++            <br/>
+         </div>
+     </t>
+ </templates>
+diff --git a/pos_bar_single_ticket/static/src/app/screens/payment_screen.js b/pos_bar_single_ticket/static/src/app/screens/payment_screen.js
+new file mode 100644
+index 0000000..7967de0
+--- /dev/null
++++ b/pos_bar_single_ticket/static/src/app/screens/payment_screen.js
+@@ -0,0 +1,31 @@
++/** @odoo-module **/
++
++import { PaymentScreen } from "@point_of_sale/app/screens/payment_screen/payment_screen";
++import { patch } from "@web/core/utils/patch";
++import { useService } from "@web/core/utils/hooks";
++import { printBarTicketsForOrder } from "@pos_bar_single_ticket/app/utils/bar_ticket_utils";
++import { usePos } from "@point_of_sale/app/store/pos_hook";
++
++patch(PaymentScreen.prototype, {
++    setup() {
++        super.setup(...arguments);
++        this._barTicketPos = usePos();
++        this._barTicketPrinter = useService("printer");
++    },
++
++    async validateOrder(isForceValidate) {
++        const order = this.currentOrder;
++
++        // Print any unprinted bar tickets before finalizing the order
++        if (order) {
++            await printBarTicketsForOrder(
++                order,
++                this._barTicketPos,
++                this._barTicketPrinter,
++                this.env
++            );
++        }
++
++        return super.validateOrder(...arguments);
++    },
++});
+diff --git a/pos_bar_single_ticket/static/src/app/screens/ticket_screen/ticket_screen.js b/pos_bar_single_ticket/static/src/app/screens/ticket_screen/ticket_screen.js
+new file mode 100644
+index 0000000..f635abc
+--- /dev/null
++++ b/pos_bar_single_ticket/static/src/app/screens/ticket_screen/ticket_screen.js
+@@ -0,0 +1,67 @@
++/** @odoo-module **/
++
++import { TicketScreen } from "@point_of_sale/app/screens/ticket_screen/ticket_screen";
++import { patch } from "@web/core/utils/patch";
++import { useService } from "@web/core/utils/hooks";
++import { usePos } from "@point_of_sale/app/store/pos_hook";
++import { _t } from "@web/core/l10n/translation";
++import {
++    shouldSplitLine,
++    reprintBarTicketsForOrder,
++    requestSupervisorPin,
++} from "@pos_bar_single_ticket/app/utils/bar_ticket_utils";
++
++patch(TicketScreen.prototype, {
++    setup() {
++        super.setup(...arguments);
++        this._barTicketPos = usePos();
++        this._barTicketPrinter = useService("printer");
++        this._barTicketDialog = useService("dialog");
++        this._barTicketNotification = useService("notification");
++    },
++
++    /**
++     * Returns true if the given order has at least one bar-category line.
++     * Used in the XML template to conditionally show the reprint button.
++     * @param {object} order
++     * @returns {boolean}
++     */
++    hasBarTicketLines(order) {
++        if (!order || !order.get_orderlines) {
++            return false;
++        }
++        return order.get_orderlines().some((line) => shouldSplitLine(line, this._barTicketPos));
++    },
++
++    /**
++     * Called when the supervisor clicks "Reimprimir Barra" from the Ticket Screen.
++     * Verifies the supervisor PIN then reprints all bar-category tickets.
++     * @param {object} order ÔÇô the selected synced (paid) order
++     */
++    async reprintBarTickets(order) {
++        if (!order) {
++            return;
++        }
++
++        const authorized = await requestSupervisorPin(
++            this._barTicketPos,
++            this._barTicketDialog,
++            this._barTicketNotification
++        );
++        if (!authorized) {
++            return;
++        }
++
++        await reprintBarTicketsForOrder(
++            order,
++            this._barTicketPos,
++            this._barTicketPrinter,
++            this.env
++        );
++
++        this._barTicketNotification.add(_t("Tickets Barra reimpresos."), {
++            type: "success",
++            title: _t("Reimpresi├│n OK"),
++        });
++    },
++});
+diff --git a/pos_bar_single_ticket/static/src/app/screens/ticket_screen/ticket_screen.xml b/pos_bar_single_ticket/static/src/app/screens/ticket_screen/ticket_screen.xml
+new file mode 100644
+index 0000000..48168cf
+--- /dev/null
++++ b/pos_bar_single_ticket/static/src/app/screens/ticket_screen/ticket_screen.xml
+@@ -0,0 +1,22 @@
++<?xml version="1.0" encoding="UTF-8"?>
++<templates id="template" xml:space="preserve">
++    <!--
++        Inject "Reimprimir Barra" button into the TicketScreen right panel,
++        next to the existing Details / Invoice / Print Receipt buttons.
++        Only visible when the selected paid order has bar-category lines.
++    -->
++    <t t-name="pos_bar_single_ticket.TicketScreen"
++       t-inherit="point_of_sale.TicketScreen"
++       t-inherit-mode="extension">
++        <xpath expr="//div[hasclass('control-buttons')]" position="inside">
++            <button t-if="this.hasBarTicketLines(_selectedSyncedOrder)"
++                    class="control-button btn btn-warning btn-lg lh-lg flex-grow-1 flex-shrink-1"
++                    t-on-click="() => this.reprintBarTickets(_selectedSyncedOrder)">
++                <i class="fa fa-print me-1" role="img"
++                   aria-label="Reimprimir Tickets Barra"
++                   title="Reimprimir Tickets Barra"/>
++                Reimprimir Barra
++            </button>
++        </xpath>
++    </t>
++</templates>
+diff --git a/pos_bar_single_ticket/static/src/app/utils/bar_ticket_utils.js b/pos_bar_single_ticket/static/src/app/utils/bar_ticket_utils.js
+new file mode 100644
+index 0000000..4c121cd
+--- /dev/null
++++ b/pos_bar_single_ticket/static/src/app/utils/bar_ticket_utils.js
+@@ -0,0 +1,199 @@
++/** @odoo-module **/
++
++/* global Sha1 */
++
++import { BarTicketReceipt } from "@pos_bar_single_ticket/app/receipt/bar_ticket_receipt";
++import { NumberPopup } from "@point_of_sale/app/utils/input_popups/number_popup";
++import { makeAwaitable } from "@point_of_sale/app/store/make_awaitable_dialog";
++import { _t } from "@web/core/l10n/translation";
++
++/**
++ * Requests supervisor PIN verification before allowing a reprint.
++ * Shared between BarReprintButton (product screen) and TicketScreen reprint.
++ * @param {object} pos   ÔÇô result of usePos()
++ * @param {object} dialog ÔÇô result of useService("dialog")
++ * @param {object} notification ÔÇô result of useService("notification")
++ * @returns {Promise<boolean>}
++ */
++export async function requestSupervisorPin(pos, dialog, notification) {
++    // If pos_hr employee login is not enabled, allow freely
++    if (!pos.config.module_pos_hr) {
++        return true;
++    }
++
++    // If the current cashier is already a manager, allow freely
++    const cashier = pos.get_cashier();
++    if (cashier?._role === "manager") {
++        return true;
++    }
++
++    // Find all manager employees
++    const employees = pos.models["hr.employee"] || [];
++    const managers = employees.filter((e) => e._role === "manager");
++
++    // If no managers configured, allow freely (degraded mode)
++    if (!managers.length) {
++        return true;
++    }
++
++    // Prompt for supervisor PIN
++    const inputPin = await makeAwaitable(dialog, NumberPopup, {
++        formatDisplayedValue: (x) => x.replace(/./g, "ÔÇó"),
++        title: _t("PIN de Supervisor Requerido"),
++    });
++
++    if (!inputPin) {
++        return false;
++    }
++
++    const hashedPin = Sha1.hash(inputPin);
++    const authorized = managers.some((m) => m._pin && m._pin === hashedPin);
++
++    if (!authorized) {
++        notification.add(_t("PIN incorrecto. Reimpresi├│n no autorizada."), {
++            type: "warning",
++            title: _t("Acceso Denegado"),
++        });
++        return false;
++    }
++    return true;
++}
++
++/**
++ * Returns true if the given orderline belongs to a POS category
++ * that has the "Print Single Ticket" flag enabled and is available
++ * in the current POS configuration.
++ * @param {import("@point_of_sale/app/models/pos_order_line").PosOrderline} line
++ * @param {object} pos  ÔÇô result of usePos()
++ * @returns {boolean}
++ */
++export function shouldSplitLine(line, pos) {
++    const product = line.get_product();
++    if (!product) {
++        return false;
++    }
++    const categories = product.pos_categ_ids || [];
++    return categories.some((categ) => {
++        if (!categ || !categ.x_print_single_ticket) {
++            return false;
++        }
++        // If the POS limits categories, only apply if the category is allowed.
++        // iface_available_categ_ids holds record objects in Odoo 18, so we must
++        // extract their .id before comparing ÔÇö includes() on objects never matches integers.
++        if (pos?.config?.limit_categories && pos.config.iface_available_categ_ids?.length) {
++            const allowedIds = pos.config.iface_available_categ_ids.map((c) => c.id ?? c);
++            if (!allowedIds.includes(categ.id)) {
++                return false;
++            }
++        }
++        return true;
++    });
++}
++
++/**
++ * Builds the isolated receipt data for a single order line.
++ */
++function buildReceiptData(line, order, pos, headerData) {
++    return {
++        ...headerData,
++        ...order.export_for_printing(pos.session._base_url, headerData),
++        orderlines: [{
++            ...line.getDisplayData(),
++            quantity: 1,
++        }],
++        pos_name: pos.config.name,
++        amount_total: 0,
++        subtotal: 0,
++        tax_details: [],
++    };
++}
++
++/**
++ * Prints individual bar tickets for every line that has not yet been
++ * paid-and-printed. Marks `bar_ticket_paid_and_printed = true` on each line
++ * after printing so they can never be auto-printed again.
++ *
++ * This is called ONLY from validateOrder (payment screen) to ensure tickets
++ * are never printed before the client actually pays.
++ *
++ * @param {import("@point_of_sale/app/models/pos_order").PosOrder} order
++ * @param {object} pos  ÔÇô result of usePos()
++ * @param {object} printer ÔÇô result of useService("printer")
++ * @param {object} env  ÔÇô OWL component env (for formatCurrency)
++ */
++export async function printBarTicketsForOrder(order, pos, printer, env) {
++    if (!order || order.get_orderlines().length === 0) {
++        return;
++    }
++
++    const headerData = pos.getReceiptHeaderData(order);
++
++    for (const line of order.get_orderlines()) {
++        // Skip if already printed at payment time
++        if (!shouldSplitLine(line, pos) || line.bar_ticket_paid_and_printed) {
++            continue;
++        }
++
++        const qty = line.get_quantity();
++        const receiptData = buildReceiptData(line, order, pos, headerData);
++
++        for (let i = 0; i < qty; i++) {
++            await printer.print(
++                BarTicketReceipt,
++                {
++                    data: receiptData,
++                    formatCurrency: env.utils.formatCurrency,
++                },
++                { webPrintFallback: true }
++            );
++        }
++
++        // Mark as printed ÔÇö this gate is permanent for this order line
++        line.bar_ticket_paid_and_printed = true;
++    }
++}
++
++/**
++ * Force-reprints bar tickets for ALL eligible lines in the order,
++ * regardless of whether they were already printed.
++ *
++ * This is intended for supervisor use only (after PIN verification).
++ * It does NOT reset the `bar_ticket_paid_and_printed` flag ÔÇö the flag
++ * remains true so normal auto-print logic is not affected.
++ *
++ * @param {import("@point_of_sale/app/models/pos_order").PosOrder} order
++ * @param {object} pos  ÔÇô result of usePos()
++ * @param {object} printer ÔÇô result of useService("printer")
++ * @param {object} env  ÔÇô OWL component env (for formatCurrency)
++ */
++export async function reprintBarTicketsForOrder(order, pos, printer, env) {
++    if (!order || order.get_orderlines().length === 0) {
++        return;
++    }
++
++    const headerData = pos.getReceiptHeaderData(order);
++
++    for (const line of order.get_orderlines()) {
++        if (!shouldSplitLine(line, pos)) {
++            continue;
++        }
++
++        const qty = line.get_quantity();
++        if (qty <= 0) {
++            continue;
++        }
++
++        const receiptData = buildReceiptData(line, order, pos, headerData);
++
++        for (let i = 0; i < qty; i++) {
++            await printer.print(
++                BarTicketReceipt,
++                {
++                    data: receiptData,
++                    formatCurrency: env.utils.formatCurrency,
++                },
++                { webPrintFallback: true }
++            );
++        }
++    }
++}
+diff --git a/pos_kitchen_receipt_grouping/__manifest__.py b/pos_kitchen_receipt_grouping/__manifest__.py
+index 0765f47..fbd4707 100644
+--- a/pos_kitchen_receipt_grouping/__manifest__.py
++++ b/pos_kitchen_receipt_grouping/__manifest__.py
+@@ -1,6 +1,6 @@
+ {
+     'name': 'POS Kitchen Receipt Grouping',
+-    'version': '19.0.1.0.0',
++    'version': '18.0.1.0.0',
+     'category': 'Sales/Point of Sale',
+     'summary': 'Group POS kitchen receipts by POS Category sequence and decompose Combos',
+     'description': """
+diff --git a/pos_kitchen_receipt_grouping/models/pos_session.py b/pos_kitchen_receipt_grouping/models/pos_session.py
+index 5771849..a7030a3 100644
+--- a/pos_kitchen_receipt_grouping/models/pos_session.py
++++ b/pos_kitchen_receipt_grouping/models/pos_session.py
+@@ -1,10 +1,9 @@
+-from typing import Any
+ from odoo import models
+ 
+ class PosSession(models.Model):
+     _inherit = 'pos.session'
+ 
+-    def _loader_params_pos_category(self) -> dict[str, Any]:
++    def _loader_params_pos_category(self):
+         result = super()._loader_params_pos_category()
+         result['search_params']['fields'].append('kitchen_sequence')
+         return result
+diff --git a/pos_kitchen_receipt_grouping/static/src/app/models/pos_order.js b/pos_kitchen_receipt_grouping/static/src/app/models/pos_order.js
+index a8aa306..db92afb 100644
+--- a/pos_kitchen_receipt_grouping/static/src/app/models/pos_order.js
++++ b/pos_kitchen_receipt_grouping/static/src/app/models/pos_order.js
+@@ -4,10 +4,6 @@ import { PosOrder } from "@point_of_sale/app/models/pos_order";
+ import { patch } from "@web/core/utils/patch";
+ 
+ patch(PosOrder.prototype, {
+-    /**
+-     * @param {Object} categories
+-     * @returns {Object}
+-     */
+     computeChanges(categories) {
+         let res = super.computeChanges(categories);
+         
+diff --git a/pos_kitchen_receipt_grouping/static/src/app/store/pos_store.js b/pos_kitchen_receipt_grouping/static/src/app/store/pos_store.js
+index 74714fe..8d6eacb 100644
+--- a/pos_kitchen_receipt_grouping/static/src/app/store/pos_store.js
++++ b/pos_kitchen_receipt_grouping/static/src/app/store/pos_store.js
+@@ -34,14 +34,6 @@ function isComboParent(product) {
+ }
+ 
+ patch(PosStore.prototype, {
+-    /**
+-     * @param {Object} order
+-     * @param {string} title
+-     * @param {Object} lines
+-     * @param {boolean} fullReceipt
+-     * @param {boolean} diningModeUpdate
+-     * @returns {Promise<any>}
+-     */
+     async getRenderedReceipt(order, title, lines, fullReceipt = false, diningModeUpdate) {
+         const orderlines = order.get_orderlines();
+ 
+@@ -109,11 +101,6 @@ patch(PosStore.prototype, {
+         return super.getRenderedReceipt(order, RECEIPT_LABELS[title] || title, lines, fullReceipt, diningModeUpdate);
+     },
+ 
+-    /**
+-     * @param {Object} order
+-     * @param {Object} changes
+-     * @returns {Object}
+-     */
+     preparePrintingData(order, changes) {
+         // Call the original method to get the English-keyed object
+         const original = super.preparePrintingData(order, changes);
+diff --git a/pos_payment_card_details/__manifest__.py b/pos_payment_card_details/__manifest__.py
+index ba5610a..4d37ce1 100644
+--- a/pos_payment_card_details/__manifest__.py
++++ b/pos_payment_card_details/__manifest__.py
+@@ -1,6 +1,6 @@
+ {
+     'name': 'POS Payment Card Details',
+-    'version': '19.0.1.0.1',
++    'version': '18.0.1.0.1',
+     'category': 'Sales/Point of Sale',
+     'summary': 'Add Lot Number, Coupon, and Installments to POS payments for banking conciliation.',
+     'description': """
+diff --git a/pos_payment_card_details/models/pos_order.py b/pos_payment_card_details/models/pos_order.py
+index e62ec56..fc93674 100644
+--- a/pos_payment_card_details/models/pos_order.py
++++ b/pos_payment_card_details/models/pos_order.py
+@@ -1,10 +1,9 @@
+-from typing import Any
+ from odoo import models
+ 
+ class PosOrder(models.Model):
+     _inherit = 'pos.order'
+ 
+-    def _payment_fields(self, order: Any, ui_paymentline: dict[str, Any]) -> dict[str, Any]:
++    def _payment_fields(self, order, ui_paymentline):
+         payment_fields = super()._payment_fields(order, ui_paymentline)
+         payment_fields.update({
+             'lot_number': ui_paymentline.get('lot_number'),
+diff --git a/pos_payment_card_details/models/pos_payment_method.py b/pos_payment_card_details/models/pos_payment_method.py
+index f3cf78d..d695e7f 100644
+--- a/pos_payment_card_details/models/pos_payment_method.py
++++ b/pos_payment_card_details/models/pos_payment_method.py
+@@ -1,4 +1,3 @@
+-from typing import Any
+ from odoo import models, fields
+ 
+ class PosPaymentMethod(models.Model):
+@@ -9,7 +8,7 @@ class PosPaymentMethod(models.Model):
+         help='If checked, the POS will ask for Lot Number, Coupon, and Installments when using this payment method.'
+     )
+ 
+-    def _load_pos_data_fields(self, config_id: Any) -> list[str]:
++    def _load_pos_data_fields(self, config_id):
+         fields = super()._load_pos_data_fields(config_id)
+         fields.append('use_terminal_details')
+         return fields
+diff --git a/pos_payment_card_details/report/pos_sale_details.py b/pos_payment_card_details/report/pos_sale_details.py
+index aeab156..be536c9 100644
+--- a/pos_payment_card_details/report/pos_sale_details.py
++++ b/pos_payment_card_details/report/pos_sale_details.py
+@@ -1,12 +1,11 @@
+ # -*- coding: utf-8 -*-
+-from typing import Any
+ from odoo import models, fields, api
+ 
+ class ReportSaleDetails(models.AbstractModel):
+     _inherit = 'report.point_of_sale.report_saledetails'
+ 
+     @api.model
+-    def get_sale_details(self, date_start: Any = False, date_stop: Any = False, config_ids: Any = False, session_ids: Any = False) -> dict[str, Any]:
++    def get_sale_details(self, date_start=False, date_stop=False, config_ids=False, session_ids=False):
+         # Call super to get the original report data
+         data = super().get_sale_details(date_start, date_stop, config_ids, session_ids)
+         
+diff --git a/pos_payment_card_details/static/src/app/models/pos_order_card_details.js b/pos_payment_card_details/static/src/app/models/pos_order_card_details.js
+index f15fc77..bfde8b5 100644
+--- a/pos_payment_card_details/static/src/app/models/pos_order_card_details.js
++++ b/pos_payment_card_details/static/src/app/models/pos_order_card_details.js
+@@ -4,9 +4,6 @@ import { PosOrder } from "@point_of_sale/app/models/pos_order";
+ import { patch } from "@web/core/utils/patch";
+ 
+ patch(PosOrder.prototype, {
+-    /**
+-     * @returns {Object}
+-     */
+     export_for_printing() {
+         const receipt = super.export_for_printing(...arguments);
+ 
+diff --git a/pos_payment_card_details/static/src/app/models/pos_payment_card_details.js b/pos_payment_card_details/static/src/app/models/pos_payment_card_details.js
+index bb05bbe..6d04037 100644
+--- a/pos_payment_card_details/static/src/app/models/pos_payment_card_details.js
++++ b/pos_payment_card_details/static/src/app/models/pos_payment_card_details.js
+@@ -4,9 +4,6 @@ import { PosPayment } from "@point_of_sale/app/models/pos_payment";
+ import { patch } from "@web/core/utils/patch";
+ 
+ patch(PosPayment.prototype, {
+-    /**
+-     * @returns {Object}
+-     */
+     serialize() {
+         const result = super.serialize ? super.serialize(...arguments) : {};
+         result.lot_number = this.lot_number || "";
+@@ -14,9 +11,6 @@ patch(PosPayment.prototype, {
+         result.installments = this.installments || 1;
+         return result;
+     },
+-    /**
+-     * @returns {Object}
+-     */
+     export_as_JSON() {
+         const json = super.export_as_JSON ? super.export_as_JSON(...arguments) : {};
+         json.lot_number = this.lot_number || "";
+@@ -24,9 +18,6 @@ patch(PosPayment.prototype, {
+         json.installments = this.installments || 1;
+         return json;
+     },
+-    /**
+-     * @returns {Object}
+-     */
+     export_for_printing() {
+         const result = super.export_for_printing(...arguments);
+         result.lot_number = this.lot_number || "";
+diff --git a/pos_payment_card_details/static/src/app/payment_screen.js b/pos_payment_card_details/static/src/app/payment_screen.js
+index fc35939..5ed3a25 100644
+--- a/pos_payment_card_details/static/src/app/payment_screen.js
++++ b/pos_payment_card_details/static/src/app/payment_screen.js
+@@ -6,10 +6,6 @@ import { makeAwaitable } from "@point_of_sale/app/store/make_awaitable_dialog";
+ import { patch } from "@web/core/utils/patch";
+ 
+ patch(PaymentScreen.prototype, {
+-    /**
+-     * @param {Object} paymentMethod
+-     * @returns {Promise<any>}
+-     */
+     async addNewPaymentLine(paymentMethod) {
+         // Guard: skip if no valid payment method
+         if (!paymentMethod || paymentMethod.is_category) return;
+diff --git a/pos_payment_card_details/static/src/app/popups/terminal_details_popup/terminal_details_popup.js b/pos_payment_card_details/static/src/app/popups/terminal_details_popup/terminal_details_popup.js
+index 4073c56..53f3c05 100644
+--- a/pos_payment_card_details/static/src/app/popups/terminal_details_popup/terminal_details_popup.js
++++ b/pos_payment_card_details/static/src/app/popups/terminal_details_popup/terminal_details_popup.js
+@@ -3,24 +3,24 @@
+ import { Component, useState } from "@odoo/owl";
+ import { Dialog } from "@web/core/dialog/dialog";
+ 
+-/**
+- * @typedef {Object} TerminalDetailsPopupProps
+- * @property {Function} [getPayload]
+- * @property {Function} [close]
+- * @property {string} [title]
+- * @property {Object} [startingValue]
+- */
+-
+ export class TerminalDetailsPopup extends Component {
+     static template = "pos_payment_card_details.TerminalDetailsPopup";
+     static components = { Dialog };
+-    
+-    /** @type {TerminalDetailsPopupProps} */
+     static props = {
+-        getPayload: { type: Function, optional: true },
+-        close: { type: Function, optional: true },
++        // Injected by makeAwaitable
++        getPayload: Function,
++        close: Function,
++        // Custom
+         title: { type: String, optional: true },
+-        startingValue: { type: Object, optional: true },
++        startingValue: {
++            type: Object,
++            optional: true,
++            shape: {
++                lot_number: { type: String, optional: true },
++                coupon_number: { type: String, optional: true },
++                installments: { type: Number, optional: true },
++            },
++        },
+     };
+ 
+     setup() {
+diff --git a/pos_payment_category/__manifest__.py b/pos_payment_category/__manifest__.py
+index 6b6b11f..f664e88 100644
+--- a/pos_payment_category/__manifest__.py
++++ b/pos_payment_category/__manifest__.py
+@@ -1,6 +1,6 @@
+ {
+     'name': 'POS Payment Category',
+-    'version': '19.0.1.0.2',
++    'version': '18.0.1.1.0',
+     'category': 'Sales/Point of Sale',
+     'summary': 'Group payment methods into categories (e.g., Terminals, QR) for a cleaner POS UI.',
+     'description': """
+diff --git a/pos_payment_category/models/pos_payment_category.py b/pos_payment_category/models/pos_payment_category.py
+index 2223a97..ab6180a 100644
+--- a/pos_payment_category/models/pos_payment_category.py
++++ b/pos_payment_category/models/pos_payment_category.py
+@@ -1,5 +1,4 @@
+ # -*- coding: utf-8 -*-
+-from typing import Any
+ from odoo import models, fields, api
+ 
+ class PosPaymentCategory(models.Model):
+@@ -12,15 +11,23 @@ class PosPaymentCategory(models.Model):
+     sequence = fields.Integer(string='Sequence', default=10, help='Gives the sequence order when displaying a list of payment categories.')
+     active = fields.Boolean(default=True)
+     color = fields.Integer(string='Color')
+-    
++
+     payment_method_ids = fields.One2many('pos.payment.method', 'category_id', string='Payment Methods')
++    config_ids = fields.Many2many(
++        'pos.config',
++        'pos_config_payment_category_rel',
++        'category_id', 'config_id',
++        string='Point of Sale',
++        help='Select which POS configurations can use this payment category. If empty, it will not appear in any POS.',
++    )
+ 
+     @api.model
+-    def _load_pos_data_domain(self, data: Any) -> list[tuple[str, str, Any]]:
+-        return [('active', '=', True)]
++    def _load_pos_data_domain(self, data):
++        config_id = data['pos.config']['data'][0]['id']
++        return [('active', '=', True), ('config_ids', 'in', [config_id])]
+ 
+     @api.model
+-    def _load_pos_data_fields(self, config_id: Any) -> list[str]:
++    def _load_pos_data_fields(self, config_id):
+         return ['name', 'sequence', 'color']
+ 
+ class PosPaymentMethod(models.Model):
+@@ -29,7 +36,7 @@ class PosPaymentMethod(models.Model):
+     category_id = fields.Many2one('pos.payment.category', string='Payment Category', help='Group payment methods by category (e.g. Terminal 1, QR, etc).')
+ 
+     @api.model
+-    def _load_pos_data_fields(self, config_id: Any) -> list[str]:
++    def _load_pos_data_fields(self, config_id):
+         # Extend the standard pos.payment.method loaded fields to include category_id
+         fields = super()._load_pos_data_fields(config_id)
+         fields.append('category_id')
+@@ -39,7 +46,7 @@ class PosSession(models.Model):
+     _inherit = 'pos.session'
+ 
+     @api.model
+-    def _load_pos_data_models(self, config_id: Any) -> list[str]:
++    def _load_pos_data_models(self, config_id):
+         models = super()._load_pos_data_models(config_id)
+         models.append('pos.payment.category')
+         return models
+@@ -53,3 +60,14 @@ class PosPayment(models.Model):
+         string='Payment Category',
+         store=True,
+     )
++
++class PosConfig(models.Model):
++    _inherit = 'pos.config'
++
++    payment_category_ids = fields.Many2many(
++        'pos.payment.category',
++        'pos_config_payment_category_rel',
++        'config_id', 'category_id',
++        string='Payment Categories',
++        help='Payment categories available on this POS. Only these categories will appear on the payment screen.',
++    )
+diff --git a/pos_payment_category/static/src/app/payment_screen.js b/pos_payment_category/static/src/app/payment_screen.js
+index 70f0c97..5f3c5af 100644
+--- a/pos_payment_category/static/src/app/payment_screen.js
++++ b/pos_payment_category/static/src/app/payment_screen.js
+@@ -14,16 +14,10 @@ patch(PaymentScreen.prototype, {
+         });
+     },
+ 
+-    /**
+-     * @returns {Array<Object>}
+-     */
+     get paymentCategories() {
+         return this.pos.models['pos.payment.category']?.getAll() ?? [];
+     },
+ 
+-    /**
+-     * @returns {Array<Object>}
+-     */
+     get filteredPaymentMethods() {
+         const allMethods = this.payment_methods_from_config;
+ 
+@@ -45,9 +39,6 @@ patch(PaymentScreen.prototype, {
+         return [...cats, ...loose];
+     },
+ 
+-    /**
+-     * @param {Object} category
+-     */
+     clickPaymentCategory(category) {
+         // Toggle the category selection on and off
+         if (this.state.activePaymentCategory?.id === category.id) {
+@@ -57,11 +48,7 @@ patch(PaymentScreen.prototype, {
+         }
+     },
+ 
+-    /**
+-     * Guard addNewPaymentLine against being called with a category object or undefined
+-     * @param {Object} paymentMethod
+-     * @returns {Promise<any>}
+-     */
++    // Guard addNewPaymentLine against being called with a category object or undefined
+     async addNewPaymentLine(paymentMethod) {
+         if (!paymentMethod || paymentMethod.is_category) return;
+         return super.addNewPaymentLine(...arguments);
+diff --git a/pos_payment_category/views/pos_payment_category_view.xml b/pos_payment_category/views/pos_payment_category_view.xml
+index 2f614dd..3777ce0 100644
+--- a/pos_payment_category/views/pos_payment_category_view.xml
++++ b/pos_payment_category/views/pos_payment_category_view.xml
+@@ -17,6 +17,7 @@
+                         </group>
+                         <group>
+                             <field name="payment_method_ids" widget="many2many_tags" readonly="1"/>
++                            <field name="config_ids" widget="many2many_tags"/>
+                         </group>
+                     </group>
+                 </sheet>
+@@ -107,4 +108,32 @@
+             </xpath>
+         </field>
+     </record>
++
++    <!-- Inherit pos.config form to configure payment categories per POS -->
++    <record id="pos_config_view_form_inherit_payment_category" model="ir.ui.view">
++        <field name="name">pos.config.form.inherit.payment.category</field>
++        <field name="model">pos.config</field>
++        <field name="inherit_id" ref="point_of_sale.pos_config_view_form"/>
++        <field name="arch" type="xml">
++            <xpath expr="//div[hasclass('row','mt16','o_settings_container')][last()]" position="after">
++                <div class="row mt16 o_settings_container">
++                    <div class="o_setting_box col-xs-12 col-md-6">
++                        <div class="o_setting_left_pane"/>
++                        <div class="o_setting_right_pane">
++                            <label for="payment_category_ids" string="Payment Categories"/>
++                            <div class="text-muted">
++                                Payment categories available on this POS screen.
++                            </div>
++                            <div class="content-group mt8">
++                                <field name="payment_category_ids" widget="many2many_tags"
++                                       options="{'no_create': True}"
++                                       placeholder="Select payment categories..."/>
++                            </div>
++                        </div>
++                    </div>
++                </div>
++            </xpath>
++        </field>
++    </record>
+ </odoo>
++
+diff --git a/pos_retail_pre_ticket/__manifest__.py b/pos_retail_pre_ticket/__manifest__.py
+index 1123efe..c8a163c 100644
+--- a/pos_retail_pre_ticket/__manifest__.py
++++ b/pos_retail_pre_ticket/__manifest__.py
+@@ -1,6 +1,6 @@
+ {
+     'name': 'POS Retail Pre-Ticket',
+-    'version': '19.0.1.0.0',
++    'version': '18.0.1.0.0',
+     'category': 'Sales/Point of Sale',
+     'summary': 'Adds a Pre-Ticket printing button to the standard retail POS',
+     'description': """
+diff --git a/pos_retail_pre_ticket/static/src/app/control_buttons/pre_ticket_button.js b/pos_retail_pre_ticket/static/src/app/control_buttons/pre_ticket_button.js
+index 5656e86..a1f370f 100644
+--- a/pos_retail_pre_ticket/static/src/app/control_buttons/pre_ticket_button.js
++++ b/pos_retail_pre_ticket/static/src/app/control_buttons/pre_ticket_button.js
+@@ -16,16 +16,10 @@ export class PreTicketButton extends Component {
+         this.printer = useService("printer");
+     }
+ 
+-    /**
+-     * @returns {Object|null}
+-     */
+     get currentOrder() {
+         return this.pos.get_order();
+     }
+ 
+-    /**
+-     * @returns {Promise<void>}
+-     */
+     async click() {
+         const order = this.currentOrder;
+         if (!order || order.get_orderlines().length === 0) {
+diff --git a/pos_retail_pre_ticket/static/src/app/receipt/pre_ticket_receipt.js b/pos_retail_pre_ticket/static/src/app/receipt/pre_ticket_receipt.js
+index 5663bae..fa5a2ff 100644
+--- a/pos_retail_pre_ticket/static/src/app/receipt/pre_ticket_receipt.js
++++ b/pos_retail_pre_ticket/static/src/app/receipt/pre_ticket_receipt.js
+@@ -11,7 +11,7 @@ export class PreTicketReceipt extends Component {
+         Orderline,
+     };
+     static props = {
+-        data: { type: Object },
+-        formatCurrency: { type: Function },
++        data: Object,
++        formatCurrency: Function,
+     };
+ }

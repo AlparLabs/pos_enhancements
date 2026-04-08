@@ -1,0 +1,28 @@
+<odoo>
+<record id="payment_provider_form" model="ir.ui.view">
+    <field name="name">payway Provider Form</field>
+    <field name="model">payment.provider</field>
+    <field name="inherit_id" ref="payment.payment_provider_form"/>
+    <field name="arch" type="xml">
+        <xpath expr="//group[@name=&quot;provider_credentials&quot;]" position="inside">
+            <group invisible="code != 'payway'">
+                <field required="code == 'payway' and state != 'disabled'" name="payway_commerce"/>
+                <field required="code == 'payway' and state != 'disabled'" name="payway_public_key"/>
+                <field required="code == 'payway' and state != 'disabled'" name="payway_secret_key" password="True"/>
+                <field required="code == 'payway' and state != 'disabled'" name="product_surcharge_id"/>
+                <field name="payway_cybersource"/>
+            </group>
+            <group name="payment_followup" position="after">
+            <group string="Payway fraud detection configuration" invisible="code != 'payway' or payway_cybersource == False">
+                <field name="payway_channel" requiered="payway_cybersource == True"/>
+                <field name="payway_item_code" requiered="payway_cybersource == True"/>
+                <field name="payway_item_description" requiered="payway_cybersource == True"/>
+                <field name="payway_item_name" requiered="payway_cybersource == True"/>
+                <field name="payway_item_sku" requiered="payway_cybersource == True"/>
+            </group>
+        </group>
+
+        </xpath>
+    </field>
+</record>
+</odoo>
