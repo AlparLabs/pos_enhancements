@@ -86,7 +86,10 @@
         <!-- Replace the entire pos-receipt-taxes block to add the AR letter condition to its t-if -->
         <xpath expr="//div[hasclass('pos-receipt-taxes')]" position="replace">
             <t t-set="taxTotals" t-value="props.data.taxTotals"/>
-            <div t-if="taxTotals and taxTotals.has_tax_groups and props.data.l10n_ar_letter !== 'B' and props.data.l10n_ar_letter !== 'C'" class="pos-receipt-taxes">
+            <t t-set="docName" t-value="props.data.l10n_latam_document_type_name or ''"/>
+            <t t-set="is_b_or_c" t-value="props.data.l10n_ar_letter == 'B' or props.data.l10n_ar_letter == 'C' or docName.includes(' B') or docName.includes(' C')"/>
+            
+            <div t-if="taxTotals and taxTotals.has_tax_groups and !is_b_or_c" class="pos-receipt-taxes">
                 <div class="text-center">--------------------------------</div>
                 <t t-foreach="taxTotals.subtotals" t-as="subtotal" t-key="subtotal.name">
                     <div class="d-flex">
