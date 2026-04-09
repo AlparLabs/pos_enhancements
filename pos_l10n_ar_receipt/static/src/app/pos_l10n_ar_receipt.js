@@ -103,6 +103,9 @@ patch(PosOrder.prototype, {
 
         if (this.l10n_ar_data) {
             Object.assign(result, this.l10n_ar_data);
+            if (result.headerData) {
+                Object.assign(result.headerData, this.l10n_ar_data);
+            }
         }
 
         return result;

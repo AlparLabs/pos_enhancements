@@ -4,18 +4,37 @@
         
         <!-- Add Argentine Invoice Header -->
         <xpath expr="//ReceiptHeader" position="after">
-            <div t-if="props.data.l10n_latam_document_type_name" class="pos-receipt-center-align" style="font-weight: bold; margin-top: 5px; text-transform: uppercase;">
-                <t t-esc="props.data.l10n_latam_document_type_name.replace('Facturas', 'Factura')"/>
-            </div>
-            <div t-if="props.data.l10n_latam_document_number" class="pos-receipt-center-align" style="font-weight: bold;">
-                Nº DE FACTURA: <t t-esc="props.data.l10n_latam_document_number"/>
-            </div>
-            <div t-if="props.data.l10n_ar_company_cuit" class="pos-receipt-center-align" style="font-size: 0.9em;">
-                CUIT: <t t-esc="props.data.l10n_ar_company_cuit"/>
-            </div>
-            <div t-if="props.data.l10n_ar_company_responsibility" class="pos-receipt-center-align" style="font-size: 0.9em; margin-bottom: 5px;">
-                <t t-esc="props.data.l10n_ar_company_responsibility"/>
-            </div>
+            <t t-if="props.data.l10n_latam_document_type_name">
+                <div class="pos-receipt-center-align" style="font-weight: bold; margin-top: 10px; font-size: 1.2em; text-transform: uppercase; border-top: 2px solid black; padding-top: 5px;">
+                    <t t-esc="props.data.l10n_latam_document_type_name.replace('Facturas', 'Factura')"/>
+                </div>
+                
+                <div class="pos-l10n-ar-header-info" style="font-size: 0.85em; margin-bottom: 10px; border-bottom: 2px solid black; padding-bottom: 5px;">
+                    <!-- Document Number and Date -->
+                    <div style="display: flex; justify-content: space-between; font-weight: bold; margin-top: 5px;">
+                        <span>Nro: <t t-esc="props.data.l10n_latam_document_number"/></span>
+                        <span>Fecha: <t t-esc="props.data.l10n_ar_invoice_date || props.data.date"/></span>
+                    </div>
+
+                    <div style="margin-top: 10px; border-top: 1px dashed #ccc; padding-top: 5px;">
+                        <div style="font-weight: bold; text-decoration: underline; margin-bottom: 3px;">EMISOR:</div>
+                        <div style="font-weight: bold;"><t t-esc="props.data.headerData.company.name"/></div>
+                        <div><t t-esc="props.data.l10n_ar_company_address"/></div>
+                        <div>CUIT: <t t-esc="props.data.l10n_ar_company_cuit"/></div>
+                        <div>Cond. IVA: <t t-esc="props.data.l10n_ar_company_responsibility"/></div>
+                        <div t-if="props.data.l10n_ar_company_iibb">IIBB: <t t-esc="props.data.l10n_ar_company_iibb"/></div>
+                        <div t-if="props.data.l10n_ar_company_start_date">Inicio Act: <t t-esc="props.data.l10n_ar_company_start_date"/></div>
+                    </div>
+
+                    <div style="margin-top: 10px; border-top: 1px dashed #ccc; padding-top: 5px;">
+                        <div style="font-weight: bold; text-decoration: underline; margin-bottom: 3px;">RECEPTOR:</div>
+                        <div style="font-weight: bold;"><t t-esc="props.data.l10n_ar_partner_name"/></div>
+                        <div t-if="props.data.l10n_ar_partner_vat">CUIT/DNI: <t t-esc="props.data.l10n_ar_partner_vat"/></div>
+                        <div t-if="props.data.l10n_ar_partner_responsibility">Cond. IVA: <t t-esc="props.data.l10n_ar_partner_responsibility"/></div>
+                        <div t-if="props.data.l10n_ar_partner_address"><t t-esc="props.data.l10n_ar_partner_address"/></div>
+                    </div>
+                </div>
+            </t>
         </xpath>
 
         <!-- AFIP QR Code and CAE Details -->
@@ -24,11 +43,11 @@
                 
                 <!-- QR Code -->
                 <div t-if="props.data.l10n_ar_afip_qr_code" class="pos-receipt-center-align" style="margin-bottom: 5px;">
-                    <img t-att-src="'/report/barcode/QR/' + props.data.l10n_ar_afip_qr_code" style="width: 200px; height: 200px;" alt="QR Code AFIP"/>
+                    <img t-att-src="'/report/barcode/QR/' + props.data.l10n_ar_afip_qr_code" style="width: 160px; height: 160px;" alt="QR Code AFIP"/>
                 </div>
 
                 <!-- CAE Details -->
-                <div t-if="props.data.l10n_ar_afip_auth_code" class="pos-receipt-center-align" style="font-weight: bold;">
+                <div t-if="props.data.l10n_ar_afip_auth_code" class="pos-receipt-center-align" style="font-weight: bold; font-size: 1.1em;">
                     CAE: <t t-esc="props.data.l10n_ar_afip_auth_code"/>
                 </div>
                 <div t-if="props.data.l10n_ar_afip_auth_code_due" class="pos-receipt-center-align">
@@ -63,10 +82,24 @@
             </div>
         </xpath>
 
-        <!-- Hide Subtotal + Taxes for Factura B -->
+        <!-- Hide Subtotal + Taxes for Factura B/C -->
+        <!-- We use a more aggressive approach to ensure standard blocks are hidden -->
         <xpath expr="//div[hasclass('pos-receipt-taxes')]" position="attributes">
-            <attribute name="t-attf-class">pos-receipt-taxes {{ props.data.l10n_ar_letter === 'B' ? 'd-none' : '' }}</attribute>
+            <attribute name="t-attf-style" add="display: {{ props.data.l10n_ar_letter === 'B' or props.data.l10n_ar_letter === 'C' ? 'none' : 'block' }}" separator=";"/>
         </xpath>
 
     </t>
+
+    <!-- Hide standard ReceiptHeader elements for AFIP receipts -->
+    <t t-name="pos_l10n_ar_receipt.ReceiptHeader" t-inherit="point_of_sale.ReceiptHeader" t-inherit-mode="extension">
+        <xpath expr="//h1[hasclass('tracking-number')]" position="attributes">
+            <attribute name="t-attf-class" add="{{ props.data.l10n_latam_document_type_name ? 'd-none' : '' }}" separator=" "/>
+        </xpath>
+        <xpath expr="//div[hasclass('pos-receipt-contact')]" position="attributes">
+            <attribute name="t-attf-class" add="{{ props.data.l10n_latam_document_type_name ? 'd-none' : '' }}" separator=" "/>
+        </xpath>
+    </t>
+
+</templates>
+
 </templates>
