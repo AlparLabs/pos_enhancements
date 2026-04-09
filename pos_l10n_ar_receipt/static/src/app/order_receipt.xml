@@ -34,6 +34,16 @@
                         <div t-if="props.data.l10n_ar_partner_address"><t t-esc="props.data.l10n_ar_partner_address"/></div>
                     </div>
                 </div>
+
+                <!-- Print Table and Cashier (otherwise hidden in AR invoice mode which replaces the contact block) -->
+                <div class="pos-receipt-center-align" style="font-size: 0.9em; margin-top: 5px; margin-bottom: 10px; font-weight: bold;">
+                    <t t-if="props.data.headerData and props.data.headerData.table">
+                        <div>Mesa: <t t-esc="props.data.headerData.table"/></div>
+                    </t>
+                    <t t-if="props.data.headerData and props.data.headerData.cashier">
+                        <div><t t-esc="props.data.headerData.cashier"/></div>
+                    </t>
+                </div>
             </t>
         </xpath>
 
@@ -137,6 +147,10 @@
                 <div t-if="props.data.cashier" class="cashier">
                     <div>--------------------------------</div>
                     <div t-esc="props.data.cashier" />
+                </div>
+                <div t-if="props.data.table" class="pos-receipt-center-align">
+                    <div>--------------------------------</div>
+                    <div style="font-weight: bold;">Mesa: <t t-esc="props.data.table"/></div>
                 </div>
                 <div t-if="props.data.trackingNumber and !props.data.bigTrackingNumber">
                     <span class="tracking-number fs-1" t-esc="props.data.trackingNumber" />
