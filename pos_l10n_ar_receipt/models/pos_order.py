@@ -91,11 +91,11 @@ class PosOrder(models.Model):
                 'l10n_ar_company_responsibility': company.l10n_ar_afip_responsibility_type_id.name if company.l10n_ar_afip_responsibility_type_id else False,
                 'l10n_ar_company_iibb': company.l10n_ar_gross_income_number or False,
                 'l10n_ar_company_start_date': company.l10n_ar_afip_start_date or False,
-                'l10n_ar_company_address': company.partner_id.contact_address or False,
+                'l10n_ar_company_address': company.partner_id.contact_address_complete or False,
                 'l10n_ar_partner_name': move.partner_id.name or False,
                 'l10n_ar_partner_vat': move.partner_id.vat or False,
                 'l10n_ar_partner_responsibility': move.partner_id.l10n_ar_afip_responsibility_type_id.name or False,
-                'l10n_ar_partner_address': move.partner_id.contact_address or False,
+                'l10n_ar_partner_address': move.partner_id.contact_address_complete  or False,
                 'l10n_ar_tax_details': self._get_l10n_ar_tax_details(move),
                 'l10n_ar_custom_tax_summary': move._l10n_ar_get_invoice_custom_tax_summary_for_report() if hasattr(move, '_l10n_ar_get_invoice_custom_tax_summary_for_report') else [],
             }

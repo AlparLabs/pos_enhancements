@@ -83,20 +83,62 @@
         </xpath>
 
         <!-- Hide Subtotal + Taxes for Factura B/C -->
-        <!-- We use a more aggressive approach to ensure standard blocks are hidden -->
-        <xpath expr="//div[hasclass('pos-receipt-taxes')]" position="attributes">
-            <attribute name="t-attf-style" add="display: {{ props.data.l10n_ar_letter === 'B' or props.data.l10n_ar_letter === 'C' ? 'none' : 'block' }}" separator=";"/>
+        <!-- Replace the entire pos-receipt-taxes block to add the AR letter condition to its t-if -->
+        <xpath expr="//div[hasclass('pos-receipt-taxes')]" position="replace">
+            <t t-set="taxTotals" t-value="props.data.taxTotals"/>
+            <div t-if="taxTotals and taxTotals.has_tax_groups and props.data.l10n_ar_letter !== 'B' and props.data.l10n_ar_letter !== 'C'" class="pos-receipt-taxes">
+                <div class="text-center">--------------------------------</div>
+                <t t-foreach="taxTotals.subtotals" t-as="subtotal" t-key="subtotal.name">
+                    <div class="d-flex">
+                        <span class="fw-bolder text-nowrap mw-100" t-out="subtotal.name"/>
+                        <span t-esc="props.formatCurrency(subtotal.base_amount_currency)" class="ms-auto"/>
+                    </div>
+                    <div t-foreach="subtotal.tax_groups" t-as="tax_group" t-key="tax_group.id" class="d-flex">
+                        <span>
+                            <span t-esc="tax_group.group_name"/>
+                            <t t-if="!taxTotals.same_tax_base">
+                                on
+                                <span t-esc="props.formatCurrency(tax_group.base_amount_currency)"/>
+                            </t>
+                        </span>
+                        <span t-esc="props.formatCurrency(tax_group.tax_amount_currency)" class="ms-auto"/>
+                    </div>
+                </t>
+            </div>
         </xpath>
 
     </t>
 
     <!-- Hide standard ReceiptHeader elements for AFIP receipts -->
     <t t-name="pos_l10n_ar_receipt.ReceiptHeader" t-inherit="point_of_sale.ReceiptHeader" t-inherit-mode="extension">
-        <xpath expr="//h1[hasclass('tracking-number')]" position="attributes">
-            <attribute name="t-attf-class" add="{{ props.data.l10n_latam_document_type_name ? 'd-none' : '' }}" separator=" "/>
+        <!-- Hide the big tracking number when we have an AR document type -->
+        <xpath expr="//h1[hasclass('tracking-number')]" position="replace">
+            <h1 t-if="!props.data.l10n_latam_document_type_name" class="tracking-number text-center" style="font-size: 100px"
+                t-esc="props.data.trackingNumber"/>
         </xpath>
-        <xpath expr="//div[hasclass('pos-receipt-contact')]" position="attributes">
-            <attribute name="t-attf-class" add="{{ props.data.l10n_latam_document_type_name ? 'd-none' : '' }}" separator=" "/>
+        <!-- Hide the standard company/cashier contact block for AR invoiced receipts -->
+        <!-- (company info and cashier are shown in our custom EMISOR block instead) -->
+        <xpath expr="//div[hasclass('pos-receipt-contact')]" position="replace">
+            <div t-if="!props.data.l10n_latam_document_type_name" class="pos-receipt-contact">
+                <!-- contact address -->
+                <div t-if="props.data.company.name" t-esc="props.data.company.name" />
+                <t t-if="props.data.company.phone">
+                    <div>Tel:<span dir="ltr"><t t-esc="props.data.company.phone" /></span></div>
+                </t>
+                <t t-if="props.data.company.vat">
+                    <div t-esc="vatText"/>
+                </t>
+                <div t-if="props.data.company.email" t-esc="props.data.company.email" />
+                <div t-if="props.data.company.website" t-esc="props.data.company.website" />
+                <div t-if="props.data.header" style="white-space:pre-line" t-esc="props.data.header" />
+                <div t-if="props.data.cashier" class="cashier">
+                    <div>--------------------------------</div>
+                    <div t-esc="props.data.cashier" />
+                </div>
+                <div t-if="props.data.trackingNumber and !props.data.bigTrackingNumber">
+                    <span class="tracking-number fs-1" t-esc="props.data.trackingNumber" />
+                </div>
+            </div>
         </xpath>
     </t>
 
