@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates id="template" xml:space="preserve">
+
+    <!--
+        Extend the ReceiptScreen to add an "Imprimir Factura" button.
+        The button is only visible when the order was invoiced (is_to_invoice).
+        It fetches the AFIP/AR data from the server and prints the receipt
+        enriched with invoice details through the receipt printer.
+    -->
+    <t t-name="pos_l10n_ar_receipt.ReceiptScreen"
+       t-inherit="point_of_sale.ReceiptScreen"
+       t-inherit-mode="extension">
+
+        <!-- Insert the AR invoice print button after the existing print buttons row -->
+        <xpath expr="//div[hasclass('receipt-options')]//div[hasclass('d-flex') and hasclass('gap-1')][1]" position="after">
+            <div t-if="currentOrder.is_to_invoice()" class="d-flex gap-1 mt-1">
+                <button
+                    class="button print-ar-invoice btn btn-lg btn-warning w-100 py-3"
+                    t-on-click="() => doPrintArInvoice.call()"
+                    title="Imprimir comprobante fiscal completo"
+                >
+                    <i t-attf-class="fa {{ doPrintArInvoice.status === 'loading' ? 'fa-fw fa-spin fa-circle-o-notch' : 'fa-file-text-o' }} me-1" />
+                    <t t-if="doPrintArInvoice.status === 'loading'">Imprimiendo...</t>
+                    <t t-else="">Imprimir Factura</t>
+                </button>
+            </div>
+        </xpath>
+
+    </t>
+
+</templates>
