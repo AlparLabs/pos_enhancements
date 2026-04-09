@@ -2,9 +2,58 @@
 
 import { FloorScreen } from "@pos_restaurant/app/floor_screen/floor_screen";
 import { patch } from "@web/core/utils/patch";
+import { onMounted, useState } from "@odoo/owl";
+import { useService } from "@web/core/utils/hooks";
 import { KpiDashboardModal } from "@pos_restaurant_kpi/app/kpi_dashboard_modal/kpi_dashboard_modal";
 
 patch(FloorScreen.prototype, {
+    setup() {
+        super.setup(...arguments);
+        this.orm = useService("orm");
+        this.kpiState = useState({
+            sessionTotalCustomers: 0,
+            sessionTotalAmount: 0,
+            turnoverRate: 0,
+            doneOrdersCount: 0,
+        });
+
+        onMounted(() => {
+            this.fetchSessionKpis();
+        });
+    },
+
+    async fetchSessionKpis() {
+        if (!this.pos || !this.pos.pos_session) return;
+        try {
+            const domain = [
+                ["session_id", "=", this.pos.pos_session.id],
+                ["state", "in", ["paid", "done", "invoiced"]],
+                ["table_id", "!=", false]
+            ];
+            
+            const records = await this.orm.searchRead("pos.order", domain, ["customer_count", "amount_total"]);
+            let totalCustomers = 0;
+            let totalAmount = 0;
+            for (const rec of records) {
+                totalCustomers += (rec.customer_count || 0);
+                totalAmount += (rec.amount_total || 0);
+            }
+            
+            this.kpiState.sessionTotalCustomers = totalCustomers;
+            this.kpiState.sessionTotalAmount = totalAmount;
+            this.kpiState.doneOrdersCount = records.length;
+            
+            const totalTables = this.pos.models["restaurant.table"].length;
+            if (totalTables > 0) {
+                this.kpiState.turnoverRate = parseFloat((records.length / totalTables).toFixed(1));
+            } else {
+                this.kpiState.turnoverRate = 0;
+            }
+        } catch (e) {
+            console.error("Failed to fetch KPIs:", e);
+        }
+    },
+
     get totalCustomers() {
         return this.pos.models["pos.order"]
             .filter((order) => order.state === "draft" && order.table_id)
@@ -21,19 +70,30 @@ patch(FloorScreen.prototype, {
         return totalAmount / customers;
     },
     get sessionTotalCustomers() {
-        return this.pos.models["pos.order"]
-            .filter((order) => order.state !== "draft" && order.state !== "cancel" && order.table_id)
-            .reduce((sum, order) => sum + (order.customer_count || 0), 0);
+        // Find local paid orders that haven't been synchronized yet from the current session
+        const localPaidOrders = this.pos.models["pos.order"].filter((order) => {
+            const sId = order.session_id?.id || order.session_id;
+            return order.state !== "draft" && order.state !== "cancel" && order.table_id && sId === this.pos.pos_session.id && !order.server_id && typeof order.id === "string";
+        });
+        const localCustomers = localPaidOrders.reduce((sum, order) => sum + (order.customer_count || 0), 0);
+        return (this.kpiState?.sessionTotalCustomers || 0) + localCustomers;
     },
     get sessionAvgConsumption() {
-        const customers = this.sessionTotalCustomers;
-        if (customers === 0) {
+        const localPaidOrders = this.pos.models["pos.order"].filter((order) => {
+            const sId = order.session_id?.id || order.session_id;
+            return order.state !== "draft" && order.state !== "cancel" && order.table_id && sId === this.pos.pos_session.id && !order.server_id && typeof order.id === "string";
+        });
+        
+        const localCustomers = localPaidOrders.reduce((sum, order) => sum + (order.customer_count || 0), 0);
+        const localAmount = localPaidOrders.reduce((sum, order) => sum + order.get_total_with_tax(), 0);
+        
+        const totalCustomers = (this.kpiState?.sessionTotalCustomers || 0) + localCustomers;
+        const totalAmount = (this.kpiState?.sessionTotalAmount || 0) + localAmount;
+
+        if (totalCustomers === 0) {
             return 0;
         }
-        const totalAmount = this.pos.models["pos.order"]
-            .filter((order) => order.state !== "draft" && order.state !== "cancel" && order.table_id)
-            .reduce((sum, order) => sum + order.get_total_with_tax(), 0);
-        return totalAmount / customers;
+        return totalAmount / totalCustomers;
     },
     get occupancyRate() {
         const totalTables = this.pos.models["restaurant.table"].length;
@@ -46,12 +106,16 @@ patch(FloorScreen.prototype, {
         return Math.round((occupiedTables / totalTables) * 100);
     },
     get turnoverRate() {
+        const localPaidCount = this.pos.models["pos.order"].filter((order) => {
+            const sId = order.session_id?.id || order.session_id;
+            return order.state !== "draft" && order.state !== "cancel" && order.table_id && sId === this.pos.pos_session.id && !order.server_id && typeof order.id === "string";
+        }).length;
+        
+        const totalDone = (this.kpiState?.doneOrdersCount || 0) + localPaidCount;
         const totalTables = this.pos.models["restaurant.table"].length;
+        
         if (!totalTables) return 0;
-        // Approximation: count unique sessions or total done orders divided by total tables
-        const doneOrders = this.pos.models["pos.order"]
-            .filter((order) => order.state !== "draft" && order.state !== "cancel" && order.table_id).length;
-        return parseFloat((doneOrders / totalTables).toFixed(1));
+        return parseFloat((totalDone / totalTables).toFixed(1));
     },
     get openAmount() {
         return this.pos.models["pos.order"]

@@ -116,7 +116,7 @@
     <t t-name="pos_l10n_ar_receipt.ReceiptHeader" t-inherit="point_of_sale.ReceiptHeader" t-inherit-mode="extension">
         <!-- Hide the big tracking number when we have an AR document type -->
         <xpath expr="//h1[hasclass('tracking-number')]" position="replace">
-            <h1 t-if="!props.data.l10n_latam_document_type_name" class="tracking-number text-center" style="font-size: 100px"
+            <h1 t-if="props.data.bigTrackingNumber and !props.data.l10n_latam_document_type_name" class="tracking-number text-center" style="font-size: 100px"
                 t-esc="props.data.trackingNumber"/>
         </xpath>
         <!-- Hide the standard company/cashier contact block for AR invoiced receipts -->
@@ -129,7 +129,7 @@
                     <div>Tel:<span dir="ltr"><t t-esc="props.data.company.phone" /></span></div>
                 </t>
                 <t t-if="props.data.company.vat">
-                    <div t-esc="vatText"/>
+                    <div t-esc="props.data.company.vat_label ? props.data.company.vat_label + ': ' + props.data.company.vat : 'VAT: ' + props.data.company.vat"/>
                 </t>
                 <div t-if="props.data.company.email" t-esc="props.data.company.email" />
                 <div t-if="props.data.company.website" t-esc="props.data.company.website" />
