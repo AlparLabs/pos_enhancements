@@ -14,6 +14,16 @@
                 No válido como factura
             </div>
 
+            <!-- Table and Cashier -->
+            <div class="pos-receipt-center-align" style="margin-bottom: 10px; font-weight: bold;">
+                <t t-if="props.data.headerData.table">
+                    <div>Mesa: <t t-esc="props.data.headerData.table" /></div>
+                </t>
+                <t t-if="props.data.headerData.cashier">
+                    <div><t t-esc="props.data.headerData.cashier" /></div>
+                </t>
+            </div>
+
             <br />
             <div t-if="props.data.partner" class="pos-receipt-contact">
                 Cliente: <t t-esc="props.data.partner.name" /><br/>

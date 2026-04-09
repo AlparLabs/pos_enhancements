@@ -61,7 +61,7 @@ patch(FloorScreen.prototype, {
     get avgTableTime() {
         const activeOrders = this.pos.models["pos.order"].filter((order) => order.state === "draft" && order.table_id);
         if (!activeOrders.length) return 0;
-        
+
         const now = new Date();
         const totalMinutes = activeOrders.reduce((sum, order) => {
             // Using creation_date, fallback to date_order if order has been synchronized somehow
