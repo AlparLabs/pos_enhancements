@@ -70,17 +70,19 @@ patch(FloorScreen.prototype, {
         return totalAmount / customers;
     },
     get sessionTotalCustomers() {
+        if (!this.pos?.pos_session) return this.kpiState?.sessionTotalCustomers || 0;
         // Find local paid orders that haven't been synchronized yet from the current session
         const localPaidOrders = this.pos.models["pos.order"].filter((order) => {
-            const sId = order.session_id?.id || order.session_id;
+            const sId = order.session_id?.id ?? order.session_id;
             return order.state !== "draft" && order.state !== "cancel" && order.table_id && sId === this.pos.pos_session.id && !order.server_id && typeof order.id === "string";
         });
         const localCustomers = localPaidOrders.reduce((sum, order) => sum + (order.customer_count || 0), 0);
         return (this.kpiState?.sessionTotalCustomers || 0) + localCustomers;
     },
     get sessionAvgConsumption() {
+        if (!this.pos?.pos_session) return 0;
         const localPaidOrders = this.pos.models["pos.order"].filter((order) => {
-            const sId = order.session_id?.id || order.session_id;
+            const sId = order.session_id?.id ?? order.session_id;
             return order.state !== "draft" && order.state !== "cancel" && order.table_id && sId === this.pos.pos_session.id && !order.server_id && typeof order.id === "string";
         });
         
@@ -106,8 +108,9 @@ patch(FloorScreen.prototype, {
         return Math.round((occupiedTables / totalTables) * 100);
     },
     get turnoverRate() {
+        if (!this.pos?.pos_session) return 0;
         const localPaidCount = this.pos.models["pos.order"].filter((order) => {
-            const sId = order.session_id?.id || order.session_id;
+            const sId = order.session_id?.id ?? order.session_id;
             return order.state !== "draft" && order.state !== "cancel" && order.table_id && sId === this.pos.pos_session.id && !order.server_id && typeof order.id === "string";
         }).length;
         
