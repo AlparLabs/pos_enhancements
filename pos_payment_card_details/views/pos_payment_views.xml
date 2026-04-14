@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_pos_payment_tree_inherit_card_details" model="ir.ui.view">
+        <field name="name">pos.payment.tree.inherit.card_details</field>
+        <field name="model">pos.payment</field>
+        <field name="inherit_id" ref="point_of_sale.view_pos_payment_tree"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='payment_method_id']" position="after">
+                <field name="lot_number" optional="show"/>
+                <field name="coupon_number" optional="show"/>
+                <field name="installments" optional="show"/>
+            </xpath>
+        </field>
+    </record>
+
+    <record id="view_pos_payment_form_inherit_card_details" model="ir.ui.view">
+        <field name="name">pos.payment.form.inherit.card_details</field>
+        <field name="model">pos.payment</field>
+        <field name="inherit_id" ref="point_of_sale.view_pos_payment_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='payment_method_id']" position="after">
+                <field name="lot_number"/>
+                <field name="coupon_number"/>
+                <field name="installments"/>
+            </xpath>
+        </field>
+    </record>
+</odoo>

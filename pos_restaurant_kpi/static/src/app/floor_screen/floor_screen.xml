@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates id="template" xml:space="preserve">
+    <t t-inherit="pos_restaurant.FloorScreen" t-inherit-mode="extension">
+        <xpath expr="//div[hasclass('floor-selector')]" position="after">
+            <div class="kpi-bar d-flex gap-4 p-2 align-items-center bg-light border-start">
+                <div class="kpi-item d-flex flex-column align-items-center px-3">
+                    <span class="text-muted smaller fw-bolder text-uppercase" style="font-size: 0.7rem;">Cubiertos actuales</span>
+                    <span class="kpi-value fs-4 fw-bolder text-primary" t-esc="totalCustomers"/>
+                </div>
+                <div class="kpi-item d-flex flex-column align-items-center px-3 border-end pe-4">
+                    <span class="text-muted smaller fw-bolder text-uppercase" style="font-size: 0.7rem;">Promedio actuales</span>
+                    <span class="kpi-value fs-4 fw-bolder text-success" t-esc="pos.env.utils.formatCurrency(avgConsumption)"/>
+                </div>
+                <div class="kpi-item d-flex flex-column align-items-center px-3 ps-4">
+                    <span class="text-muted smaller fw-bolder text-uppercase" style="font-size: 0.7rem;">Cubiertos sesión</span>
+                    <span class="kpi-value fs-4 fw-bolder text-primary" t-esc="sessionTotalCustomers"/>
+                </div>
+                <div class="kpi-item d-flex flex-column align-items-center px-3">
+                    <span class="text-muted smaller fw-bolder text-uppercase" style="font-size: 0.7rem;">Promedio sesión</span>
+                    <span class="kpi-value fs-4 fw-bolder text-success" t-esc="pos.env.utils.formatCurrency(sessionAvgConsumption)"/>
+                </div>
+                <div class="kpi-item d-flex flex-column align-items-center px-3 border-start ps-4 cursor-pointer" t-on-click="() => this.openKpiDashboard()">
+                    <span class="fs-4 text-primary"><i class="fa fa-bar-chart"/></span>
+                    <span class="text-muted smaller fw-bolder text-uppercase" style="font-size: 0.7rem;">Dashboard</span>
+                </div>
+            </div>
+        </xpath>
+    </t>
+</templates>

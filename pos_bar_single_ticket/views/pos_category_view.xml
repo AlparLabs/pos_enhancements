@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="pos_category_form_view_inherit_single_ticket" model="ir.ui.view">
+        <field name="name">pos.category.form.inherit.single_ticket</field>
+        <field name="model">pos.category</field>
+        <field name="inherit_id" ref="point_of_sale.product_pos_category_form_view"/>
+        <field name="arch" type="xml">
+            <field name="color" position="after">
+                <field name="x_print_single_ticket"/>
+            </field>
+        </field>
+    </record>
+</odoo>

@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <template id="report_saledetails_card_details" inherit_id="point_of_sale.report_saledetails">
+        <!-- We append our card transactions table at the end of the report, right after the main content is rendered -->
+        <xpath expr="//t[@t-call='point_of_sale.pos_session_sales_details']" position="after">
+            <t t-if="card_details_by_payment_method and len(card_details_by_payment_method) > 0">
+                <br/>
+                <h3>Card Transactions</h3>
+                <t t-foreach="card_details_by_payment_method" t-as="pm">
+                    <strong><t t-esc="pm['name']"/></strong>
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>Amount</th>
+                                <th>Lot</th>
+                                <th>Coupon</th>
+                                <th>Installments</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr t-foreach="pm['transactions']" t-as="tx">
+                                <td>
+                                    <t t-esc="tx['amount']" t-options="{'widget': 'float', 'precision': currency_precision}"/>
+                                </td>
+                                <td><t t-esc="tx['lot_number']"/></td>
+                                <td><t t-esc="tx['coupon_number']"/></td>
+                                <td><t t-esc="tx['installments']"/></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </t>
+            </t>
+        </xpath>
+    </template>
+</odoo>

@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates id="template" xml:space="preserve">
+    <!--
+        Inject "Reimprimir Barra" button into the TicketScreen right panel,
+        next to the existing Details / Invoice / Print Receipt buttons.
+        Only visible when the selected paid order has bar-category lines.
+    -->
+    <t t-name="pos_bar_single_ticket.TicketScreen"
+       t-inherit="point_of_sale.TicketScreen"
+       t-inherit-mode="extension">
+        <xpath expr="//div[hasclass('control-buttons')]" position="inside">
+            <button t-if="this.hasBarTicketLines(_selectedSyncedOrder)"
+                    class="control-button btn btn-warning btn-lg lh-lg flex-grow-1 flex-shrink-1"
+                    t-on-click="() => this.reprintBarTickets(_selectedSyncedOrder)">
+                <i class="fa fa-print me-1" role="img"
+                   aria-label="Reimprimir Tickets Barra"
+                   title="Reimprimir Tickets Barra"/>
+                Reimprimir Barra
+            </button>
+        </xpath>
+    </t>
+</templates>

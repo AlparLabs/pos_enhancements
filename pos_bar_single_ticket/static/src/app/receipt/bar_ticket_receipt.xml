@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates id="template" xml:space="preserve">
+    <t t-name="pos_bar_single_ticket.BarTicketReceipt">
+        <div class="pos-receipt">
+            <div class="pos-receipt-title text-center my-3" style="font-size: 150%; font-weight: bold;">
+                <t t-esc="props.data.pos_name" />
+            </div>
+
+            <hr style="border-top: 2px dashed black;"/>
+            
+            <!-- We only display the single isolated orderline passed into the array -->
+            <div t-foreach="props.data.orderlines" t-as="line" t-key="line_index" class="pos-receipt-title my-4 text-center">
+                <span style="font-size: 130%; font-weight: bold;">1 x <t t-esc="line.productName"/></span>
+                <t t-if="line.pack_lot_lines">
+                    <div t-foreach="line.pack_lot_lines" t-as="lot" t-key="lot_index" style="font-size: 80%;">
+                        Lot: <t t-esc="lot.lot_name"/>
+                    </div>
+                </t>
+            </div>
+            
+            <hr style="border-top: 2px dashed black;"/>
+            
+            <div class="pos-receipt-title text-center mt-2 mb-4">
+                <div t-esc="props.data.date" />
+                <div t-esc="props.data.name" />
+            </div>
+            <!-- Extra padding to prevent the printer from cutting off the order number -->
+            <br/>
+            <br/>
+        </div>
+    </t>
+</templates>

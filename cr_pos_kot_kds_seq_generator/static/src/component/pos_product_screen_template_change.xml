@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<templates id="template" xml:space="preserve">
+    <t t-name="point_of_sale.ProductScreen" t-inherit="point_of_sale.ProductScreen" t-inherit-mode="extension">
+        <xpath expr="//t[@t-set='line']" position="after">
+            <t t-if="line.kot_is_set and line.kot_note">
+                <p class="kot-number-line" style="background-color: #d8b1b1; margin:2px; padding-left:25px;"
+                   t-out="line.kot_note"/>
+            </t>
+        </xpath>
+    </t>
+</templates>

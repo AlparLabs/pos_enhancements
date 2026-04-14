@@ -1,0 +1,48 @@
+.kpi-bar {
+    border-left: 1px solid #dee2e6;
+    height: 100%;
+    flex-shrink: 1; /* Permite que se reduzca si falta espacio */
+    overflow: hidden;
+    
+    .kpi-item {
+        border-right: 1px solid #eee;
+        &:last-child {
+            border-right: none;
+        }
+        .text-muted {
+            letter-spacing: 0.05rem;
+            color: #6c757d !important;
+            white-space: nowrap;
+        }
+        .kpi-value {
+            white-space: nowrap;
+        }
+    }
+}
+
+/* En pantallas medianas y pequeñas, reducimos el padding y tamaño de fuente */
+@media (max-width: 1300px) {
+    .kpi-bar {
+        gap: 0.5rem !important;
+        
+        .kpi-item {
+            padding-left: 0.5rem !important;
+            padding-right: 0.5rem !important;
+            
+            .text-muted {
+                font-size: 0.6rem !important;
+                letter-spacing: 0 !important;
+            }
+            .kpi-value {
+                font-size: 1.1rem !important;
+            }
+        }
+    }
+}
+
+/* En resoluciones menores a 992px, ocultamos el KPI bar para evitar superposición con herramientas del mapa de mesas */
+@media (max-width: 992px) {
+    .kpi-bar {
+        display: none !important;
+    }
+}

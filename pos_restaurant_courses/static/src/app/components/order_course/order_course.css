@@ -1,0 +1,17 @@
+.order-course-name {
+    background-color: #f8f9fa;
+    border-bottom: 1px solid #dee2e6;
+    font-size: 1.1em;
+    color: #495057;
+    transition: background-color 0.2s;
+}
+
+.order-course-name:hover {
+    background-color: #e9ecef;
+}
+
+.order-course-name.isSelected {
+    background-color: #d1ecf1;
+    border-left: 4px solid #0c5460;
+    color: #0c5460;
+}

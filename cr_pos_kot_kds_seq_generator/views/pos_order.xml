@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<odoo>
+    <!-- Inherit Form View to Modify it -->
+    <record id="pos_order_inherit_kot" model="ir.ui.view">
+        <field name="name">pos_order_inherit_kot</field>
+        <field name="model">pos.order</field>
+        <field name="inherit_id" ref="point_of_sale.view_pos_pos_form"/>
+        <field name="arch" type="xml">
+
+            <xpath expr="//field[@name='lines']" position="attributes">
+                <attribute name="widget">section_and_note_one2many</attribute>
+            </xpath>
+            <xpath expr="//field[@name='full_product_name']" position="before">
+                <control>
+                    <create name="add_product_control" string="Add a product"/>
+                    <create name="add_section_control" string="Add a section"
+                            context="{'default_display_type': 'line_section'}"/>
+                    <create name="add_note_control" string="Add a note"
+                            context="{'default_display_type': 'line_note'}"/>
+                </control>
+                <field name="sequence" widget="handle"/>
+            </xpath>
+
+            <xpath expr="//field[@name='full_product_name']" position="after">
+                <field name="display_type" column_invisible="1"/>
+                <field name="name"/>
+            </xpath>
+
+        </field>
+    </record>
+</odoo>

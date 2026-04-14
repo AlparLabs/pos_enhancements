@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates id="template" xml:space="preserve">
+    <t t-name="lo_pos_table_time_counter.FloorScreen" t-inherit="pos_restaurant.FloorScreen" t-inherit-mode="extension">
+        <xpath expr="//div[hasclass('table')]" position="inside">
+            <div t-if="this.pos.config.enable_table_timer">
+                <t t-esc="this.getTableTimer(table)"/>
+            </div>
+        </xpath>
+    </t>
+</templates>

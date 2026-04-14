@@ -1,0 +1,55 @@
+<odoo>
+    <data>
+        <record id="payment_provider_payway_cybersource" model="payment.provider">
+            <field name="name">Payway cybersource</field>
+            <field name="code">payway</field>
+            <field file="payment_pay_way/static/description/icon.png" name="image_128" type="base64"/>
+            <field name="module_id" ref="base.module_payment_pay_way"/>
+            <field name="inline_form_view_id" ref="inline_form"/>
+            <field name="token_inline_form_view_id" ref="token_inline_form"/>
+            <field name="support_refund">partial</field>
+            <field name="support_tokenization">False</field>
+            <field name="allow_tokenization">True</field>
+            <field name="payway_commerce">88888888</field>
+            <field name="payway_public_key">cf1bbc8b2fef45ae900f1b1a637da556</field>
+            <field name="payway_secret_key">40a4683e07084f129bc48fa3d3387b1c</field>
+            <field name="payway_cybersource" eval="True"/>
+            <field name="payway_item_code">000101</field>
+            <field name="payway_item_description">A big Product</field>
+            <field name="payway_item_name">Test product</field>
+            <field name="payway_item_sku">000101</field>
+            <field name="payway_channel">Web/Mobile/Telefonica</field>
+            <field name="payment_method_ids"
+               eval="[Command.set([
+                        ref('payment_pay_way.payment_method_pay_way'),
+                     ])]"
+        />
+        </record>
+        <record id="payment_provider_payway" model="payment.provider">
+            <field name="payway_commerce">999 99999</field>
+            <field name="payway_public_key">96e7f0d36a0648fb9a8dcb50ac06d260</field>
+            <field name="payway_secret_key">1b19bb47507c4a259ca22c12f78e881f</field>
+        </record>
+        <record id="card_installment.card_visa_credit" model="account.card">
+            <field name="payway_method">1</field>
+        </record>
+        <record id="card_installment.card_visa_debit" model="account.card">
+            <field name="payway_method">31</field>
+        </record>
+        <record id="card_installment.card_amex" model="account.card">
+            <field name="payway_method">111</field>
+        </record>
+        <record id="card_installment.card_master_credit" model="account.card">
+            <field name="payway_method">104</field>
+        </record>
+        <record id="card_installment.card_master_debit" model="account.card">
+            <field name="payway_method">105</field>
+        </record>
+        <record id="card_installment.card_naranja" model="account.card">
+            <field name="payway_method">24</field>
+        </record>
+        <record id="card_installment.card_maestro" model="account.card">
+            <field name="payway_method">106</field>
+        </record>
+    </data>
+</odoo>
