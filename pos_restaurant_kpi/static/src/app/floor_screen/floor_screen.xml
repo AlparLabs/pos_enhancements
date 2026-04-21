@@ -19,7 +19,7 @@
                     <span class="text-muted smaller fw-bolder text-uppercase" style="font-size: 0.7rem;">Promedio sesión</span>
                     <span class="kpi-value fs-4 fw-bolder text-success" t-esc="pos.env.utils.formatCurrency(sessionAvgConsumption)"/>
                 </div>
-                <div class="kpi-item d-flex flex-column align-items-center px-3 border-start ps-4 cursor-pointer" t-on-click="() => this.openKpiDashboard()">
+                <div class="kpi-item d-flex flex-column align-items-center px-3 border-start ps-4 cursor-pointer" t-on-click="openKpiDashboard">
                     <span class="fs-4 text-primary"><i class="fa fa-bar-chart"/></span>
                     <span class="text-muted smaller fw-bolder text-uppercase" style="font-size: 0.7rem;">Dashboard</span>
                 </div>
