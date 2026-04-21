@@ -8,7 +8,7 @@
     "data": [],
     "assets": {
         "point_of_sale._assets_pos": [
-            "pos_restaurant_table_time/static/src/app/table/*",
+            "pos_restaurant_table_time/static/src/app/floor_screen/*",
         ],
     },
     "installable": True,

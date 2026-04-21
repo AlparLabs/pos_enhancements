@@ -1,12 +1,13 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <templates id="template" xml:space="preserve">
-    <t t-inherit="pos_restaurant.Table" t-inherit-mode="extension" owl="1">
+    <t t-inherit="pos_restaurant.FloorScreen" t-inherit-mode="extension" owl="1">
         <xpath expr="//div[hasclass('table')]" position="inside">
+            <t t-set="tableTime" t-value="getTableTimeDisplay(table)"/>
             <span class="table-time-passed badge rounded-pill text-bg-warning mx-1 position-absolute top-0 start-50 translate-middle-x mt-1" 
-                  t-if="tableTimeDisplay" 
+                  t-if="tableTime !== ''" 
                   style="font-size: 0.75em; z-index: 10;">
                 <i class="fa fa-clock-o me-1"></i>
-                <t t-esc="tableTimeDisplay"/>
+                <t t-esc="tableTime"/>
             </span>
         </xpath>
     </t>
