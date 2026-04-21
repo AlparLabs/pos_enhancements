@@ -137,7 +137,11 @@ patch(FloorScreen.prototype, {
     },
 
     openKpiDashboard() {
-        this.env.services.dialog.add(KpiDashboardModal, {
+        // Prevent stacking multiple instances of the dialog
+        if (this._kpiDialogClose) {
+            return;
+        }
+        this._kpiDialogClose = this.env.services.dialog.add(KpiDashboardModal, {
             occupancyRate: this.occupancyRate,
             turnoverRate: this.turnoverRate,
             openAmount: this.openAmount,
@@ -147,6 +151,10 @@ patch(FloorScreen.prototype, {
             sessionTotalCustomers: this.sessionTotalCustomers,
             sessionAvgConsumption: this.sessionAvgConsumption,
             singleDinerTables: this.singleDinerTables,
+        }, {
+            onClose: () => {
+                this._kpiDialogClose = null;
+            },
         });
     },
 });
