@@ -122,19 +122,60 @@ patch(FloorScreen.prototype, {
 
         const now = new Date();
         const totalMinutes = activeOrders.reduce((sum, order) => {
-            const orderDate = new Date(order.creation_date || order.date_order || now);
-            const diffMs = now - orderDate;
+            let orderDate = now;
+            const rawDate = order.creation_date || order.date_order;
+            
+            if (rawDate) {
+                if (rawDate instanceof Date) {
+                    orderDate = rawDate;
+                } else if (rawDate.isLuxonDateTime) {
+                    orderDate = rawDate.toJSDate();
+                } else if (typeof rawDate === "string") {
+                    if (rawDate.includes("T")) {
+                        orderDate = new Date(rawDate);
+                    } else {
+                        // Odoo DB string is in UTC: "YYYY-MM-DD HH:mm:ss"
+                        orderDate = new Date(rawDate.replace(" ", "T") + "Z");
+                    }
+                }
+            }
+            
+            // Si por algún motivo el tiempo es negativo (futuro cercano por desajuste de reloj), lo limitamos a 0
+            let diffMs = now - orderDate;
+            if (diffMs < 0) diffMs = 0;
+            
             return sum + (diffMs / 60000);
         }, 0);
         return Math.round(totalMinutes / activeOrders.length);
     },
 
+    get singleDinerTables() {
+        // Mesas activas con exactamente 1 comensal
+        return this.pos.models["pos.order"]
+            .filter((order) => order.state === "draft" && order.table_id && order.customer_count === 1)
+            .length;
+    },
+
     openKpiDashboard() {
+        // Prevent stacking multiple instances of the dialog
+        if (this._kpiDialogOpen) {
+            return;
+        }
+        this._kpiDialogOpen = true;
         this.env.services.dialog.add(KpiDashboardModal, {
             occupancyRate: this.occupancyRate,
             turnoverRate: this.turnoverRate,
             openAmount: this.openAmount,
             avgTableTime: this.avgTableTime,
+            totalCustomers: this.totalCustomers,
+            avgConsumption: this.avgConsumption,
+            sessionTotalCustomers: this.sessionTotalCustomers,
+            sessionAvgConsumption: this.sessionAvgConsumption,
+            singleDinerTables: this.singleDinerTables,
+        }, {
+            onClose: () => {
+                this._kpiDialogOpen = false;
+            },
         });
     },
 });
