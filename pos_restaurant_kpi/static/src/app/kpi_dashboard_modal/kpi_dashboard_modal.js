@@ -17,6 +17,7 @@ export class KpiDashboardModal extends Component {
         avgConsumption:        { type: Number, optional: true },
         sessionTotalCustomers: { type: Number, optional: true },
         sessionAvgConsumption: { type: Number, optional: true },
+        sessionTotalAmount:    { type: Number, optional: true },
         singleDinerTables:     { type: Number, optional: true },
     };
 
