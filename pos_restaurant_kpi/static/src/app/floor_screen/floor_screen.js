@@ -129,12 +129,24 @@ patch(FloorScreen.prototype, {
         return Math.round(totalMinutes / activeOrders.length);
     },
 
+    get singleDinerTables() {
+        // Mesas activas con exactamente 1 comensal
+        return this.pos.models["pos.order"]
+            .filter((order) => order.state === "draft" && order.table_id && order.customer_count === 1)
+            .length;
+    },
+
     openKpiDashboard() {
         this.env.services.dialog.add(KpiDashboardModal, {
             occupancyRate: this.occupancyRate,
             turnoverRate: this.turnoverRate,
             openAmount: this.openAmount,
             avgTableTime: this.avgTableTime,
+            totalCustomers: this.totalCustomers,
+            avgConsumption: this.avgConsumption,
+            sessionTotalCustomers: this.sessionTotalCustomers,
+            sessionAvgConsumption: this.sessionAvgConsumption,
+            singleDinerTables: this.singleDinerTables,
         });
     },
 });
