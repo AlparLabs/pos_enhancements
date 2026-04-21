@@ -33,7 +33,7 @@
                         <div class="col-4">
                             <div class="card border-0 shadow-sm rounded-4 h-100 text-center p-3">
                                 <span class="text-muted fw-bold text-uppercase mb-1" style="font-size: 0.72rem; letter-spacing: 0.5px;">Prom. consumo actual</span>
-                                <span class="fw-bolder" style="font-size: 1.7rem; color: #2e7d32;" t-esc="pos.env.utils.formatCurrency(props.avgConsumption || 0)"/>
+                                <span class="fw-bolder" style="font-size: 1.7rem; color: #2e7d32;" t-esc="env.utils.formatCurrency(props.avgConsumption || 0)"/>
                             </div>
                         </div>
 
@@ -59,7 +59,7 @@
                         <div class="col-4">
                             <div class="card border-0 shadow-sm rounded-4 h-100 text-center p-3">
                                 <span class="text-muted fw-bold text-uppercase mb-1" style="font-size: 0.72rem; letter-spacing: 0.5px;">$ En curso</span>
-                                <span class="fw-bolder" style="font-size: 1.7rem; color: #2e7d32;" t-esc="pos.env.utils.formatCurrency(props.openAmount || 0)"/>
+                                <span class="fw-bolder" style="font-size: 1.7rem; color: #2e7d32;" t-esc="env.utils.formatCurrency(props.openAmount || 0)"/>
                             </div>
                         </div>
 
@@ -90,7 +90,7 @@
                             <div class="card border-0 shadow-sm rounded-4 h-100 text-center p-3"
                                  style="background: linear-gradient(135deg, #e8f4fd 0%, #dbeafe 100%);">
                                 <span class="text-muted fw-bold text-uppercase mb-1" style="font-size: 0.72rem; letter-spacing: 0.5px;">Prom. consumo sesión</span>
-                                <span class="fw-bolder" style="font-size: 1.7rem; color: #2e7d32;" t-esc="pos.env.utils.formatCurrency(props.sessionAvgConsumption || 0)"/>
+                                <span class="fw-bolder" style="font-size: 1.7rem; color: #2e7d32;" t-esc="env.utils.formatCurrency(props.sessionAvgConsumption || 0)"/>
                             </div>
                         </div>
 
