@@ -2,9 +2,11 @@
 
 import { Component } from "@odoo/owl";
 import { usePos } from "@point_of_sale/app/store/pos_hook";
+import { Dialog } from "@web/core/dialog/dialog";
 
 export class KpiDashboardModal extends Component {
     static template = "pos_restaurant_kpi.KpiDashboardModal";
+    static components = { Dialog };
     static props = {
         close: Function,
         occupancyRate:         { type: Number, optional: true },
