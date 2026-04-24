@@ -240,13 +240,32 @@ class PosPaymentMethod(models.Model):
         else:
             raise UserError(_("Please verify your production user token as it was rejected"))
 
+    def _fetch_mp_user_id(self, token):
+        """
+        Fetch the Mercado Pago User ID associated with the token.
+        """
+        mercado_pago = MercadoPagoPosRequest(token)
+        resp = mercado_pago.call_mercado_pago("get", "/users/me", {})
+        if 'id' in resp:
+            return str(resp['id'])
+        _logger.warning("Could not fetch MP user id: %s", resp)
+        return False
+
     def write(self, vals):
         records = super().write(vals)
 
-        if 'mp_id_point_smart' in vals or 'mp_bearer_token' in vals:
-            for record in self:
-                if record.mp_bearer_token and record.mp_id_point_smart and record._is_mercado_pago_terminal():
-                    record.mp_id_point_smart_complet = record._find_terminal(record.mp_bearer_token, record.mp_id_point_smart)
+        for record in self:
+            if record.mp_bearer_token:
+                if 'mp_id_point_smart' in vals or 'mp_bearer_token' in vals:
+                    if record.mp_id_point_smart and record._is_mercado_pago_terminal():
+                        record.mp_id_point_smart_complet = record._find_terminal(record.mp_bearer_token, record.mp_id_point_smart)
+                
+                # Fetch User ID automatically for QR modes if not set or token changed
+                if record._is_mercado_pago_qr() and ('mp_bearer_token' in vals or not record.mp_user_id):
+                    user_id = record._fetch_mp_user_id(record.mp_bearer_token)
+                    if user_id:
+                        record.mp_user_id = user_id
+                        
         return records
 
     @api.model_create_multi
@@ -254,7 +273,13 @@ class PosPaymentMethod(models.Model):
         records = super().create(vals_list)
 
         for record in records:
-            if record.mp_bearer_token and record.mp_id_point_smart and record._is_mercado_pago_terminal():
-                record.mp_id_point_smart_complet = record._find_terminal(record.mp_bearer_token, record.mp_id_point_smart)
+            if record.mp_bearer_token:
+                if record.mp_id_point_smart and record._is_mercado_pago_terminal():
+                    record.mp_id_point_smart_complet = record._find_terminal(record.mp_bearer_token, record.mp_id_point_smart)
+                
+                if record._is_mercado_pago_qr() and not record.mp_user_id:
+                    user_id = record._fetch_mp_user_id(record.mp_bearer_token)
+                    if user_id:
+                        record.mp_user_id = user_id
 
         return records

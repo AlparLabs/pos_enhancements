@@ -105,7 +105,7 @@ export class PaymentMercadoPago extends PaymentInterface {
         // Build items from order lines
         const items = order.get_orderlines().map((ol) => {
             const unitPrice = Math.round(ol.get_unit_price() * 100) / 100;
-            const qty = ol.quantity;
+            const qty = ol.get_quantity ? ol.get_quantity() : (ol.quantity || 1);
             const total = Math.round(unitPrice * qty * 100) / 100;
             return {
                 sku_number: String(ol.product_id.id),
