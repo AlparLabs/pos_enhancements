@@ -242,6 +242,45 @@ class PosPaymentMethod(models.Model):
         else:
             raise UserError(_("Please verify your production user token as it was rejected"))
 
+    def action_get_mp_pos_list(self):
+        """
+        Helper method triggered from the UI to fetch all POS from Mercado Pago.
+        If there is only one POS, it auto-fills the 'mp_external_pos_id'.
+        If there are multiple, it shows the user their available 'external_pos_id's.
+        """
+        self.ensure_one()
+        if not self.mp_bearer_token:
+            raise UserError(_("Please configure the Production User Token first."))
+            
+        mercado_pago = MercadoPagoPosRequest(self.mp_bearer_token)
+        resp = mercado_pago.call_mercado_pago("get", "/pos", {})
+        
+        if 'results' in resp and resp['results']:
+            if len(resp['results']) == 1:
+                pos = resp['results'][0]
+                self.mp_external_pos_id = pos.get('external_id')
+                return {
+                    'type': 'ir.actions.client',
+                    'tag': 'display_notification',
+                    'params': {
+                        'title': 'Autocompletado Exitoso',
+                        'message': f"Se autocompletó tu caja: {pos.get('name')} (ID: {self.mp_external_pos_id})",
+                        'sticky': False,
+                        'type': 'success',
+                    }
+                }
+            else:
+                pos_list = []
+                for pos in resp['results']:
+                    name = pos.get('name', 'Sin nombre')
+                    ext_id = pos.get('external_id', 'SIN_ID_EXTERNO')
+                    pos_list.append(f"- Caja: {name} | ID Externo (POS ID): {ext_id}")
+                
+                msg = "Tenés múltiples cajas configuradas. Por favor, copiá el ID Externo de la que quieras usar y pegalo manualmente:\n\n" + "\n".join(pos_list)
+                raise UserError(msg)
+        else:
+            raise UserError(_("No se encontraron cajas configuradas en esta cuenta de Mercado Pago. ¡Debes crear una primero en el panel de Mercado Pago!"))
+
     def _fetch_mp_user_id(self, token):
         """
         Fetch the Mercado Pago User ID associated with the token.

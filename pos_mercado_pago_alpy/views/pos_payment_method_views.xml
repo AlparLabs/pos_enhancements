@@ -34,6 +34,8 @@
                     placeholder="CAJA01"
                     invisible="use_payment_terminal not in ('mercado_pago_qr_local', 'mercado_pago_qr_screen', 'mercado_pago_qr_hybrid')"
                     required="use_payment_terminal in ('mercado_pago_qr_local', 'mercado_pago_qr_screen', 'mercado_pago_qr_hybrid')"/>
+                <button name="action_get_mp_pos_list" type="object" string="Consultar mis Cajas (API)" class="btn-link" icon="fa-cloud-download" help="Consulta a Mercado Pago para ver el listado de cajas y sus ID Externos."
+                    invisible="use_payment_terminal not in ('mercado_pago_qr_local', 'mercado_pago_qr_screen', 'mercado_pago_qr_hybrid')"/>
                 <field name="mp_qr_string"
                     placeholder="https://mpago.la/..."
                     invisible="use_payment_terminal not in ('mercado_pago_qr_screen', 'mercado_pago_qr_hybrid')"
