@@ -24,8 +24,30 @@ class PosPaymentMethod(models.Model):
         help="Enter your Point Smart terminal serial number written on the back of your terminal (after the S/N:)")
     mp_id_point_smart_complet = fields.Char()
 
+    # QR-specific fields
+    mp_external_pos_id = fields.Char(
+        string="POS ID (QR)",
+        help="Alphanumeric ID of the POS (cash register) configured in Mercado Pago, e.g. CAJA01. Required for QR payments.")
+    mp_user_id = fields.Char(
+        string="Seller User ID (QR)",
+        help="Your numeric Mercado Pago user/seller ID. Required for QR payments.")
+    mp_qr_string = fields.Char(
+        string="QR URL / String",
+        help="Scan the physical QR code with your phone camera (not the Mercado Pago app) and paste the URL here. Required to render the QR on the POS screen.")
+
     def _get_payment_terminal_selection(self):
-        return super()._get_payment_terminal_selection() + [('mercado_pago_alpy', 'Mercado Pago Alpy')]
+        return super()._get_payment_terminal_selection() + [
+            ('mercado_pago_alpy', 'Mercado Pago — Terminal Smart'),
+            ('mercado_pago_qr_local', 'Mercado Pago — QR Local (Físico)'),
+            ('mercado_pago_qr_screen', 'Mercado Pago — QR en Pantalla'),
+            ('mercado_pago_qr_hybrid', 'Mercado Pago — QR Híbrido'),
+        ]
+
+    def _is_mercado_pago_terminal(self):
+        return self.use_payment_terminal in ('mercado_pago_alpy',)
+
+    def _is_mercado_pago_qr(self):
+        return self.use_payment_terminal in ('mercado_pago_qr_local', 'mercado_pago_qr_screen', 'mercado_pago_qr_hybrid')
 
     def _check_special_access(self):
         if not self.env.user.has_group('point_of_sale.group_pos_user'):
@@ -95,6 +117,75 @@ class PosPaymentMethod(models.Model):
         _logger.debug("mp_order_get(), response from Mercado Pago: %s", resp)
         return resp
 
+    # ── QR-specific methods ──────────────────────────────────────────────────
+
+    def mp_qr_order_create(self, infos):
+        """
+        Create a QR payment order using the Mercado Pago Instore QR Orders API.
+        Associates the amount with the physical QR code of this POS.
+
+        API endpoint:
+          PUT /instore/orders/qr/seller/collectors/{user_id}/pos/{external_pos_id}/qrs
+        """
+        self._check_special_access()
+
+        record = self.sudo()
+        if not record.mp_user_id or not record.mp_external_pos_id:
+            raise UserError(_("QR payments require 'Seller User ID' and 'POS ID' to be configured."))
+
+        mercado_pago = MercadoPagoPosRequest(record.mp_bearer_token)
+
+        # Build items list from infos (frontend sends simplified order lines)
+        items = infos.get('items', [])
+        if not items:
+            # Fallback: single generic item
+            amount_decimal = round(infos['amount'] / 100, 2)
+            items = [{
+                "sku_number": "POS-SALE",
+                "category": "others",
+                "title": infos.get('title', 'POS Sale'),
+                "description": infos.get('title', 'POS Sale'),
+                "quantity": 1,
+                "unit_measure": "unit",
+                "unit_price": amount_decimal,
+                "total_amount": amount_decimal,
+            }]
+
+        amount_decimal = round(infos['amount'] / 100, 2)
+        order_payload = {
+            "external_reference": infos['external_reference'],
+            "title": infos.get('title', 'POS Sale'),
+            "description": infos.get('title', 'POS Sale'),
+            "notification_url": infos.get('notification_url', ''),
+            "total_amount": amount_decimal,
+            "items": items,
+            "cash_out": {"amount": 0},
+        }
+
+        endpoint = f"/instore/orders/qr/seller/collectors/{record.mp_user_id}/pos/{record.mp_external_pos_id}/qrs"
+        resp = mercado_pago.call_mercado_pago("put", endpoint, order_payload)
+        _logger.debug("mp_qr_order_create(), response from Mercado Pago: %s", resp)
+        return resp
+
+    def mp_qr_order_delete(self):
+        """
+        Delete (cancel) the current QR order, leaving the QR free for the next transaction.
+
+        API endpoint:
+          DELETE /instore/orders/qr/seller/collectors/{user_id}/pos/{external_pos_id}/qrs
+        """
+        self._check_special_access()
+
+        record = self.sudo()
+        if not record.mp_user_id or not record.mp_external_pos_id:
+            return {}
+
+        mercado_pago = MercadoPagoPosRequest(record.mp_bearer_token)
+        endpoint = f"/instore/orders/qr/seller/collectors/{record.mp_user_id}/pos/{record.mp_external_pos_id}/qrs"
+        resp = mercado_pago.call_mercado_pago("delete", endpoint, {})
+        _logger.debug("mp_qr_order_delete(), response from Mercado Pago: %s", resp)
+        return resp or {}
+
     def mp_get_payment_status(self, payment_id):
         """
         Called from frontend to get the payment status from Mercado Pago.
@@ -151,10 +242,10 @@ class PosPaymentMethod(models.Model):
 
     def write(self, vals):
         records = super().write(vals)
-        
+
         if 'mp_id_point_smart' in vals or 'mp_bearer_token' in vals:
             for record in self:
-                if record.mp_bearer_token and record.mp_id_point_smart:
+                if record.mp_bearer_token and record.mp_id_point_smart and record._is_mercado_pago_terminal():
                     record.mp_id_point_smart_complet = record._find_terminal(record.mp_bearer_token, record.mp_id_point_smart)
         return records
 
@@ -163,7 +254,7 @@ class PosPaymentMethod(models.Model):
         records = super().create(vals_list)
 
         for record in records:
-            if record.mp_bearer_token:
+            if record.mp_bearer_token and record.mp_id_point_smart and record._is_mercado_pago_terminal():
                 record.mp_id_point_smart_complet = record._find_terminal(record.mp_bearer_token, record.mp_id_point_smart)
 
         return records
