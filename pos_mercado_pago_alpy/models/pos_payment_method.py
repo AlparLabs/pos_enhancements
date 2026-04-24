@@ -156,11 +156,13 @@ class PosPaymentMethod(models.Model):
             "external_reference": infos['external_reference'],
             "title": infos.get('title', 'POS Sale'),
             "description": infos.get('title', 'POS Sale'),
-            "notification_url": infos.get('notification_url', ''),
             "total_amount": amount_decimal,
             "items": items,
             "cash_out": {"amount": 0},
         }
+        
+        if infos.get('notification_url'):
+            order_payload["notification_url"] = infos.get('notification_url')
 
         endpoint = f"/instore/orders/qr/seller/collectors/{record.mp_user_id}/pos/{record.mp_external_pos_id}/qrs"
         resp = mercado_pago.call_mercado_pago("put", endpoint, order_payload)
