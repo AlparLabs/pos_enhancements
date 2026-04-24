@@ -35,7 +35,7 @@ export class MercadoPagoQrPopup extends Component {
     setup() {
         this.state = useState({ loading: true, error: false });
         // Build the QR image URL using Odoo's built-in barcode controller
-        this.qrImageUrl = `/report/barcode/QR?value=${encodeURIComponent(this.props.qrString)}&width=300&height=300`;
+        this.qrImageUrl = `/report/barcode/QR/${encodeURIComponent(this.props.qrString)}?width=300&height=300`;
     }
 
     get formattedAmount() {
