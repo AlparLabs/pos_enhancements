@@ -245,7 +245,7 @@ class PosPaymentMethod(models.Model):
     def action_get_mp_pos_list(self):
         """
         Helper method triggered from the UI to fetch all POS from Mercado Pago.
-        If there is only one POS, it auto-fills the 'mp_external_pos_id'.
+        If there is only one POS, it auto-fills the 'mp_external_pos_id' and 'mp_qr_string'.
         If there are multiple, it shows the user their available 'external_pos_id's.
         """
         self.ensure_one()
@@ -259,22 +259,29 @@ class PosPaymentMethod(models.Model):
             if len(resp['results']) == 1:
                 pos = resp['results'][0]
                 self.mp_external_pos_id = pos.get('external_id')
+                if pos.get('qr_code'):
+                    self.mp_qr_string = pos.get('qr_code')
+                    
+                msg = f"Se autocompletó tu caja: {pos.get('name')} (ID: {self.mp_external_pos_id})"
+                if not self.mp_external_pos_id:
+                    msg += "\n\n⚠️ ATENCIÓN: Tu caja no tiene 'ID Externo'. Debes ir al panel de Mercado Pago y agregarle uno para que funcione."
+                    
                 return {
                     'type': 'ir.actions.client',
                     'tag': 'display_notification',
                     'params': {
-                        'title': 'Autocompletado Exitoso',
-                        'message': f"Se autocompletó tu caja: {pos.get('name')} (ID: {self.mp_external_pos_id})",
-                        'sticky': False,
-                        'type': 'success',
+                        'title': 'Autocompletado Exitoso' if self.mp_external_pos_id else 'Falta ID Externo',
+                        'message': msg,
+                        'sticky': True if not self.mp_external_pos_id else False,
+                        'type': 'success' if self.mp_external_pos_id else 'warning',
                     }
                 }
             else:
                 pos_list = []
                 for pos in resp['results']:
                     name = pos.get('name', 'Sin nombre')
-                    ext_id = pos.get('external_id', 'SIN_ID_EXTERNO')
-                    pos_list.append(f"- Caja: {name} | ID Externo (POS ID): {ext_id}")
+                    ext_id = pos.get('external_id', 'SIN_ID_EXTERNO (¡Debes configurarlo en Mercado Pago!)')
+                    pos_list.append(f"- Caja: {name}\n  ID Externo: {ext_id}\n")
                 
                 msg = "Tenés múltiples cajas configuradas. Por favor, copiá el ID Externo de la que quieras usar y pegalo manualmente:\n\n" + "\n".join(pos_list)
                 raise UserError(msg)
