@@ -135,27 +135,25 @@ class PosPaymentMethod(models.Model):
 
         mercado_pago = MercadoPagoPosRequest(record.mp_bearer_token)
 
-        # Build items list from infos (frontend sends simplified order lines)
-        items = infos.get('items', [])
-        if not items:
-            # Fallback: single generic item
-            amount_decimal = round(infos['amount'] / 100, 2)
-            items = [{
-                "sku_number": "POS-SALE",
-                "category": "others",
-                "title": infos.get('title', 'POS Sale'),
-                "description": infos.get('title', 'POS Sale'),
-                "quantity": 1,
-                "unit_measure": "unit",
-                "unit_price": amount_decimal,
-                "total_amount": amount_decimal,
-            }]
-
         amount_decimal = round(infos['amount'] / 100, 2)
+        
+        # Enforce a single generic item to avoid Mercado Pago validation errors
+        # caused by rounding, taxes, or partial payments in Odoo.
+        items = [{
+            "sku_number": "POS-SALE",
+            "category": "others",
+            "title": infos.get('title', 'Venta POS'),
+            "description": infos.get('title', 'Venta POS'),
+            "quantity": 1,
+            "unit_measure": "unit",
+            "unit_price": amount_decimal,
+            "total_amount": amount_decimal,
+        }]
+
         order_payload = {
             "external_reference": infos['external_reference'],
-            "title": infos.get('title', 'POS Sale'),
-            "description": infos.get('title', 'POS Sale'),
+            "title": infos.get('title', 'Venta POS'),
+            "description": infos.get('title', 'Venta POS'),
             "total_amount": amount_decimal,
             "items": items,
             "cash_out": {"amount": 0},
