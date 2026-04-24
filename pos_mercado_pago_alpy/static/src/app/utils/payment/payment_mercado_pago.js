@@ -143,9 +143,12 @@ export class PaymentMercadoPago extends PaymentInterface {
 
     // ── QR Popup management ──────────────────────────────────────────────────
 
-    _openQrPopup(line) {
-        const qrString = this.payment_method_id.mp_qr_string;
-        if (!qrString) return;
+    _openQrPopup(line, dynamicQrString = null) {
+        const qrString = dynamicQrString || this.payment_method_id.mp_qr_string;
+        if (!qrString) {
+            console.error("MercadoPago QR: Error abriendo popup, falta el string QR");
+            return;
+        }
 
         const amount = line.amount;
         const currency = this.pos.currency?.symbol || "$";
@@ -216,7 +219,7 @@ export class PaymentMercadoPago extends PaymentInterface {
 
         // Show QR on screen if the modality requires it
         if (this._showQrOnScreen) {
-            this._openQrPopup(line);
+            this._openQrPopup(line, mp_response.qr_data);
         }
 
         return await new Promise((resolve) => {
