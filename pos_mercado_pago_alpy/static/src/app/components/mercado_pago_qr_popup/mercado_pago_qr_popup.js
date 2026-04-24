@@ -26,6 +26,7 @@ export class MercadoPagoQrPopup extends Component {
         amount: Number,
         currency: { type: String, optional: true },
         onCancel: Function,
+        close: Function,
     };
     static defaultProps = {
         currency: "$",
@@ -52,5 +53,6 @@ export class MercadoPagoQrPopup extends Component {
 
     cancel() {
         this.props.onCancel();
+        this.props.close();
     }
 }
