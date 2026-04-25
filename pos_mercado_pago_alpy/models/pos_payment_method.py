@@ -198,6 +198,22 @@ class PosPaymentMethod(models.Model):
         _logger.debug("mp_get_payment_status(), response from Mercado Pago: %s", resp)
         return resp
 
+    def mp_qr_get_merchant_order(self, merchant_order_id):
+        """
+        Called from the frontend polling loop to check the status of a QR payment.
+        Uses the in_store_order_id returned by MP when the QR order was created.
+
+        A 'closed' status with at least one 'approved' payment means the buyer paid.
+
+        API endpoint: GET /merchant_orders/{merchant_order_id}
+        """
+        self._check_special_access()
+
+        mercado_pago = MercadoPagoPosRequest(self.sudo().mp_bearer_token)
+        resp = mercado_pago.call_mercado_pago("get", f"/merchant_orders/{merchant_order_id}", {})
+        _logger.debug("mp_qr_get_merchant_order(%s), response: %s", merchant_order_id, resp)
+        return resp
+
     def mp_order_cancel(self, order_id):
         """
         Cancel an order using the new Mercado Pago Orders API.

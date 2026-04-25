@@ -15,6 +15,7 @@ export class PaymentMercadoPago extends PaymentInterface {
         this.mp_order = {};
         this.pending_cid = null;
         this._qr_popup_close = null; // Reference to close the QR popup dialog
+        this.mp_qr_order_id = null;  // Stores the in_store_order_id returned by MP for polling
     }
 
     /** Returns true if this payment method uses any QR modality. */
@@ -90,6 +91,15 @@ export class PaymentMercadoPago extends PaymentInterface {
         );
     }
 
+    async _getMerchantOrderStatus(merchantOrderId) {
+        const line = this._findPaymentLine(this.pending_cid);
+        return await this.env.services.orm.silent.call(
+            "pos.payment.method",
+            "mp_qr_get_merchant_order",
+            [[line.payment_method_id.id], merchantOrderId]
+        );
+    }
+
     // ── RPC helpers (QR) ─────────────────────────────────────────────────────
 
     async _createQrOrder(cid) {
@@ -124,6 +134,7 @@ export class PaymentMercadoPago extends PaymentInterface {
             external_reference: `${sessionId}_${line.payment_method_id.id}_${order.uuid}_${Date.now()}`,
             title: `Orden POS #${order.sequence_number || order.uid}`,
             items: items,
+            notification_url: `${window.location.origin}/pos_mercado_pago_alpy/notification`,
         };
         return await this.env.services.orm.silent.call(
             "pos.payment.method",
@@ -215,6 +226,10 @@ export class PaymentMercadoPago extends PaymentInterface {
             return false;
         }
 
+        // Store the merchant order id returned by MP so the polling loop can query it
+        this.mp_qr_order_id = mp_response?.in_store_order_id || null;
+        console.log("MercadoPago QR: in_store_order_id stored for polling:", this.mp_qr_order_id);
+
         line.set_payment_status("waitingCard");
 
         // Show QR on screen if the modality requires it
@@ -225,7 +240,8 @@ export class PaymentMercadoPago extends PaymentInterface {
         return await new Promise((resolve) => {
             this.webhook_resolver = resolve;
 
-            // Polling fallback
+            // Polling fallback — queries GET /merchant_orders/{id} every 5 seconds.
+            // This resolves the payment even when the MP webhook does not arrive.
             let pollCount = 0;
             const pollInterval = setInterval(async () => {
                 pollCount++;
@@ -234,10 +250,26 @@ export class PaymentMercadoPago extends PaymentInterface {
                     return;
                 }
                 try {
-                    // For QR, we poll merchant_orders via order_get using the stored mp_order.id
-                    // mp_order may be empty (PUT returns no body), so we rely on webhook + cancel
+                    if (this.mp_qr_order_id) {
+                        const statusResp = await this._getMerchantOrderStatus(this.mp_qr_order_id);
+                        console.log("MercadoPago QR: Poll merchant_order status:", statusResp?.status, statusResp?.payments);
+                        if (statusResp && statusResp.status === "closed") {
+                            const payments = statusResp.payments || [];
+                            const approved = payments.some(
+                                (p) => p.status === "approved" || p.status_detail === "accredited"
+                            );
+                            clearInterval(pollInterval);
+                            if (approved) {
+                                // Resolve via the standard QR webhook handler so status is set correctly
+                                this._handleQrWebhook();
+                            } else {
+                                this._showMsg(_t("El pago fue rechazado o cancelado."), "info");
+                                resolve(false);
+                            }
+                        }
+                    }
                 } catch (e) {
-                    /* ignore */
+                    /* ignore transient network errors */
                 }
                 if (pollCount > 60) {
                     // 5 minutes timeout
