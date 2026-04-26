@@ -126,6 +126,11 @@ export async function printBarTicketsForOrder(order, pos, printer, env) {
         return;
     }
 
+    const hasTable = order.getTable ? order.getTable() : order.table_id;
+    if (hasTable) {
+        return;
+    }
+
     const headerData = pos.getReceiptHeaderData(order);
 
     for (const line of order.get_orderlines()) {
@@ -168,6 +173,11 @@ export async function printBarTicketsForOrder(order, pos, printer, env) {
  */
 export async function reprintBarTicketsForOrder(order, pos, printer, env) {
     if (!order || order.get_orderlines().length === 0) {
+        return;
+    }
+
+    const hasTable = order.getTable ? order.getTable() : order.table_id;
+    if (hasTable) {
         return;
     }
 

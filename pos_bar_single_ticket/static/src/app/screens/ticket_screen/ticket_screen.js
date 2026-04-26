@@ -30,6 +30,10 @@ patch(TicketScreen.prototype, {
         if (!order || !order.get_orderlines) {
             return false;
         }
+        const hasTable = order.getTable ? order.getTable() : order.table_id;
+        if (hasTable) {
+            return false;
+        }
         return order.get_orderlines().some((line) => shouldSplitLine(line, this._barTicketPos));
     },
 
