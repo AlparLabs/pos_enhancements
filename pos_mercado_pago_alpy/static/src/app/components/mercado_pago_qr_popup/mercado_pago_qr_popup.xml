@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+    <t t-name="pos_mercado_pago_alpy.MercadoPagoQrPopup">
+        <!-- Full-screen overlay -->
+        <div class="mercadopago-qr-overlay">
+            <div class="mercadopago-qr-card">
+
+                <!-- Header -->
+                <div class="mercadopago-qr-header">
+                    <img
+                        src="/pos_mercado_pago_alpy/static/src/img/mp_logo.svg"
+                        alt="Mercado Pago"
+                        class="mercadopago-qr-logo"
+                        onerror="this.style.display='none'"
+                    />
+                    <h2 class="mercadopago-qr-title">Escanear para pagar</h2>
+                    <p class="mercadopago-qr-subtitle">
+                        Abrí la app de Mercado Pago y escaneá el código QR
+                    </p>
+                </div>
+
+                <!-- QR Image -->
+                <div class="mercadopago-qr-image-wrapper">
+                    <t t-if="state.loading">
+                        <div class="mercadopago-qr-spinner">
+                            <i class="fa fa-circle-o-notch fa-spin fa-3x"/>
+                        </div>
+                    </t>
+                    <t t-if="state.error">
+                        <div class="mercadopago-qr-error">
+                            <i class="fa fa-exclamation-triangle fa-2x"/>
+                            <p>No se pudo cargar el QR</p>
+                        </div>
+                    </t>
+                    <img
+                        t-att-src="qrImageUrl"
+                        alt="Código QR Mercado Pago"
+                        class="mercadopago-qr-image"
+                        t-att-style="state.loading || state.error ? 'display:none' : ''"
+                        t-on-load="onImageLoad"
+                        t-on-error="onImageError"
+                    />
+                </div>
+
+                <!-- Amount -->
+                <div class="mercadopago-qr-amount-wrapper">
+                    <span class="mercadopago-qr-amount-label">Total a pagar</span>
+                    <span class="mercadopago-qr-amount" t-esc="formattedAmount"/>
+                </div>
+
+                <!-- Waiting indicator -->
+                <div class="mercadopago-qr-waiting">
+                    <i class="fa fa-circle-o-notch fa-spin"/> Esperando confirmación de pago...
+                </div>
+
+                <!-- Cancel button -->
+                <div class="mercadopago-qr-actions">
+                    <button class="btn btn-secondary mercadopago-qr-cancel-btn" t-on-click="cancel">
+                        <i class="fa fa-times"/> Cancelar
+                    </button>
+                </div>
+
+            </div>
+        </div>
+    </t>
+</templates>

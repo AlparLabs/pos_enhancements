@@ -56,21 +56,28 @@
                     <i class="fa fa-history me-1"/> Sesión actual
                 </p>
                 <div class="row g-3">
-                    <div class="col-4">
+                    <div class="col-3">
                         <div class="card border-0 shadow-sm rounded-4 h-100 text-center p-3"
                              style="background: linear-gradient(135deg, #e8f4fd 0%, #dbeafe 100%);">
                             <span class="text-muted fw-bold text-uppercase mb-1" style="font-size: 0.72rem; letter-spacing: 0.5px;">Cubiertos sesión</span>
                             <span class="fw-bolder" style="font-size: 2.2rem; color: #1a73e8;" t-esc="props.sessionTotalCustomers || 0"/>
                         </div>
                     </div>
-                    <div class="col-4">
+                    <div class="col-3">
                         <div class="card border-0 shadow-sm rounded-4 h-100 text-center p-3"
                              style="background: linear-gradient(135deg, #e8f4fd 0%, #dbeafe 100%);">
-                            <span class="text-muted fw-bold text-uppercase mb-1" style="font-size: 0.72rem; letter-spacing: 0.5px;">Prom. consumo sesión</span>
+                            <span class="text-muted fw-bold text-uppercase mb-1" style="font-size: 0.72rem; letter-spacing: 0.5px;">Prom. sesión</span>
                             <span class="fw-bolder" style="font-size: 1.7rem; color: #2e7d32;" t-esc="env.utils.formatCurrency(props.sessionAvgConsumption || 0)"/>
                         </div>
                     </div>
-                    <div class="col-4">
+                    <div class="col-3">
+                        <div class="card border-0 shadow-sm rounded-4 h-100 text-center p-3"
+                             style="background: linear-gradient(135deg, #e8f4fd 0%, #dbeafe 100%);">
+                            <span class="text-muted fw-bold text-uppercase mb-1" style="font-size: 0.72rem; letter-spacing: 0.5px;">$ Total Sesión</span>
+                            <span class="fw-bolder" style="font-size: 1.7rem; color: #2e7d32;" t-esc="env.utils.formatCurrency(props.sessionTotalAmount || 0)"/>
+                        </div>
+                    </div>
+                    <div class="col-3">
                         <div class="card border-0 shadow-sm rounded-4 h-100 text-center p-3"
                              style="background: linear-gradient(135deg, #e8f4fd 0%, #dbeafe 100%);">
                             <span class="text-muted fw-bold text-uppercase mb-1" style="font-size: 0.72rem; letter-spacing: 0.5px;">Rotación de mesas</span>

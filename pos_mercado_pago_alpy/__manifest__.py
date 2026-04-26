@@ -1,21 +1,26 @@
 {
     'name': 'POS Mercado Pago (Alpy)',
-    'version': '18.0.0.2',
+    'version': '18.0.2.2',
     'category': 'Sales/Point of Sale',
-    'summary': 'Integrate your POS with Mercado Pago Point Smart terminals using the Orders API',
+    'summary': 'Integrate your POS with Mercado Pago: Point Smart terminals and QR code payments',
     'description': """
-This module integrates Mercado Pago Point Smart terminals with Odoo Point of Sale.
-It uses the modern Mercado Pago 'Orders' API (v1/orders) for payment creation and status polling.
+This module integrates Mercado Pago with Odoo Point of Sale.
+
+Payment modalities:
+- Terminal Smart  : Point Smart terminal via Orders API (/v1/orders)
+- QR Local        : Sends the amount to the physical QR code in the store (Instore QR API)
+- QR en Pantalla  : Renders the QR on the POS screen so the customer can scan it
+- QR Híbrido      : Combines both — amount sent to the physical QR and rendered on screen
 
 Features:
-- Payment support via Point Smart terminals
-- Real-time status polling
-- Webhook support for status updates
-- 'Force PDV' mode for terminals
+- Real-time webhooks (merchant_order for QR, Orders API for Terminal)
+- Fallback polling for unstable networks
+- 'Force PDV' mode for Point Smart terminals
+- Idempotency keys for safe retries
     """,
     'depends': ['point_of_sale'],
     'data': [
-        'views/pos_payment_method_views.xml'
+        'views/pos_payment_method_views.xml',
     ],
     'assets': {
         'point_of_sale._assets_pos': [
@@ -26,3 +31,4 @@ Features:
     'installable': True,
     'application': False,
 }
+

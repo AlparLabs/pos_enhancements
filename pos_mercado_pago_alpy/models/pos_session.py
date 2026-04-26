@@ -7,5 +7,5 @@ class PosSession(models.Model):
 
     def _loader_params_pos_payment_method(self):
         result = super()._loader_params_pos_payment_method()
-        result['search_params']['fields'].append('mp_id_point_smart')
+        result['search_params']['fields'].extend(['mp_id_point_smart', 'mp_external_pos_id', 'mp_qr_string'])
         return result

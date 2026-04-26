@@ -2,6 +2,11 @@ import { _t } from "@web/core/l10n/translation";
 import { PaymentInterface } from "@point_of_sale/app/payment/payment_interface";
 import { AlertDialog } from "@web/core/confirmation_dialog/confirmation_dialog";
 import { register_payment_method } from "@point_of_sale/app/store/pos_store";
+import { MercadoPagoQrPopup } from "@pos_mercado_pago_alpy/app/components/mercado_pago_qr_popup/mercado_pago_qr_popup";
+
+// QR integration type identifiers
+const QR_TYPES = ["mercado_pago_qr_local", "mercado_pago_qr_screen", "mercado_pago_qr_hybrid"];
+const QR_SCREEN_TYPES = ["mercado_pago_qr_screen", "mercado_pago_qr_hybrid"];
 
 export class PaymentMercadoPago extends PaymentInterface {
     setup(pos, payment_method_id) {
@@ -9,26 +14,42 @@ export class PaymentMercadoPago extends PaymentInterface {
         this.webhook_resolver = null;
         this.mp_order = {};
         this.pending_cid = null;
+        this._qr_popup_close = null; // Reference to close the QR popup dialog
+        this.mp_qr_order_id = null;  // Stores the in_store_order_id returned by MP for polling
     }
 
-    // Find the payment line by UUID (cid). In Odoo 18, send_payment_request
-    // receives the payment line's UUID, not a selected-line reference.
+    /** Returns true if this payment method uses any QR modality. */
+    get _isQr() {
+        return QR_TYPES.includes(this.payment_method_id.use_payment_terminal);
+    }
+
+    /** Returns true if this payment method should display the QR on screen. */
+    get _showQrOnScreen() {
+        return QR_SCREEN_TYPES.includes(this.payment_method_id.use_payment_terminal);
+    }
+
+    // ── Find payment line ────────────────────────────────────────────────────
+
     _findPaymentLine(cid) {
         const order = this.pos.get_order();
         if (cid) {
             const found = order.payment_ids.find((pl) => pl.uuid === cid);
             if (found) return found;
         }
-        // Fallback: try the selected line
         return order.get_selected_paymentline();
     }
 
-    // ---- RPC helpers (private) ----
+    // ── RPC helpers (Terminal Smart) ─────────────────────────────────────────
 
     async _createOrder(cid) {
         const order = this.pos.get_order();
         const line = this._findPaymentLine(cid);
-        const sessionId = this.pos.session?.id || this.pos.pos_session?.id || this.pos.config?.current_session_id?.id || this.pos.config?.current_session_id || '0';
+        const sessionId =
+            this.pos.session?.id ||
+            this.pos.pos_session?.id ||
+            this.pos.config?.current_session_id?.id ||
+            this.pos.config?.current_session_id ||
+            "0";
         const infos = {
             amount: parseInt(line.amount * 100, 10),
             additional_info: {
@@ -70,73 +91,300 @@ export class PaymentMercadoPago extends PaymentInterface {
         );
     }
 
-    // ---- PaymentInterface overrides (snake_case required by Odoo 18) ----
+    async _getMerchantOrderStatus(merchantOrderId) {
+        const line = this._findPaymentLine(this.pending_cid);
+        return await this.env.services.orm.silent.call(
+            "pos.payment.method",
+            "mp_qr_get_merchant_order",
+            [[line.payment_method_id.id], merchantOrderId]
+        );
+    }
+
+    // ── RPC helpers (QR) ─────────────────────────────────────────────────────
+
+    async _createQrOrder(cid) {
+        const order = this.pos.get_order();
+        const line = this._findPaymentLine(cid);
+        const sessionId =
+            this.pos.session?.id ||
+            this.pos.pos_session?.id ||
+            this.pos.config?.current_session_id?.id ||
+            this.pos.config?.current_session_id ||
+            "0";
+
+        // Build items from order lines
+        const items = order.get_orderlines().map((ol) => {
+            const unitPrice = Math.round(ol.get_unit_price() * 100) / 100;
+            const qty = ol.get_quantity ? ol.get_quantity() : (ol.quantity || 1);
+            const total = Math.round(unitPrice * qty * 100) / 100;
+            return {
+                sku_number: String(ol.product_id.id),
+                category: "others",
+                title: ol.product_id.display_name || ol.product_id.name,
+                description: ol.product_id.display_name || ol.product_id.name,
+                quantity: qty,
+                unit_measure: "unit",
+                unit_price: unitPrice,
+                total_amount: total,
+            };
+        });
+
+        const infos = {
+            amount: parseInt(line.amount * 100, 10),
+            external_reference: `${sessionId}_${line.payment_method_id.id}_${order.uuid}_${Date.now()}`,
+            title: `Orden POS #${order.sequence_number || order.uid}`,
+            items: items,
+            notification_url: `${window.location.origin}/pos_mercado_pago_alpy/notification`,
+        };
+        return await this.env.services.orm.silent.call(
+            "pos.payment.method",
+            "mp_qr_order_create",
+            [[line.payment_method_id.id], infos]
+        );
+    }
+
+    async _deleteQrOrder(cid) {
+        const line = this._findPaymentLine(cid);
+        return await this.env.services.orm.silent.call(
+            "pos.payment.method",
+            "mp_qr_order_delete",
+            [[line.payment_method_id.id]]
+        );
+    }
+
+    // ── QR Popup management ──────────────────────────────────────────────────
+
+    _openQrPopup(line, dynamicQrString = null) {
+        const qrString = dynamicQrString || this.payment_method_id.mp_qr_string;
+        if (!qrString) {
+            console.error("MercadoPago QR: Error abriendo popup, falta el string QR");
+            return;
+        }
+
+        const amount = line.amount;
+        const currency = this.pos.currency?.symbol || "$";
+
+        this.env.services.dialog.add(
+            MercadoPagoQrPopup,
+            {
+                qrString,
+                amount,
+                currency,
+                onCancel: () => {
+                    // Trigger cancel from the popup button
+                    const currentLine = this._findPaymentLine(this.pending_cid);
+                    if (currentLine) {
+                        this.send_payment_cancel(this.pos.get_order(), this.pending_cid);
+                    }
+                },
+            },
+            {
+                onClose: () => {
+                    this._qr_popup_close = null;
+                },
+            }
+        );
+    }
+
+    _closeQrPopup() {
+        // Dialogs in Odoo 18 self-close when the component unmounts;
+        // we trigger a re-render by removing the pending_cid flag.
+        // The popup's onCancel already triggers send_payment_cancel which resolves the flow.
+    }
+
+    // ── PaymentInterface overrides ────────────────────────────────────────────
 
     async send_payment_request(cid) {
         this.pending_cid = cid;
         const line = this._findPaymentLine(cid);
+
         try {
             line.set_payment_status("waitingCapture");
-            console.log("MercadoPago: Sending order...", { amount: line.amount });
-            const mp_response = await this._createOrder(cid);
-            console.log("MercadoPago: Order response:", mp_response);
 
-            if (!mp_response || !("id" in mp_response)) {
-                const msg = mp_response?.errorMessage || mp_response?.message || "Unknown error from Mercado Pago";
-                this._showMsg(msg, "error");
-                return false;
+            if (this._isQr) {
+                return await this._sendQrPaymentRequest(cid, line);
+            } else {
+                return await this._sendTerminalPaymentRequest(cid, line);
             }
-            this.mp_order = mp_response;
-            line.set_payment_status("waitingCard");
-            return await new Promise((resolve) => {
-                this.webhook_resolver = resolve;
-                
-                // Fallback polling for Odoo.sh or unstable networks 
-                let pollCount = 0;
-                const pollInterval = setInterval(async () => {
-                    pollCount++;
-                    if (this.pending_cid !== cid) {
-                        clearInterval(pollInterval);
-                        return;
-                    }
-                    try {
-                        const statusResp = await this._getOrderStatus();
-                        if (statusResp && ["processed", "finished", "canceled", "failed", "expired", "closed"].includes(statusResp.status)) {
-                            clearInterval(pollInterval);
-                            this.handleMercadoPagoWebhook();
-                        }
-                    } catch (e) { } // ignore
-                    if (pollCount > 18) {
-                        clearInterval(pollInterval);
-                    }
-                }, 5000);
-            });
         } catch (error) {
             this._showMsg(error?.message || String(error), "System error");
             return false;
         }
     }
 
+    /** QR payment flow */
+    async _sendQrPaymentRequest(cid, line) {
+        console.log("MercadoPago QR: Sending QR order...", { amount: line.amount });
+
+        const mp_response = await this._createQrOrder(cid);
+        console.log("MercadoPago QR: Order response:", mp_response);
+
+        // The Instore QR PUT endpoint returns HTTP 204 (no content) on success;
+        // our request helper returns an empty object {}. An error key means failure.
+        if (mp_response && (mp_response.errorMessage || mp_response.message)) {
+            this._showMsg(mp_response.errorMessage || mp_response.message, "error");
+            return false;
+        }
+
+        // Store the merchant order id returned by MP so the polling loop can query it
+        this.mp_qr_order_id = mp_response?.in_store_order_id || null;
+        console.log("MercadoPago QR: in_store_order_id stored for polling:", this.mp_qr_order_id);
+
+        line.set_payment_status("waitingCard");
+
+        // Show QR on screen if the modality requires it
+        if (this._showQrOnScreen) {
+            this._openQrPopup(line, mp_response.qr_data);
+        }
+
+        return await new Promise((resolve) => {
+            this.webhook_resolver = resolve;
+
+            // Polling fallback — queries GET /merchant_orders/{id} every 5 seconds.
+            // This resolves the payment even when the MP webhook does not arrive.
+            let pollCount = 0;
+            const pollInterval = setInterval(async () => {
+                pollCount++;
+                if (this.pending_cid !== cid) {
+                    clearInterval(pollInterval);
+                    return;
+                }
+                try {
+                    if (this.mp_qr_order_id) {
+                        const statusResp = await this._getMerchantOrderStatus(this.mp_qr_order_id);
+                        console.log("MercadoPago QR: Poll merchant_order status:", statusResp?.status, statusResp?.payments);
+                        if (statusResp && statusResp.status === "closed") {
+                            const payments = statusResp.payments || [];
+                            const approved = payments.some(
+                                (p) => p.status === "approved" || p.status_detail === "accredited"
+                            );
+                            clearInterval(pollInterval);
+                            if (approved) {
+                                // Resolve via the standard QR webhook handler so status is set correctly
+                                this._handleQrWebhook();
+                            } else {
+                                this._showMsg(_t("El pago fue rechazado o cancelado."), "info");
+                                resolve(false);
+                            }
+                        }
+                    }
+                } catch (e) {
+                    /* ignore transient network errors */
+                }
+                if (pollCount > 60) {
+                    // 5 minutes timeout
+                    clearInterval(pollInterval);
+                    resolve(false);
+                }
+            }, 5000);
+        });
+    }
+
+    /** Terminal Smart payment flow (unchanged) */
+    async _sendTerminalPaymentRequest(cid, line) {
+        console.log("MercadoPago: Sending order...", { amount: line.amount });
+        const mp_response = await this._createOrder(cid);
+        console.log("MercadoPago: Order response:", mp_response);
+
+        if (!mp_response || !("id" in mp_response)) {
+            const msg = mp_response?.errorMessage || mp_response?.message || "Unknown error from Mercado Pago";
+            this._showMsg(msg, "error");
+            return false;
+        }
+        this.mp_order = mp_response;
+        line.set_payment_status("waitingCard");
+        return await new Promise((resolve) => {
+            this.webhook_resolver = resolve;
+
+            // Fallback polling for Odoo.sh or unstable networks
+            let pollCount = 0;
+            const pollInterval = setInterval(async () => {
+                pollCount++;
+                if (this.pending_cid !== cid) {
+                    clearInterval(pollInterval);
+                    return;
+                }
+                try {
+                    const statusResp = await this._getOrderStatus();
+                    if (
+                        statusResp &&
+                        ["processed", "finished", "canceled", "failed", "expired", "closed"].includes(
+                            statusResp.status
+                        )
+                    ) {
+                        clearInterval(pollInterval);
+                        this.handleMercadoPagoWebhook();
+                    }
+                } catch (e) {
+                    /* ignore */
+                }
+                if (pollCount > 18) {
+                    clearInterval(pollInterval);
+                }
+            }, 5000);
+        });
+    }
+
     async send_payment_cancel(order, cid) {
+        const resolverBackup = this.webhook_resolver;
+        this.webhook_resolver = null;
+
+        if (this._isQr) {
+            try {
+                await this._deleteQrOrder(cid || this.pending_cid);
+            } catch (e) {
+                _logger.warn("MercadoPago QR: could not delete QR order on cancel", e);
+            }
+            // Resolve the pending promise as false (cancelled)
+            resolverBackup?.(false);
+            return true;
+        }
+
+        // Terminal Smart cancel
         if (!("id" in this.mp_order)) {
+            resolverBackup?.(false);
             return true;
         }
         try {
             const canceling_status = await this._cancelOrder();
             if (!canceling_status || "error" in canceling_status || "errorMessage" in canceling_status) {
-                this._showMsg(_t("Could not cancel the order, please cancel directly on the terminal"), "info");
+                this._showMsg(
+                    _t("Could not cancel the order, please cancel directly on the terminal"),
+                    "info"
+                );
+                resolverBackup?.(false);
                 return false;
             }
+            resolverBackup?.(false);
             return true;
         } catch (error) {
             this._showMsg(error?.message || String(error), "System error");
+            resolverBackup?.(false);
             return false;
         }
     }
 
-    // ---- Webhook handler (called from pos_store.js) ----
+    // ── Webhook handler (called from pos_store.js) ────────────────────────────
 
     async handleMercadoPagoWebhook() {
+        if (this._isQr) {
+            return await this._handleQrWebhook();
+        }
+        return await this._handleTerminalWebhook();
+    }
+
+    /** QR webhook: the merchant_order is closed → resolve as paid */
+    async _handleQrWebhook() {
+        const line = this._findPaymentLine(this.pending_cid);
+        if (!line) return;
+
+        line.set_payment_status("done");
+        this.webhook_resolver?.(true);
+        this.webhook_resolver = null;
+    }
+
+    /** Original Terminal Smart webhook handler */
+    async _handleTerminalWebhook() {
         const line = this._findPaymentLine(this.pending_cid);
         if (!line) return;
         const MAX_RETRY = 5;
@@ -157,16 +405,15 @@ export class PaymentMercadoPago extends PaymentInterface {
                 return showMessageAndResolve(_t("Payment has been canceled"), "info", false);
             }
             if (["processed", "finished", "closed"].includes(orderStatus.status)) {
-                // In Orders API, payments are located inside transactions
                 const payments = orderStatus.transactions?.payments || [];
-                
                 if (payments.length > 0) {
                     const lastPayment = payments[payments.length - 1];
                     const innerStatus = lastPayment.status || lastPayment.state;
                     const innerDetail = lastPayment.status_detail;
-                    
-                    if (["approved", "accredited", "processed"].includes(innerStatus) || 
-                        ["approved", "accredited"].includes(innerDetail)) {
+                    if (
+                        ["approved", "accredited", "processed"].includes(innerStatus) ||
+                        ["approved", "accredited"].includes(innerDetail)
+                    ) {
                         return showMessageAndResolve(_t("Payment has been processed"), "info", true);
                     }
                 }
@@ -179,7 +426,6 @@ export class PaymentMercadoPago extends PaymentInterface {
         }
 
         let last_status_order = await this._getOrderStatus();
-
         if (this.mp_order.id != last_status_order.id) {
             return;
         }
@@ -219,7 +465,7 @@ export class PaymentMercadoPago extends PaymentInterface {
         return showMessageAndResolve(_t("Unknown payment status"), "error", false);
     }
 
-    // ---- Private helpers ----
+    // ── Private helpers ───────────────────────────────────────────────────────
 
     _showMsg(msg, title) {
         this.env.services.dialog.add(AlertDialog, {
@@ -229,4 +475,8 @@ export class PaymentMercadoPago extends PaymentInterface {
     }
 }
 
+// Register all four terminal identifiers so Odoo loads this class for each
 register_payment_method("mercado_pago_alpy", PaymentMercadoPago);
+register_payment_method("mercado_pago_qr_local", PaymentMercadoPago);
+register_payment_method("mercado_pago_qr_screen", PaymentMercadoPago);
+register_payment_method("mercado_pago_qr_hybrid", PaymentMercadoPago);

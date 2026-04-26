@@ -1,28 +1,43 @@
-# POS Mercado Pago (Alpy) - v18.0.0.2
+# POS Mercado Pago (Alpy) - v18.0.1.0
 
-Integrates Odoo Point of Sale with Mercado Pago Point Smart terminals using the modern **Orders API** (v1/orders).
+Integrates Odoo Point of Sale with Mercado Pago Point Smart terminals and Dynamic QR Code payments using the modern **Orders API** (v1/orders) and **Instore QR API**.
 
 ## Overview
-This module enables seamless payment processing on Mercado Pago Point Smart terminals directly from the Odoo POS interface. It replaces legacy payment intent flows with the more robust Orders API, supporting real-time status updates via Webhooks and fallback polling.
+This module enables seamless payment processing directly from the Odoo POS interface. It supports:
+- **Terminal Smart:** Payments via physical Point Smart devices.
+- **Dynamic QR:** Payments via Mercado Pago QR (Local/Physical, On-Screen, or Hybrid).
+
+It replaces legacy payment intent flows with robust APIs, supporting real-time status updates via Webhooks and fallback polling.
 
 ## Key Features
-- **Orders API Integration**: Uses `/v1/orders` for creating and managing terminal payments.
-- **Real-time Webhooks**: Professional handling of Mercado Pago notifications via `/pos_mercado_pago_alpy/notification`.
+- **Orders & Instore API Integration**: Uses modern endpoints for terminal and QR payments.
+- **Multiple QR Modalities**: Choose to print the QR, show it on the POS screen, or both (Hybrid).
+- **Real-time Webhooks**: Professional handling of Mercado Pago notifications (`merchant_order` for QR, `point_integration_wh` for terminals).
 - **Intelligent Polling**: Fallback polling mechanism in the frontend for environments where webhooks might be blocked or delayed.
-- **Force PDV Mode**: A debug/management feature to ensure terminals are in the correct operating mode.
 - **Idempotency**: Implements `X-Idempotency-Key` using order UUIDs to prevent duplicate charges.
 
 ## Configuration
 
-### 1. Mercado Pago Credentials
+### 1. Terminal Smart Configuration
 Go to **Point of Sale > Configuration > Payment Methods** and create/edit a method:
-- **Use Payment Terminal**: Select `Mercado Pago Alpy`.
+- **Use Payment Terminal**: Select `Mercado Pago — Terminal Smart`.
 - **Production user token**: Your Mercado Pago Access Token.
 - **Production secret key**: Your Webhook Secret Key for signature verification.
 - **Terminal S/N**: The Serial Number of your Point Smart device.
 
-### 2. POS Configuration
-Add the new payment method to your POS configuration.
+### 2. QR Payments Configuration (Local, Screen, Hybrid)
+Go to **Point of Sale > Configuration > Payment Methods** and select one of the QR methods. You will need the following data:
+
+- **Production user token** & **Production secret key**: Same as Terminal Smart.
+- **Seller User ID (QR)**: Your numeric Mercado Pago user/seller ID.
+  * **Where to find it:** In the Mercado Pago panel, go to *Tu Negocio > Configuración > Credenciales* (Your Business > Settings > Credentials) or query the `/users/me` API. It is a long numeric string.
+- **POS ID (QR) / `external_pos_id`**: The alphanumeric ID of your cash register.
+  * **Where to find it:** In the Mercado Pago panel, go to *Tu Negocio > Locales y Cajas* (Your Business > Stores and Registers). When you create a cash register, you assign it an "ID externo" (External ID) like `CAJA_01`. Use that exact string here.
+- **QR URL / String**: The URL encoded in your physical QR code.
+  * **Where to find it:** Take the physical QR code that Mercado Pago provided you for this specific cash register. Open your smartphone's **default camera app** (not the Mercado Pago app) and point it at the QR. A link will pop up (usually starting with `https://mpago.la/...`). Copy and paste that exact link here. Odoo will use it to draw the QR on the POS screen.
+
+### 3. POS Configuration
+Add the new payment method(s) to your POS configuration.
 
 ## Technical Details
 

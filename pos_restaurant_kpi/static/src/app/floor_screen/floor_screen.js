@@ -68,12 +68,7 @@ patch(FloorScreen.prototype, {
         return Math.max(fromMemory, fromServer);
     },
 
-    get sessionAvgConsumption() {
-        const customers = this.sessionTotalCustomers;
-        if (customers === 0) {
-            return 0;
-        }
-
+    get sessionTotalAmount() {
         const sessionId = this.pos.session.id;
         const fromMemory = this.pos.models["pos.order"]
             .filter((order) =>
@@ -87,8 +82,16 @@ patch(FloorScreen.prototype, {
         const fromServer = this.kpiState.sessionPaidOrders
             .reduce((sum, order) => sum + (order.amount_total || 0), 0);
 
-        const totalAmount = Math.max(fromMemory, fromServer);
-        return totalAmount / customers;
+        return Math.max(fromMemory, fromServer);
+    },
+
+    get sessionAvgConsumption() {
+        const customers = this.sessionTotalCustomers;
+        if (customers === 0) {
+            return 0;
+        }
+
+        return this.sessionTotalAmount / customers;
     },
 
     get occupancyRate() {
@@ -105,8 +108,19 @@ patch(FloorScreen.prototype, {
     get turnoverRate() {
         const totalTables = this.pos.models["restaurant.table"].length;
         if (!totalTables) return 0;
-        const doneOrders = this.pos.models["pos.order"]
-            .filter((order) => order.state !== "draft" && order.state !== "cancel" && order.table_id).length;
+
+        const sessionId = this.pos.session.id;
+        const memoryDoneOrders = this.pos.models["pos.order"]
+            .filter((order) => 
+                order.state !== "draft" && 
+                order.state !== "cancel" && 
+                order.table_id &&
+                order.session_id?.id === sessionId
+            ).length;
+
+        const serverDoneOrders = this.kpiState.sessionPaidOrders.length;
+        const doneOrders = Math.max(memoryDoneOrders, serverDoneOrders);
+
         return parseFloat((doneOrders / totalTables).toFixed(1));
     },
 
@@ -171,6 +185,7 @@ patch(FloorScreen.prototype, {
             avgConsumption: this.avgConsumption,
             sessionTotalCustomers: this.sessionTotalCustomers,
             sessionAvgConsumption: this.sessionAvgConsumption,
+            sessionTotalAmount: this.sessionTotalAmount,
             singleDinerTables: this.singleDinerTables,
         }, {
             onClose: () => {

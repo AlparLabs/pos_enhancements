@@ -6,11 +6,40 @@
         <field name="inherit_id" ref="point_of_sale.pos_payment_method_view_form"/>
         <field name="arch" type="xml">
             <xpath expr="//field[@name='use_payment_terminal']" position="after">
-                <!-- MercadoPago -->
-                <field name="mp_bearer_token" placeholder="APP_USR-..." invisible="use_payment_terminal != 'mercado_pago_alpy'" required="use_payment_terminal == 'mercado_pago_alpy'"/>
-                <field name="mp_webhook_secret_key" placeholder="c2f3662..." invisible="use_payment_terminal != 'mercado_pago_alpy'" required="use_payment_terminal == 'mercado_pago_alpy'"/>
-                <field name="mp_id_point_smart" placeholder="1494126963" invisible="use_payment_terminal != 'mercado_pago_alpy'" required="use_payment_terminal == 'mercado_pago_alpy'"/>
-                <button string="Force PDV" type="object" name="force_pdv" groups="base.group_no_one" class="oe_highlight" invisible="use_payment_terminal != 'mercado_pago_alpy'" required="use_payment_terminal == 'mercado_pago_alpy'"/>
+                <!-- ── Campos comunes a todos los métodos Mercado Pago ── -->
+                <field name="mp_bearer_token"
+                    placeholder="APP_USR-..."
+                    invisible="use_payment_terminal not in ('mercado_pago_alpy', 'mercado_pago_qr_local', 'mercado_pago_qr_screen', 'mercado_pago_qr_hybrid')"
+                    required="use_payment_terminal in ('mercado_pago_alpy', 'mercado_pago_qr_local', 'mercado_pago_qr_screen', 'mercado_pago_qr_hybrid')"/>
+                <field name="mp_webhook_secret_key"
+                    placeholder="c2f3662..."
+                    invisible="use_payment_terminal not in ('mercado_pago_alpy', 'mercado_pago_qr_local', 'mercado_pago_qr_screen', 'mercado_pago_qr_hybrid')"/>
+
+                <!-- ── Terminal Smart ── -->
+                <field name="mp_id_point_smart"
+                    placeholder="1494126963"
+                    invisible="use_payment_terminal != 'mercado_pago_alpy'"
+                    required="use_payment_terminal == 'mercado_pago_alpy'"/>
+                <button string="Force PDV" type="object" name="force_pdv"
+                    groups="base.group_no_one"
+                    class="oe_highlight"
+                    invisible="use_payment_terminal != 'mercado_pago_alpy'"/>
+
+                <!-- ── QR (Local / Pantalla / Híbrido) ── -->
+                <field name="mp_user_id"
+                    placeholder="123456789"
+                    invisible="use_payment_terminal not in ('mercado_pago_qr_local', 'mercado_pago_qr_screen', 'mercado_pago_qr_hybrid')"
+                    required="use_payment_terminal in ('mercado_pago_qr_local', 'mercado_pago_qr_screen', 'mercado_pago_qr_hybrid')"/>
+                <field name="mp_external_pos_id"
+                    placeholder="CAJA01"
+                    invisible="use_payment_terminal not in ('mercado_pago_qr_local', 'mercado_pago_qr_screen', 'mercado_pago_qr_hybrid')"
+                    required="use_payment_terminal in ('mercado_pago_qr_local', 'mercado_pago_qr_screen', 'mercado_pago_qr_hybrid')"/>
+                <button name="action_get_mp_pos_list" type="object" string="Consultar mis Cajas (API)" class="btn-link" icon="fa-cloud-download" help="Consulta a Mercado Pago para ver el listado de cajas y sus ID Externos."
+                    invisible="use_payment_terminal not in ('mercado_pago_qr_local', 'mercado_pago_qr_screen', 'mercado_pago_qr_hybrid')"/>
+                <field name="mp_qr_string"
+                    placeholder="https://mpago.la/..."
+                    invisible="use_payment_terminal not in ('mercado_pago_qr_screen', 'mercado_pago_qr_hybrid')"
+                    required="use_payment_terminal in ('mercado_pago_qr_screen', 'mercado_pago_qr_hybrid')"/>
             </xpath>
         </field>
     </record>
