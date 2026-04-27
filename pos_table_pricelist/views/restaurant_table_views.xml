@@ -5,7 +5,7 @@
     <record id="restaurant_table_form_inherit_pos_pricelist" model="ir.ui.view">
         <field name="name">restaurant.table.form.inherit.pos.pricelist</field>
         <field name="model">restaurant.table</field>
-        <field name="inherit_id" ref="pos_restaurant.restaurant_table_view_form"/>
+        <field name="inherit_id" ref="pos_restaurant.view_restaurant_table_form"/>
         <field name="arch" type="xml">
             <xpath expr="//field[@name='color']" position="after">
                 <field
