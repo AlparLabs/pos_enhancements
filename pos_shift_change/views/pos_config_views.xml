@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+    <record id="view_pos_config_form_shift_change" model="ir.ui.view">
+        <field name="name">pos.config.form.shift.change</field>
+        <field name="model">pos.config</field>
+        <field name="inherit_id" ref="point_of_sale.pos_config_form_view"/>
+        <field name="arch" type="xml">
+            <!--
+                Add the Shift Change toggle right after the "Is a Bar/Restaurant"
+                checkbox, visible only when that flag is active.
+            -->
+            <xpath expr="//field[@name='module_pos_restaurant']" position="after">
+                <field
+                    name="pos_shift_change_enabled"
+                    invisible="not module_pos_restaurant"
+                    widget="boolean_toggle"
+                />
+            </xpath>
+        </field>
+    </record>
+</odoo>
