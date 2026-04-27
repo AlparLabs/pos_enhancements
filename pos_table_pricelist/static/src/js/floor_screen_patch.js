@@ -39,7 +39,7 @@ patch(PosStore.prototype, {
         if (!table) return;
 
         // Pricelist feature must be enabled on this POS config
-        if (!this.config.pos_use_pricelist) {
+        if (!this.config.use_pricelist) {
             return;
         }
 
