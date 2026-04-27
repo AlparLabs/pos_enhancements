@@ -396,14 +396,50 @@ export class PaymentMercadoPago extends PaymentInterface {
         return await this._handleTerminalWebhook();
     }
 
-    /** QR webhook: the merchant_order is closed → resolve as paid */
+    /** QR webhook: verify the merchant_order is actually closed+approved before resolving */
     async _handleQrWebhook() {
         const line = this._findPaymentLine(this.pending_cid);
         if (!line) return;
 
-        line.set_payment_status("done");
-        this.webhook_resolver?.(true);
-        this.webhook_resolver = null;
+        // Always verify with Mercado Pago — never trust the webhook alone.
+        // A stale / duplicate bus message can arrive right after the QR order
+        // is created, before the customer even scans the code.
+        let statusResp = null;
+        try {
+            if (this.mp_qr_order_id) {
+                statusResp = await this._getMerchantOrderStatus(this.mp_qr_order_id);
+            } else if (this.mp_qr_ext_ref) {
+                statusResp = await this._searchMerchantOrder(this.mp_qr_ext_ref);
+                if (statusResp?.id) {
+                    this.mp_qr_order_id = statusResp.id;
+                }
+            }
+        } catch (e) {
+            // Network error — stay pending, polling will retry
+            console.warn("MercadoPago QR: could not verify merchant order on webhook", e);
+            return;
+        }
+
+        if (!statusResp || statusResp.status !== "closed") {
+            // Payment not yet confirmed — stay in waitingCard state and let polling handle it
+            console.log("MercadoPago QR: webhook received but order not closed yet, status:", statusResp?.status);
+            return;
+        }
+
+        const payments = statusResp.payments || [];
+        const approved = payments.some(
+            (p) => p.status === "approved" || p.status_detail === "accredited"
+        );
+
+        if (approved) {
+            line.set_payment_status("done");
+            this.webhook_resolver?.(true);
+            this.webhook_resolver = null;
+        } else {
+            this._showMsg(_t("El pago fue rechazado o cancelado."), "info");
+            this.webhook_resolver?.(false);
+            this.webhook_resolver = null;
+        }
     }
 
     /** Original Terminal Smart webhook handler */
