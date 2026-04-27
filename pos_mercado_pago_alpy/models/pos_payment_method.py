@@ -214,6 +214,28 @@ class PosPaymentMethod(models.Model):
         _logger.debug("mp_qr_get_merchant_order(%s), response: %s", merchant_order_id, resp)
         return resp
 
+    def mp_qr_search_merchant_order(self, external_reference):
+        """
+        Fallback polling method used when the QR PUT response returns no in_store_order_id
+        (MP returns HTTP 204 with empty body in some configurations).
+
+        Searches merchant orders by the external_reference we always control,
+        so polling works regardless of what the PUT response included.
+
+        API endpoint: GET /merchant_orders/search?external_reference={ref}
+        Returns the first matching merchant order, or {} if none found yet.
+        """
+        self._check_special_access()
+
+        mercado_pago = MercadoPagoPosRequest(self.sudo().mp_bearer_token)
+        resp = mercado_pago.call_mercado_pago(
+            "get", "/merchant_orders/search",
+            {"external_reference": external_reference}
+        )
+        _logger.debug("mp_qr_search_merchant_order(%s), response: %s", external_reference, resp)
+        elements = resp.get("elements", [])
+        return elements[0] if elements else {}
+
     def mp_order_cancel(self, order_id):
         """
         Cancel an order using the new Mercado Pago Orders API.
