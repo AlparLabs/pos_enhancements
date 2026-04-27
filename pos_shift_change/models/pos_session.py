@@ -121,15 +121,26 @@ class PosSession(models.Model):
     # New RPC method: close_session_shift_change
     # -------------------------------------------------------------------------
 
-    def close_session_shift_change(self, bank_payment_method_diff_pairs=None):
+    def close_session_shift_change(self, bank_payment_method_diff_pairs=None,
+                                    counted_cash=None, closing_notes=''):
         """Close the session for a shift change.
+
+        All draft-order guards are bypassed via the ``pos_shift_change`` context
+        flag.  Cash details and session-state transitions that would normally be
+        done by separate frontend calls (``post_closing_cash_details`` and
+        ``update_closing_control_state_session``) are handled here so that none
+        of those helpers can block on draft orders before the context flag is
+        active.
 
         Steps:
         1. Identify all draft orders in the current session.
-        2. Close the current session (bypassing draft-order guards).
-        3. Create a new continuation session for the same POS config.
-        4. Transfer the draft orders to the new session.
-        5. Log a chatter message on both sessions.
+        2. Record counted cash (if cash control is enabled) – skipping the
+           draft-order guard that lives in ``post_closing_cash_details``.
+        3. Transition the session to ``closing_control`` state and save notes.
+        4. Close the current session (bypassing draft-order checks).
+        5. Create a new continuation session for the same POS config.
+        6. Transfer the draft orders to the new session.
+        7. Log chatter messages on both sessions.
 
         Returns:
             dict with 'successful' key (True/False) and, on success,
@@ -151,18 +162,55 @@ class PosSession(models.Model):
             draft_names,
         )
 
-        # Close current session – bypass draft-order checks via context flag.
         bank_payment_method_diffs = dict(bank_payment_method_diff_pairs or [])
+
+        # ------------------------------------------------------------------
+        # Step 1: Validate (skipping the draft-order check via context flag)
+        # ------------------------------------------------------------------
         check_result = self.with_context(
             pos_shift_change=True
         )._cannot_close_session(bank_payment_method_diffs)
         if check_result:
-            open_order_ids = self.get_session_orders().filtered(
-                lambda o: o.state == 'draft'
-            ).ids
+            open_order_ids = draft_orders.ids
             check_result['open_order_ids'] = open_order_ids
             return check_result
 
+        # ------------------------------------------------------------------
+        # Step 2: Record counted cash (cash control only)
+        #   We do this ourselves instead of calling post_closing_cash_details
+        #   because that method calls _cannot_close_session WITHOUT the
+        #   pos_shift_change context, which would block on draft orders.
+        # ------------------------------------------------------------------
+        if counted_cash is not None and self.config_id.cash_control:
+            if not self.cash_journal_id:
+                return {
+                    'successful': False,
+                    'message': _("There is no cash register in this session."),
+                    'redirect': False,
+                }
+            self.cash_register_balance_end_real = counted_cash
+
+        # ------------------------------------------------------------------
+        # Step 3: Transition to closing_control and save notes
+        #   We replicate update_closing_control_state_session here so we stay
+        #   inside the shift-change context the entire time.
+        # ------------------------------------------------------------------
+        if self.state != 'closed':
+            self.write({
+                'state': 'closing_control',
+                'stop_at': fields.Datetime.now(),
+                'closing_notes': closing_notes or '',
+            })
+            self._post_cash_details_message(
+                'Closing',
+                self.cash_register_balance_end,
+                self.cash_register_difference,
+                closing_notes or '',
+            )
+
+        # ------------------------------------------------------------------
+        # Step 4: Close the session (draft-order guard bypassed via context)
+        # ------------------------------------------------------------------
         validate_result = self.with_context(
             pos_shift_change=True
         ).action_pos_session_closing_control(
@@ -177,16 +225,22 @@ class PosSession(models.Model):
                 'redirect': True,
             }
 
-        # Session is now closed. Create the continuation session.
+        # ------------------------------------------------------------------
+        # Step 5: Create the continuation session
+        # ------------------------------------------------------------------
         new_session = self.env['pos.session'].create({
             'config_id': self.config_id.id,
         })
 
-        # Transfer draft orders to the continuation session.
+        # ------------------------------------------------------------------
+        # Step 6: Transfer draft orders to the continuation session
+        # ------------------------------------------------------------------
         if draft_orders:
             draft_orders.write({'session_id': new_session.id})
 
-        # --- Chatter messages for audit trail ---
+        # ------------------------------------------------------------------
+        # Step 7: Audit-trail chatter messages
+        # ------------------------------------------------------------------
         closing_body = _(
             "🔄 <b>Shift Change – Session Closed</b><br/>"
             "%d open order(s) transferred to continuation session "
