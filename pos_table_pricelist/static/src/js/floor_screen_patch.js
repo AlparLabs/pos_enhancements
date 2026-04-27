@@ -1,28 +1,31 @@
 /** @odoo-module **/
 
 /**
- * POS Table Pricelist — Floor Screen Patch
+ * POS Table Pricelist — PosStore Patch
  *
  * Automatically switches the active POS pricelist when a table is selected:
  *   - If the table has a pos_pricelist_id → switch to that pricelist.
  *   - If the table has no pos_pricelist_id → revert to the POS config default.
  *
+ * We patch PosStore.setTableFromUi (same hook used by pos_restaurant_auto_guest_count)
+ * rather than FloorScreen.onClickTable, so the pricelist is applied AFTER the order
+ * is created/selected but BEFORE showScreen() navigates to ProductScreen.
+ * This prevents any screen-mount logic from overwriting our pricelist choice.
+ *
  * Compatible with Odoo 18 POS (OWL 2.x).
  */
 
 import { patch } from "@web/core/utils/patch";
-import { FloorScreen } from "@pos_restaurant/app/floor_screen/floor_screen";
+import { PosStore } from "@point_of_sale/app/store/pos_store";
 
-patch(FloorScreen.prototype, {
+patch(PosStore.prototype, {
     /**
-     * Override the table click handler.
-     *
-     * In Odoo 18 POS Restaurant, the real method is `onClickTable(table, ev)`.
-     * We call super first so the order is selected/created, then apply the pricelist.
+     * @override
+     * After the base setTableFromUi selects/creates the order and before
+     * showScreen() fires, we apply the table's assigned pricelist.
      */
-    async onClickTable(table, ev) {
-        await super.onClickTable(...arguments);
-        // After super, the order for this table is now active — apply pricelist.
+    async setTableFromUi(table, orderUuid = null) {
+        await super.setTableFromUi(...arguments);
         this._applyTablePricelist(table);
     },
 
@@ -36,17 +39,16 @@ patch(FloorScreen.prototype, {
         if (!table) return;
 
         // Pricelist feature must be enabled on this POS config
-        if (!this.pos.config.use_pricelist) {
+        if (!this.config.use_pricelist) {
             return;
         }
 
-        // In Odoo 18 reactive models, Many2one fields are already resolved to
-        // the linked record object (not a [id, name] tuple). Fallback to id lookup.
+        // In Odoo 18 reactive models, Many2one fields are resolved to the linked
+        // record object directly. We handle both object and raw-id cases.
         const rawValue = table.pos_pricelist_id;
         let pricelistId = false;
 
         if (rawValue) {
-            // Could be a record object (has .id) or a plain id number
             pricelistId = typeof rawValue === "object" ? rawValue.id : rawValue;
         }
 
@@ -78,9 +80,8 @@ patch(FloorScreen.prototype, {
      * @returns {Object|undefined}
      */
     _findPricelistById(id) {
-        const pricelists = this.pos.models["product.pricelist"];
+        const pricelists = this.models["product.pricelist"];
         if (!pricelists) return undefined;
-        // In Odoo 18, models[key] is a ModelCollection with a .find() method
         return typeof pricelists.find === "function"
             ? pricelists.find((pl) => pl.id === id)
             : Object.values(pricelists).find((pl) => pl.id === id);
@@ -93,32 +94,28 @@ patch(FloorScreen.prototype, {
      * @returns {Object|null}
      */
     _getDefaultPricelist() {
-        const raw = this.pos.config.pricelist_id;
+        const raw = this.config.pricelist_id;
         if (!raw) return null;
-        // If it's already a record object, return it directly
         if (typeof raw === "object" && raw.id) {
             return raw;
         }
-        // Otherwise treat it as an id
         return this._findPricelistById(raw) || null;
     },
 
     /**
      * Apply the given pricelist to the currently active order.
-     * In Odoo 18, pricelist is set via direct reactive assignment on the order.
+     * In Odoo 18, pricelist is set via order.update() (reactive model).
      *
      * @param {Object} pricelist  - product.pricelist record from POS models
      */
     _setPricelist(pricelist) {
         if (!pricelist) return;
 
-        const order = this.pos.get_order();
+        const order = this.get_order();
         if (!order) return;
 
-        // In Odoo 18 the order model is reactive — direct assignment triggers reactivity.
-        // set_pricelist() does not exist; use update() or direct field assignment.
         if (typeof order.set_pricelist === "function") {
-            // Older compatibility path (Odoo 17 or community backports)
+            // Compatibility path (Odoo 17 or community backports)
             order.set_pricelist(pricelist);
         } else {
             order.update({ pricelist_id: pricelist });
