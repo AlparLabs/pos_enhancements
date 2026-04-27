@@ -15,7 +15,8 @@ export class PaymentMercadoPago extends PaymentInterface {
         this.mp_order = {};
         this.pending_cid = null;
         this._qr_popup_close = null; // Reference to close the QR popup dialog
-        this.mp_qr_order_id = null;  // Stores the in_store_order_id returned by MP for polling
+        this.mp_qr_order_id = null;  // Stores the in_store_order_id returned by MP for polling (fast path)
+        this.mp_qr_ext_ref = null;   // Stores the external_reference for fallback polling when in_store_order_id is absent
     }
 
     /** Returns true if this payment method uses any QR modality. */
@@ -100,6 +101,15 @@ export class PaymentMercadoPago extends PaymentInterface {
         );
     }
 
+    async _searchMerchantOrder(externalReference) {
+        const line = this._findPaymentLine(this.pending_cid);
+        return await this.env.services.orm.silent.call(
+            "pos.payment.method",
+            "mp_qr_search_merchant_order",
+            [[line.payment_method_id.id], externalReference]
+        );
+    }
+
     // ── RPC helpers (QR) ─────────────────────────────────────────────────────
 
     async _createQrOrder(cid) {
@@ -129,9 +139,11 @@ export class PaymentMercadoPago extends PaymentInterface {
             };
         });
 
+        const extRef = `${sessionId}_${line.payment_method_id.id}_${order.uuid}_${Date.now()}`;
+        this.mp_qr_ext_ref = extRef; // Persist for fallback polling when in_store_order_id is absent
         const infos = {
             amount: parseInt(line.amount * 100, 10),
-            external_reference: `${sessionId}_${line.payment_method_id.id}_${order.uuid}_${Date.now()}`,
+            external_reference: extRef,
             title: `Orden POS #${order.sequence_number || order.uid}`,
             items: items,
             notification_url: `${window.location.origin}/pos_mercado_pago_alpy/notification`,
@@ -250,22 +262,33 @@ export class PaymentMercadoPago extends PaymentInterface {
                     return;
                 }
                 try {
+                    // Fast path: MP returned in_store_order_id → poll directly by ID (O(1) lookup)
+                    // Fallback path: MP returned HTTP 204 with no body → search by external_reference
+                    let statusResp = null;
                     if (this.mp_qr_order_id) {
-                        const statusResp = await this._getMerchantOrderStatus(this.mp_qr_order_id);
-                        console.log("MercadoPago QR: Poll merchant_order status:", statusResp?.status, statusResp?.payments);
-                        if (statusResp && statusResp.status === "closed") {
-                            const payments = statusResp.payments || [];
-                            const approved = payments.some(
-                                (p) => p.status === "approved" || p.status_detail === "accredited"
-                            );
-                            clearInterval(pollInterval);
-                            if (approved) {
-                                // Resolve via the standard QR webhook handler so status is set correctly
-                                this._handleQrWebhook();
-                            } else {
-                                this._showMsg(_t("El pago fue rechazado o cancelado."), "info");
-                                resolve(false);
-                            }
+                        statusResp = await this._getMerchantOrderStatus(this.mp_qr_order_id);
+                        console.log("MercadoPago QR: Poll by id, status:", statusResp?.status);
+                    } else if (this.mp_qr_ext_ref) {
+                        statusResp = await this._searchMerchantOrder(this.mp_qr_ext_ref);
+                        console.log("MercadoPago QR: Poll by ext_ref fallback, status:", statusResp?.status);
+                        // Once we get the id from the search result, upgrade to fast path
+                        if (statusResp?.id) {
+                            this.mp_qr_order_id = statusResp.id;
+                        }
+                    }
+
+                    if (statusResp && statusResp.status === "closed") {
+                        const payments = statusResp.payments || [];
+                        const approved = payments.some(
+                            (p) => p.status === "approved" || p.status_detail === "accredited"
+                        );
+                        clearInterval(pollInterval);
+                        if (approved) {
+                            // Resolve via the standard QR webhook handler so status is set correctly
+                            this._handleQrWebhook();
+                        } else {
+                            this._showMsg(_t("El pago fue rechazado o cancelado."), "info");
+                            resolve(false);
                         }
                     }
                 } catch (e) {
