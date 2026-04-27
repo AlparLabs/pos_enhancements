@@ -176,7 +176,8 @@ export class PaymentMercadoPago extends PaymentInterface {
         const amount = line.amount;
         const currency = this.pos.currency?.symbol || "$";
 
-        this.env.services.dialog.add(
+        // dialog.add() returns a close function in Odoo 18+
+        const closeDialog = this.env.services.dialog.add(
             MercadoPagoQrPopup,
             {
                 qrString,
@@ -196,12 +197,15 @@ export class PaymentMercadoPago extends PaymentInterface {
                 },
             }
         );
+        // Store the close function so we can programmatically dismiss the popup
+        this._qr_popup_close = typeof closeDialog === "function" ? closeDialog : null;
     }
 
     _closeQrPopup() {
-        // Dialogs in Odoo 18 self-close when the component unmounts;
-        // we trigger a re-render by removing the pending_cid flag.
-        // The popup's onCancel already triggers send_payment_cancel which resolves the flow.
+        if (typeof this._qr_popup_close === "function") {
+            this._qr_popup_close();
+            this._qr_popup_close = null;
+        }
     }
 
     // ── PaymentInterface overrides ────────────────────────────────────────────
@@ -285,8 +289,11 @@ export class PaymentMercadoPago extends PaymentInterface {
                         clearInterval(pollInterval);
                         if (approved) {
                             // Resolve via the standard QR webhook handler so status is set correctly
+                            // (_handleQrWebhook closes the popup and resolves the promise)
                             this._handleQrWebhook();
                         } else {
+                            // Close the popup before resolving so the screen is not blocked
+                            this._closeQrPopup();
                             this._showMsg(_t("El pago fue rechazado o cancelado."), "info");
                             resolve(false);
                         }
@@ -295,8 +302,9 @@ export class PaymentMercadoPago extends PaymentInterface {
                     /* ignore transient network errors */
                 }
                 if (pollCount > 60) {
-                    // 5 minutes timeout
+                    // 5 minutes timeout — give up and close the popup
                     clearInterval(pollInterval);
+                    this._closeQrPopup();
                     resolve(false);
                 }
             }, 5000);
@@ -353,10 +361,12 @@ export class PaymentMercadoPago extends PaymentInterface {
         this.webhook_resolver = null;
 
         if (this._isQr) {
+            // Close the QR popup first so it does not block the screen
+            this._closeQrPopup();
             try {
                 await this._deleteQrOrder(cid || this.pending_cid);
             } catch (e) {
-                _logger.warn("MercadoPago QR: could not delete QR order on cancel", e);
+                console.warn("MercadoPago QR: could not delete QR order on cancel", e);
             }
             // Resolve the pending promise as false (cancelled)
             resolverBackup?.(false);
@@ -430,6 +440,9 @@ export class PaymentMercadoPago extends PaymentInterface {
         const approved = payments.some(
             (p) => p.status === "approved" || p.status_detail === "accredited"
         );
+
+        // Close the QR popup so the POS screen is no longer blocked
+        this._closeQrPopup();
 
         if (approved) {
             line.set_payment_status("done");
