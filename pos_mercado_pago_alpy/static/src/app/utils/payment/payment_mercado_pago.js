@@ -167,6 +167,15 @@ export class PaymentMercadoPago extends PaymentInterface {
     // ── QR Popup management ──────────────────────────────────────────────────
 
     _openQrPopup(line, dynamicQrString = null) {
+        // DEBUG — remove after fixing
+        console.log("MercadoPago QR [DEBUG] payment_method_id:", JSON.stringify({
+            id: this.payment_method_id?.id,
+            name: this.payment_method_id?.name,
+            use_payment_terminal: this.payment_method_id?.use_payment_terminal,
+            mp_qr_string: this.payment_method_id?.mp_qr_string,
+            mp_external_pos_id: this.payment_method_id?.mp_external_pos_id,
+        }));
+        console.log("MercadoPago QR [DEBUG] dynamicQrString:", dynamicQrString);
         const qrString = dynamicQrString || this.payment_method_id.mp_qr_string;
         if (!qrString) {
             console.error("MercadoPago QR: Error abriendo popup, falta el string QR");
