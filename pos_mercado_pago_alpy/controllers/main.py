@@ -185,11 +185,13 @@ class PosMercadoPagoWebhook(http.Controller):
         except ValueError:
             session_id = 0
 
+        _all_mp_terminal_types = self._MP_TERMINAL_TYPES + self._MP_QR_TERMINAL_TYPES
+
         pos_session_sudo = request.env['pos.session'].sudo().browse(session_id)
         if not pos_session_sudo or pos_session_sudo.state != 'opened':
             # session is invalid or closed. If we have payment method, fallback
             payment_method_sudo = request.env['pos.payment.method'].sudo().browse(int(payment_method_id_str))
-            if payment_method_sudo.exists() and payment_method_sudo.use_payment_terminal == 'mercado_pago_alpy':
+            if payment_method_sudo.exists() and payment_method_sudo.use_payment_terminal in _all_mp_terminal_types:
                 configs = request.env['pos.config'].sudo().search([('payment_method_ids', 'in', payment_method_sudo.ids)])
                 for config in configs:
                     config._notify('MERCADO_PAGO_LATEST_MESSAGE', {'config_id': config.id})
@@ -197,9 +199,22 @@ class PosMercadoPagoWebhook(http.Controller):
             return http.Response('OK', status=200)
 
         payment_method_sudo = pos_session_sudo.config_id.payment_method_ids.filtered(lambda p: p.id == int(payment_method_id_str))
-        if not payment_method_sudo or payment_method_sudo.use_payment_terminal != 'mercado_pago_alpy':
+        if not payment_method_sudo:
             _logger.error("Invalid payment method id: %s", payment_method_id_str)
-            # This error is not related with Mercado Pago, simply acknowledge Mercado Pago message
+            return http.Response('OK', status=200)
+
+        # If the payment method is a QR type (e.g. a 'payment' topic webhook arrived for a
+        # hybrid/screen QR order), delegate to the QR resolver — it fires the bus notification
+        # exactly like merchant_order does, without requiring Terminal Smart signature validation.
+        if payment_method_sudo.use_payment_terminal in self._MP_QR_TERMINAL_TYPES:
+            _logger.info(
+                '_handle_terminal_order: payment webhook for QR method %s, delegating to QR resolver',
+                payment_method_id_str
+            )
+            return self._resolve_and_notify(external_reference, self._MP_QR_TERMINAL_TYPES)
+
+        if payment_method_sudo.use_payment_terminal not in self._MP_TERMINAL_TYPES:
+            _logger.error("Invalid payment method id: %s", payment_method_id_str)
             return http.Response('OK', status=200)
 
         # We have to check if this comes from Mercado Pago with the secret key
