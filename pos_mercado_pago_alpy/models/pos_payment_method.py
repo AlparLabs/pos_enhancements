@@ -3,6 +3,7 @@ import logging
 from odoo import api, fields, models, _
 from odoo.exceptions import AccessError, UserError
 
+
 from .mercado_pago_post_request import MercadoPagoPosRequest
 
 _logger = logging.getLogger(__name__)
@@ -42,6 +43,13 @@ class PosPaymentMethod(models.Model):
             ('mercado_pago_qr_screen', 'Mercado Pago — QR en Pantalla'),
             ('mercado_pago_qr_hybrid', 'Mercado Pago — QR Híbrido'),
         ]
+
+    @api.model
+    def _load_pos_data_fields(self, config_id):
+        """Expose custom MP fields to the POS frontend (Odoo 18 pattern)."""
+        params = super()._load_pos_data_fields(config_id)
+        params += ['mp_id_point_smart', 'mp_external_pos_id', 'mp_user_id', 'mp_qr_string']
+        return params
 
     def _is_mercado_pago_terminal(self):
         return self.use_payment_terminal in ('mercado_pago_alpy',)

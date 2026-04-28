@@ -231,13 +231,18 @@ export class PaymentMercadoPago extends PaymentInterface {
     /**
      * Returns true when an order/merchant-order response indicates the payment
      * was successfully approved.
-     *   New Orders API : order.status === "paid"
+     *   New Orders API : status === "processed" (status_detail === "accredited")
+     *                    or status === "paid" / "finished"
      *   Old merchant_order: status === "closed" + payments[].status === "approved"
      */
     _isOrderApproved(resp) {
         if (!resp) return false;
-        // New Orders API
-        if (resp.status === "paid") return true;
+        // New Orders API: "paid", "processed", or "finished" all indicate a successful payment.
+        // QR instore flow returns "processed" with status_detail "accredited".
+        if (["paid", "processed", "finished"].includes(resp.status)) return true;
+        // Secondary check: status_detail === "accredited" regardless of the status string.
+        // Provides a safety net against future Orders API status name variations.
+        if (resp.status_detail === "accredited") return true;
         // Old merchant_order fallback
         if (resp.status === "closed") {
             return (resp.payments || []).some(
@@ -249,12 +254,12 @@ export class PaymentMercadoPago extends PaymentInterface {
 
     /**
      * Returns true when an order response indicates a terminal/rejected state.
-     *   New Orders API : "expired", "cancelled"
+     *   New Orders API : "expired", "cancelled", "rejected"
      *   Old merchant_order: "closed" without approved payments
      */
     _isOrderRejected(resp) {
         if (!resp) return false;
-        if (["expired", "cancelled"].includes(resp.status)) return true;
+        if (["expired", "cancelled", "rejected"].includes(resp.status)) return true;
         if (resp.status === "closed") return !this._isOrderApproved(resp);
         return false;
     }
