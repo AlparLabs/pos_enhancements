@@ -292,8 +292,8 @@ export class PaymentMercadoPago extends PaymentInterface {
         line.set_payment_status("waitingCard");
 
         // Show QR on screen if the modality requires it.
-        // New Orders API: qr_data is in type_response.qr_data
-        const qrData = mp_response?.type_response?.qr_data || mp_response?.qr_data;
+        // New Orders API: qr_data is in config.qr.qr_data
+        const qrData = mp_response?.config?.qr?.qr_data || mp_response?.type_response?.qr_data || mp_response?.qr_data;
         if (this._showQrOnScreen) {
             this._openQrPopup(line, qrData);
         }
