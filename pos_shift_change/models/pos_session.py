@@ -242,9 +242,9 @@ class PosSession(models.Model):
         # Step 7: Audit-trail chatter messages
         # ------------------------------------------------------------------
         closing_body = _(
-            "🔄 <b>Shift Change – Session Closed</b><br/>"
+            "🔄 Shift Change – Session Closed"
             "%d open order(s) transferred to continuation session "
-            "<b>%s</b>: %s",
+            "%s: %s",
             draft_count,
             new_session.name,
             draft_names or _('(none)'),
@@ -252,8 +252,8 @@ class PosSession(models.Model):
         self.message_post(body=closing_body)
 
         new_session_body = _(
-            "🔄 <b>Shift Change – Session Opened</b><br/>"
-            "Continuation of <b>%s</b>. Received %d open order(s): %s",
+            "🔄 Shift Change – Session Opened"
+            "Continuation of %s. Received %d open order(s): %s",
             self.name,
             draft_count,
             draft_names or _('(none)'),
