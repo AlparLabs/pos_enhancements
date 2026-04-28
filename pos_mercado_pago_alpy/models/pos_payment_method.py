@@ -117,59 +117,69 @@ class PosPaymentMethod(models.Model):
         _logger.debug("mp_order_get(), response from Mercado Pago: %s", resp)
         return resp
 
-    # ── QR-specific methods ──────────────────────────────────────────────────
+    # ── QR-specific methods (new Orders API v1/orders) ───────────────────────
 
     def mp_qr_order_create(self, infos):
         """
-        Create a QR payment order using the Mercado Pago Instore QR Orders API.
-        Associates the amount with the physical QR code of this POS.
+        Create a QR payment order using the Mercado Pago Orders API.
+
+        Both QR and Terminal Smart use the same /v1/orders API — the only
+        difference is `type: "qr"` vs `type: "point"` and the config block.
+        Polling and cancellation are handled by the shared `mp_order_get` and
+        `mp_order_cancel` methods.
 
         API endpoint:
-          PUT /instore/orders/qr/seller/collectors/{user_id}/pos/{external_pos_id}/qrs
+          POST /v1/orders
+          body: {type: "qr", total_amount, external_reference, config.qr.external_pos_id, items}
+
+        Returns the order object including `id` (ORD-prefixed string) and
+        `type_response.qr_data` for rendering the on-screen QR code.
         """
         self._check_special_access()
 
         record = self.sudo()
-        if not record.mp_user_id or not record.mp_external_pos_id:
-            raise UserError(_("QR payments require 'Seller User ID' and 'POS ID' to be configured."))
+        if not record.mp_external_pos_id:
+            raise UserError(_("QR payments require 'POS ID' (external_pos_id) to be configured."))
 
         mercado_pago = MercadoPagoPosRequest(record.mp_bearer_token)
 
-        amount_decimal = round(infos['amount'] / 100, 2)
-        
-        # Enforce a single generic item to avoid Mercado Pago validation errors
-        # caused by rounding, taxes, or partial payments in Odoo.
+        amount_str = "{:.2f}".format(infos['amount'] / 100)
+
+        # Single generic item avoids rounding/tax validation errors in MP
         items = [{
-            "sku_number": "POS-SALE",
-            "category": "others",
             "title": infos.get('title', 'Venta POS'),
-            "description": infos.get('title', 'Venta POS'),
+            "unit_price": amount_str,
             "quantity": 1,
             "unit_measure": "unit",
-            "unit_price": amount_decimal,
-            "total_amount": amount_decimal,
+            "external_code": "POS-SALE",
         }]
 
         order_payload = {
-            "external_reference": infos['external_reference'],
-            "title": infos.get('title', 'Venta POS'),
+            "type": "qr",
+            "total_amount": amount_str,
             "description": infos.get('title', 'Venta POS'),
-            "total_amount": amount_decimal,
+            "external_reference": infos['external_reference'],
+            "config": {
+                "qr": {
+                    "external_pos_id": record.mp_external_pos_id,
+                }
+            },
+            "transactions": {
+                "payments": [{"amount": amount_str}]
+            },
             "items": items,
-            "cash_out": {"amount": 0},
         }
-        
-        if infos.get('notification_url'):
-            order_payload["notification_url"] = infos.get('notification_url')
 
-        endpoint = f"/instore/orders/qr/seller/collectors/{record.mp_user_id}/pos/{record.mp_external_pos_id}/qrs"
-        resp = mercado_pago.call_mercado_pago("put", endpoint, order_payload)
+        # X-Idempotency-Key required by the new Orders API
+        idempotency_key = f"qr_{infos['external_reference']}"
+        resp = mercado_pago.call_mercado_pago("post", "/v1/orders", order_payload, idempotency_key)
         _logger.debug("mp_qr_order_create(), response from Mercado Pago: %s", resp)
         return resp
 
     def mp_qr_order_delete(self):
         """
-        Delete (cancel) the current QR order, leaving the QR free for the next transaction.
+        Kept for the physical QR (local) mode which still uses the old instore QR V2 endpoint.
+        For screen/hybrid QR using the new Orders API, use mp_qr_order_cancel instead.
 
         API endpoint:
           DELETE /instore/orders/qr/seller/collectors/{user_id}/pos/{external_pos_id}/qrs
@@ -200,10 +210,9 @@ class PosPaymentMethod(models.Model):
 
     def mp_qr_get_merchant_order(self, merchant_order_id):
         """
-        Called from the frontend polling loop to check the status of a QR payment.
-        Uses the in_store_order_id returned by MP when the QR order was created.
-
-        A 'closed' status with at least one 'approved' payment means the buyer paid.
+        Legacy polling: used by the webhook resolver in main.py which still maps
+        merchant_order webhooks to sessions. Not called from the frontend any more
+        (the frontend now uses mp_qr_order_get / mp_qr_order_search_by_ext_ref).
 
         API endpoint: GET /merchant_orders/{merchant_order_id}
         """
@@ -216,11 +225,9 @@ class PosPaymentMethod(models.Model):
 
     def mp_qr_search_merchant_order(self, external_reference):
         """
-        Fallback polling method used when the QR PUT response returns no in_store_order_id
-        (MP returns HTTP 204 with empty body in some configurations).
-
-        Searches merchant orders by the external_reference we always control,
-        so polling works regardless of what the PUT response included.
+        Fallback polling via old merchant_orders search.
+        Still used as a last-resort by the frontend when the new Orders API
+        order_id is unavailable.
 
         API endpoint: GET /merchant_orders/search?external_reference={ref}
         Returns the first matching merchant order, or {} if none found yet.

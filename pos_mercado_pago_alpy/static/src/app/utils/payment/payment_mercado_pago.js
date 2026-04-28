@@ -208,6 +208,47 @@ export class PaymentMercadoPago extends PaymentInterface {
         }
     }
 
+    /**
+     * Returns true only if the response is a valid MP order/merchant-order object.
+     * Accepts both new Orders API statuses ("paid", "created", ...) and old
+     * merchant_order statuses ("opened", "closed").
+     * MP error responses have a numeric `status` field (e.g. {status: 400}).
+     */
+    _isOrderResponseValid(resp) {
+        return resp && typeof resp.status === "string";
+    }
+
+    /**
+     * Returns true when an order/merchant-order response indicates the payment
+     * was successfully approved.
+     *   New Orders API : order.status === "paid"
+     *   Old merchant_order: status === "closed" + payments[].status === "approved"
+     */
+    _isOrderApproved(resp) {
+        if (!resp) return false;
+        // New Orders API
+        if (resp.status === "paid") return true;
+        // Old merchant_order fallback
+        if (resp.status === "closed") {
+            return (resp.payments || []).some(
+                (p) => p.status === "approved" || p.status_detail === "accredited"
+            );
+        }
+        return false;
+    }
+
+    /**
+     * Returns true when an order response indicates a terminal/rejected state.
+     *   New Orders API : "expired", "cancelled"
+     *   Old merchant_order: "closed" without approved payments
+     */
+    _isOrderRejected(resp) {
+        if (!resp) return false;
+        if (["expired", "cancelled"].includes(resp.status)) return true;
+        if (resp.status === "closed") return !this._isOrderApproved(resp);
+        return false;
+    }
+
     // ── PaymentInterface overrides ────────────────────────────────────────────
 
     async send_payment_request(cid) {
@@ -242,15 +283,19 @@ export class PaymentMercadoPago extends PaymentInterface {
             return false;
         }
 
-        // Store the merchant order id returned by MP so the polling loop can query it
-        this.mp_qr_order_id = mp_response?.in_store_order_id || null;
-        console.log("MercadoPago QR: in_store_order_id stored for polling:", this.mp_qr_order_id);
+        // Store the response as this.mp_order — shared with the terminal flow.
+        // _getOrderStatus() and _cancelOrder() both read from this.mp_order.id.
+        this.mp_order = mp_response;
+        this.mp_qr_order_id = mp_response?.id || null;
+        console.log("MercadoPago QR: order id stored for polling:", this.mp_qr_order_id);
 
         line.set_payment_status("waitingCard");
 
-        // Show QR on screen if the modality requires it
+        // Show QR on screen if the modality requires it.
+        // New Orders API: qr_data is in type_response.qr_data
+        const qrData = mp_response?.type_response?.qr_data || mp_response?.qr_data;
         if (this._showQrOnScreen) {
-            this._openQrPopup(line, mp_response.qr_data);
+            this._openQrPopup(line, qrData);
         }
 
         return await new Promise((resolve) => {
@@ -266,37 +311,39 @@ export class PaymentMercadoPago extends PaymentInterface {
                     return;
                 }
                 try {
-                    // Fast path: MP returned in_store_order_id → poll directly by ID (O(1) lookup)
-                    // Fallback path: MP returned HTTP 204 with no body → search by external_reference
+                    // Primary: poll via shared _getOrderStatus() — reads this.mp_order.id
+                    // Fallback: if order id is missing, search by external_reference.
                     let statusResp = null;
-                    if (this.mp_qr_order_id) {
-                        statusResp = await this._getMerchantOrderStatus(this.mp_qr_order_id);
-                        console.log("MercadoPago QR: Poll by id, status:", statusResp?.status);
-                    } else if (this.mp_qr_ext_ref) {
+                    if (this.mp_order?.id) {
+                        statusResp = await this._getOrderStatus();
+                        if (!this._isOrderResponseValid(statusResp)) {
+                            console.warn(
+                                "MercadoPago QR: Poll by order id failed (status:",
+                                statusResp?.status,
+                                "), falling back to ext_ref search"
+                            );
+                            this.mp_order = {};
+                            statusResp = null;
+                        } else {
+                            console.log("MercadoPago QR: Poll status:", statusResp.status);
+                        }
+                    }
+                    if (!statusResp && this.mp_qr_ext_ref) {
                         statusResp = await this._searchMerchantOrder(this.mp_qr_ext_ref);
-                        console.log("MercadoPago QR: Poll by ext_ref fallback, status:", statusResp?.status);
-                        // Once we get the id from the search result, upgrade to fast path
+                        console.log("MercadoPago QR: ext_ref fallback status:", statusResp?.status);
                         if (statusResp?.id) {
-                            this.mp_qr_order_id = statusResp.id;
+                            this.mp_order = statusResp;
                         }
                     }
 
-                    if (statusResp && statusResp.status === "closed") {
-                        const payments = statusResp.payments || [];
-                        const approved = payments.some(
-                            (p) => p.status === "approved" || p.status_detail === "accredited"
-                        );
+                    if (statusResp && this._isOrderApproved(statusResp)) {
                         clearInterval(pollInterval);
-                        if (approved) {
-                            // Resolve via the standard QR webhook handler so status is set correctly
-                            // (_handleQrWebhook closes the popup and resolves the promise)
-                            this._handleQrWebhook();
-                        } else {
-                            // Close the popup before resolving so the screen is not blocked
-                            this._closeQrPopup();
-                            this._showMsg(_t("El pago fue rechazado o cancelado."), "info");
-                            resolve(false);
-                        }
+                        this._handleQrWebhook();
+                    } else if (statusResp && this._isOrderRejected(statusResp)) {
+                        clearInterval(pollInterval);
+                        this._closeQrPopup();
+                        this._showMsg(_t("El pago fue rechazado o cancelado."), "info");
+                        resolve(false);
                     }
                 } catch (e) {
                     /* ignore transient network errors */
@@ -361,14 +408,12 @@ export class PaymentMercadoPago extends PaymentInterface {
         this.webhook_resolver = null;
 
         if (this._isQr) {
-            // Close the QR popup first so it does not block the screen
             this._closeQrPopup();
             try {
-                await this._deleteQrOrder(cid || this.pending_cid);
+                await this._cancelOrder(); // same as terminal — uses this.mp_order.id
             } catch (e) {
-                console.warn("MercadoPago QR: could not delete QR order on cancel", e);
+                console.warn("MercadoPago QR: could not cancel QR order", e);
             }
-            // Resolve the pending promise as false (cancelled)
             resolverBackup?.(false);
             return true;
         }
@@ -406,45 +451,52 @@ export class PaymentMercadoPago extends PaymentInterface {
         return await this._handleTerminalWebhook();
     }
 
-    /** QR webhook: verify the merchant_order is actually closed+approved before resolving */
+    /** QR webhook: verify the order is actually paid before resolving */
     async _handleQrWebhook() {
         const line = this._findPaymentLine(this.pending_cid);
         if (!line) return;
 
         // Always verify with Mercado Pago — never trust the webhook alone.
-        // A stale / duplicate bus message can arrive right after the QR order
-        // is created, before the customer even scans the code.
         let statusResp = null;
         try {
-            if (this.mp_qr_order_id) {
-                statusResp = await this._getMerchantOrderStatus(this.mp_qr_order_id);
-            } else if (this.mp_qr_ext_ref) {
+            if (this.mp_order?.id) {
+                statusResp = await this._getOrderStatus(); // shared with terminal
+                if (!this._isOrderResponseValid(statusResp)) {
+                    console.warn(
+                        "MercadoPago QR: webhook lookup failed (status:",
+                        statusResp?.status,
+                        "), falling back to ext_ref search"
+                    );
+                    this.mp_order = {};
+                    statusResp = null;
+                }
+            }
+            if (!statusResp && this.mp_qr_ext_ref) {
                 statusResp = await this._searchMerchantOrder(this.mp_qr_ext_ref);
                 if (statusResp?.id) {
-                    this.mp_qr_order_id = statusResp.id;
+                    this.mp_order = statusResp;
                 }
             }
         } catch (e) {
-            // Network error — stay pending, polling will retry
-            console.warn("MercadoPago QR: could not verify merchant order on webhook", e);
+            console.warn("MercadoPago QR: could not verify order on webhook", e);
             return;
         }
 
-        if (!statusResp || statusResp.status !== "closed") {
-            // Payment not yet confirmed — stay in waitingCard state and let polling handle it
-            console.log("MercadoPago QR: webhook received but order not closed yet, status:", statusResp?.status);
+        if (!statusResp || !this._isOrderResponseValid(statusResp)) {
+            console.log("MercadoPago QR: webhook received but order response invalid, status:", statusResp?.status);
             return;
         }
 
-        const payments = statusResp.payments || [];
-        const approved = payments.some(
-            (p) => p.status === "approved" || p.status_detail === "accredited"
-        );
+        if (!this._isOrderApproved(statusResp) && !this._isOrderRejected(statusResp)) {
+            // Payment not yet confirmed — stay in waitingCard state, polling will handle it
+            console.log("MercadoPago QR: webhook received but order not finalized yet, status:", statusResp.status);
+            return;
+        }
 
         // Close the QR popup so the POS screen is no longer blocked
         this._closeQrPopup();
 
-        if (approved) {
+        if (this._isOrderApproved(statusResp)) {
             line.set_payment_status("done");
             this.webhook_resolver?.(true);
             this.webhook_resolver = null;
