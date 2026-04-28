@@ -170,7 +170,7 @@ export class PaymentMercadoPago extends PaymentInterface {
         const qrString = dynamicQrString || this.payment_method_id.mp_qr_string;
         if (!qrString) {
             console.error("MercadoPago QR: Error abriendo popup, falta el string QR");
-            return;
+            return false;
         }
 
         const amount = line.amount;
@@ -199,6 +199,7 @@ export class PaymentMercadoPago extends PaymentInterface {
         );
         // Store the close function so we can programmatically dismiss the popup
         this._qr_popup_close = typeof closeDialog === "function" ? closeDialog : null;
+        return true;
     }
 
     _closeQrPopup() {
@@ -292,10 +293,22 @@ export class PaymentMercadoPago extends PaymentInterface {
         line.set_payment_status("waitingCard");
 
         // Show QR on screen if the modality requires it.
-        // New Orders API: qr_data is in config.qr.qr_data
+        // The new /v1/orders API does NOT return a dynamic qr_data — it uses
+        // the static QR string (mp_qr_string) associated with the configured
+        // external_pos_id. Keep the fallback checks in case a future API version
+        // does return qr_data in the response body.
         const qrData = mp_response?.config?.qr?.qr_data || mp_response?.type_response?.qr_data || mp_response?.qr_data;
         if (this._showQrOnScreen) {
-            this._openQrPopup(line, qrData);
+            const opened = this._openQrPopup(line, qrData);
+            if (!opened) {
+                // No QR string available — cancel the payment instead of leaving
+                // the user stuck in waitingCard state with no visible QR code.
+                this._showMsg(
+                    _t("No se encontró el string QR. Por favor configure el campo 'QR URL / String' en el método de pago de Mercado Pago y vuelva a intentarlo."),
+                    "error"
+                );
+                return false;
+            }
         }
 
         return await new Promise((resolve) => {
