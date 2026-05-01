@@ -33,9 +33,9 @@ export class PaymentMercadoPago extends PaymentInterface {
 
     _findPaymentLine(cid) {
         const order = this.pos.get_order();
+        if (!order) return undefined;
         if (cid) {
-            const found = order.payment_ids.find((pl) => pl.uuid === cid);
-            if (found) return found;
+            return order.payment_ids.find((pl) => pl.uuid === cid);
         }
         return order.get_selected_paymentline();
     }
@@ -45,6 +45,7 @@ export class PaymentMercadoPago extends PaymentInterface {
     async _createOrder(cid) {
         const order = this.pos.get_order();
         const line = this._findPaymentLine(cid);
+        if (!line) return null;
         const sessionId =
             this.pos.session?.id ||
             this.pos.pos_session?.id ||
@@ -67,6 +68,7 @@ export class PaymentMercadoPago extends PaymentInterface {
 
     async _getOrderStatus() {
         const line = this._findPaymentLine(this.pending_cid);
+        if (!line) return null;
         return await this.env.services.orm.silent.call(
             "pos.payment.method",
             "mp_order_get",
@@ -76,6 +78,7 @@ export class PaymentMercadoPago extends PaymentInterface {
 
     async _cancelOrder() {
         const line = this._findPaymentLine(this.pending_cid);
+        if (!line) return null;
         return await this.env.services.orm.silent.call(
             "pos.payment.method",
             "mp_order_cancel",
@@ -85,6 +88,7 @@ export class PaymentMercadoPago extends PaymentInterface {
 
     async _getPayment(payment_id) {
         const line = this._findPaymentLine(this.pending_cid);
+        if (!line) return null;
         return await this.env.services.orm.silent.call(
             "pos.payment.method",
             "mp_get_payment_status",
@@ -94,6 +98,7 @@ export class PaymentMercadoPago extends PaymentInterface {
 
     async _getMerchantOrderStatus(merchantOrderId) {
         const line = this._findPaymentLine(this.pending_cid);
+        if (!line) return null;
         return await this.env.services.orm.silent.call(
             "pos.payment.method",
             "mp_qr_get_merchant_order",
@@ -103,6 +108,7 @@ export class PaymentMercadoPago extends PaymentInterface {
 
     async _searchMerchantOrder(externalReference) {
         const line = this._findPaymentLine(this.pending_cid);
+        if (!line) return null;
         return await this.env.services.orm.silent.call(
             "pos.payment.method",
             "mp_qr_search_merchant_order",
@@ -115,6 +121,7 @@ export class PaymentMercadoPago extends PaymentInterface {
     async _createQrOrder(cid) {
         const order = this.pos.get_order();
         const line = this._findPaymentLine(cid);
+        if (!line) return null;
         const sessionId =
             this.pos.session?.id ||
             this.pos.pos_session?.id ||
@@ -157,6 +164,7 @@ export class PaymentMercadoPago extends PaymentInterface {
 
     async _deleteQrOrder(cid) {
         const line = this._findPaymentLine(cid);
+        if (!line) return null;
         return await this.env.services.orm.silent.call(
             "pos.payment.method",
             "mp_qr_order_delete",
@@ -433,6 +441,7 @@ export class PaymentMercadoPago extends PaymentInterface {
     async send_payment_cancel(order, cid) {
         const resolverBackup = this.webhook_resolver;
         this.webhook_resolver = null;
+        this.pending_cid = null;
 
         if (this._isQr) {
             this._closeQrPopup();
