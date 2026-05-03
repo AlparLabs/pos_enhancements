@@ -2,26 +2,15 @@
 <templates id="template" xml:space="preserve">
     <t t-name="pos_retail_pre_ticket.PreTicketReceipt" owl="1">
         <div class="pos-receipt">
-            <ReceiptHeader data="props.data.headerData" />
-            <div class="pos-receipt-contact">
-                <strong><t t-esc="props.data.company_name" /></strong>
+            <div style="font-size: 1.2em;">
+                <ReceiptHeader data="props.data.headerData" />
             </div>
-            
+
             <div class="pos-receipt-center-align" style="font-weight: bold; font-size: 1.5em; margin-top: 10px; margin-bottom: 5px;">
                 PRE-TICKET
             </div>
             <div class="pos-receipt-center-align" style="margin-bottom: 10px;">
                 No válido como factura
-            </div>
-
-            <!-- Table and Cashier -->
-            <div class="pos-receipt-center-align" style="margin-bottom: 10px; font-weight: bold;">
-                <t t-if="props.data.headerData.table">
-                    <div>Mesa: <t t-esc="props.data.headerData.table" /></div>
-                </t>
-                <t t-if="props.data.headerData.cashier">
-                    <div><t t-esc="props.data.headerData.cashier" /></div>
-                </t>
             </div>
 
             <br />
