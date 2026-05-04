@@ -52,10 +52,15 @@ export class PreCuentaButton extends Component {
         );
 
         const receiptData = {
-            // Flatten header fields to top level (table, customer_count, cashier…)
+            // Flatten header fields (table, customer_count, cashier, company…)
             ...headerData,
             // Flatten export fields (orderlines, amount_total, partner, name…)
             ...exportData,
+            // Explicitly pin company from the POS store — prevents exportData
+            // from overwriting it if export_for_printing returns its own company key.
+            company: this.pos.company,
+            // Pre-built logo URL so the template doesn't need to access company.id
+            company_logo_url: `/web/image?model=res.company&id=${this.pos.company.id}&field=logo`,
         };
 
         await this.printer.print(

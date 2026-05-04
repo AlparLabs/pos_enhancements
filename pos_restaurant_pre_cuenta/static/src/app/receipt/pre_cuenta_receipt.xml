@@ -5,7 +5,7 @@
 
             <!-- ── 1. Company header ── -->
             <div class="d-flex flex-column align-items-center mb-2">
-                <img t-attf-src="/web/image?model=res.company&amp;id={{props.data.company.id}}&amp;field=logo"
+                <img t-att-src="props.data.company_logo_url"
                      alt="Logo" class="pos-receipt-logo"/>
                 <div class="pos-receipt-contact text-center mt-1">
                     <div t-if="props.data.company.name"
@@ -54,7 +54,7 @@
 
                 <!-- Guest count -->
                 <t t-if="props.data.customer_count">
-                    <div style="font-size: 1.05em; font-weight: bold;">
+                    <div style="font-size: 1em; font-weight: bold;">
                         Comensales: <t t-esc="props.data.customer_count"/>
                     </div>
                 </t>
@@ -65,8 +65,8 @@
                     and a waiter has been assigned to the order.
                 -->
                 <t t-if="props.data.waiter_name">
-                    <div style="font-size: 1em; font-weight: normal; margin-top: 4px;">
-                        Mozo: <strong t-esc="props.data.waiter_name"/>
+                    <div style="font-size: 1em; font-weight: bold; margin-top: 4px;">
+                        Mozo: <t t-esc="props.data.waiter_name"/>
                     </div>
                 </t>
 
