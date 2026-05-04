@@ -1,0 +1,56 @@
+# Translation of Odoo Server.
+# This file contains the translation of the following modules:
+# * pos_restaurant_pre_cuenta
+#
+# Translators:
+# AlparData <info@alpardata.com.ar>
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: Odoo Server 18.0\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-05-04 00:00+0000\n"
+"PO-Revision-Date: 2026-05-04 00:00+0000\n"
+"Last-Translator: AlparData <info@alpardata.com.ar>\n"
+"Language-Team: Spanish (Argentina)\n"
+"Language: es_AR\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+#. module: pos_restaurant_pre_cuenta
+msgid "PRE-CUENTA"
+msgstr "PRE-CUENTA"
+
+#. module: pos_restaurant_pre_cuenta
+msgid "No válido como factura"
+msgstr "No válido como factura"
+
+#. module: pos_restaurant_pre_cuenta
+msgid "Mesa: "
+msgstr "Mesa: "
+
+#. module: pos_restaurant_pre_cuenta
+msgid "Comensales: "
+msgstr "Comensales: "
+
+#. module: pos_restaurant_pre_cuenta
+msgid "Mozo: "
+msgstr "Mozo: "
+
+#. module: pos_restaurant_pre_cuenta
+msgid "Cliente: "
+msgstr "Cliente: "
+
+#. module: pos_restaurant_pre_cuenta
+msgid "TOTAL"
+msgstr "TOTAL"
+
+#. module: pos_restaurant_pre_cuenta
+msgid "¡Gracias por su visita!"
+msgstr "¡Gracias por su visita!"
+
+#. module: pos_restaurant_pre_cuenta
+msgid "Pre-cuenta"
+msgstr "Pre-cuenta"

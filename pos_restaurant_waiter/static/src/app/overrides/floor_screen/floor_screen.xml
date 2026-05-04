@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates id="template" xml:space="preserve">
+    <!--
+        Extends the FloorScreen table tile to display the waiter name
+        as a badge stacked below the time badge (from pos_restaurant_table_time).
+
+        Layout (bottom of table):
+          ┌──────────────┐
+          │   Table 3    │
+          └──────────────┘
+               ⏱ 15m          ← time badge  (translate(-50%, 100%))
+               👤 Juan        ← waiter badge (translate(-50%, 210%))
+    -->
+    <t t-inherit="pos_restaurant.FloorScreen" t-inherit-mode="extension" owl="1">
+        <xpath expr="//div[hasclass('table')]" position="inside">
+            <t t-set="tableOrder" t-value="table.getOrder()"/>
+            <t t-if="tableOrder and tableOrder.waiter_id">
+                <span
+                    class="table-waiter-badge badge rounded-pill text-bg-info position-absolute bottom-0 start-50"
+                    style="font-size: 0.70em; z-index: 10; transform: translate(-50%, 210%); max-width: 90%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"
+                    t-att-title="tableOrder.waiter_id.name"
+                >
+                    <i class="fa fa-user me-1"/>
+                    <t t-esc="tableOrder.waiter_id.name"/>
+                </span>
+            </t>
+        </xpath>
+    </t>
+</templates>

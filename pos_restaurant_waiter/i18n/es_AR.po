@@ -1,0 +1,86 @@
+# Translation of Odoo Server.
+# This file contains the translation of the following modules:
+# 	* pos_restaurant_waiter
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: Odoo Server 18.0+e\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-05-04 04:26+0000\n"
+"PO-Revision-Date: 2026-05-04 01:29-0300\n"
+"Last-Translator: \n"
+"Language-Team: \n"
+"Language: es_AR\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+"X-Generator: Poedit 3.9\n"
+
+#. module: pos_restaurant_waiter
+#. odoo-javascript
+#: code:addons/pos_restaurant_waiter/static/src/app/overrides/control_buttons/control_buttons.xml:0
+#: code:addons/pos_restaurant_waiter/static/src/app/waiter_popup/waiter_popup.js:0
+msgid "Assign Waiter"
+msgstr "Asignar Mozo"
+
+#. module: pos_restaurant_waiter
+#. odoo-javascript
+#: code:addons/pos_restaurant_waiter/static/src/app/overrides/control_buttons/control_buttons.js:0
+msgid "Change Waiter"
+msgstr "Cambiar Mozo"
+
+#. module: pos_restaurant_waiter
+#. odoo-javascript
+#: code:addons/pos_restaurant_waiter/static/src/app/waiter_popup/waiter_popup.js:0
+msgid "Confirm"
+msgstr "Confirmar"
+
+#. module: pos_restaurant_waiter
+#. odoo-javascript
+#: code:addons/pos_restaurant_waiter/static/src/app/waiter_popup/waiter_popup.js:0
+msgid "Currently assigned"
+msgstr "Asignado actualmente"
+
+#. module: pos_restaurant_waiter
+#. odoo-javascript
+#: code:addons/pos_restaurant_waiter/static/src/app/waiter_popup/waiter_popup.js:0
+msgid "No waiters found"
+msgstr "No se encontraron mozos"
+
+#. module: pos_restaurant_waiter
+#: model:ir.model,name:pos_restaurant_waiter.model_pos_order
+msgid "Point of Sale Orders"
+msgstr "Órdenes del punto de venta"
+
+#. module: pos_restaurant_waiter
+#. odoo-javascript
+#: code:addons/pos_restaurant_waiter/static/src/app/waiter_popup/waiter_popup.js:0
+msgid "Search waiter..."
+msgstr "Buscar mozo..."
+
+#. module: pos_restaurant_waiter
+#. odoo-javascript
+#: code:addons/pos_restaurant_waiter/static/src/app/waiter_popup/waiter_popup.js:0
+msgid "Skip"
+msgstr "Omitir"
+
+#. module: pos_restaurant_waiter
+#: model:ir.model.fields,help:pos_restaurant_waiter.field_pos_order__waiter_id
+msgid "The employee serving this table."
+msgstr "El empleado que atiende esta mesa."
+
+#. module: pos_restaurant_waiter
+#: model:ir.model.fields,field_description:pos_restaurant_waiter.field_pos_order__waiter_id
+#: model_terms:ir.ui.view,arch_db:pos_restaurant_waiter.view_pos_order_search_waiter
+#: model_terms:ir.ui.view,arch_db:pos_restaurant_waiter.view_pos_order_tree_waiter
+#: model_terms:ir.ui.view,arch_db:pos_restaurant_waiter.view_pos_pos_form_waiter
+msgid "Waiter"
+msgstr "Mozo"
+
+#. module: pos_restaurant_waiter
+#. odoo-javascript
+#: code:addons/pos_restaurant_waiter/static/src/app/overrides/models/pos_store.js:0
+#: code:addons/pos_restaurant_waiter/static/src/app/waiter_popup/waiter_popup.js:0
+msgid "Who is serving this table?"
+msgstr "¿Quién atiende esta mesa?"

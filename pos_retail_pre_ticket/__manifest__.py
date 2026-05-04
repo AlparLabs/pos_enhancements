@@ -1,6 +1,6 @@
 {
     'name': 'POS Retail Pre-Ticket',
-    'version': '18.0.1.0.0',
+    'version': '18.0.1.0.1',
     'category': 'Sales/Point of Sale',
     'summary': 'Adds a Pre-Ticket printing button to the standard retail POS',
     'description': """
