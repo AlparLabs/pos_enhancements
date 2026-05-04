@@ -28,7 +28,9 @@ class PosPaymentCategory(models.Model):
 
     @api.model
     def _load_pos_data_fields(self, config_id):
-        return ['name', 'sequence', 'color']
+        fields = super()._load_pos_data_fields(config_id)
+        fields.extend(['name', 'sequence', 'color'])
+        return fields
 
 class PosPaymentMethod(models.Model):
     _inherit = 'pos.payment.method'
@@ -48,7 +50,10 @@ class PosSession(models.Model):
     @api.model
     def _load_pos_data_models(self, config_id):
         models = super()._load_pos_data_models(config_id)
-        models.append('pos.payment.category')
+        if 'pos.payment.method' in models:
+            models.insert(models.index('pos.payment.method'), 'pos.payment.category')
+        else:
+            models.append('pos.payment.category')
         return models
 
 class PosPayment(models.Model):
