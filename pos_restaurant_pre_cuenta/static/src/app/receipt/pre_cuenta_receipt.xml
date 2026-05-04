@@ -42,34 +42,36 @@
 
             <div style="border-top: 1px dashed #ccc; margin: 8px 0;"/>
 
-            <!-- ── 4. Table · Guests · Waiter ── -->
-            <div class="pos-receipt-center-align"
-                 style="font-size: 1.15em; font-weight: bold; margin: 8px 0;">
+            <!-- ── 4. Table / Guests / Waiter ── -->
+            <div class="pos-receipt-center-align" style="margin: 8px 0;">
 
-                <!-- Table + Guests -->
+                <!-- Table number -->
                 <t t-if="props.data.table">
-                    <div>
+                    <div style="font-size: 1.15em; font-weight: bold;">
                         Mesa: <t t-esc="props.data.table"/>
-                        <t t-if="props.data.customer_count">
-                            &amp;nbsp;·&amp;nbsp;
-                            Comensales: <t t-esc="props.data.customer_count"/>
-                        </t>
+                    </div>
+                </t>
+
+                <!-- Guest count -->
+                <t t-if="props.data.customer_count">
+                    <div style="font-size: 1.05em; font-weight: bold;">
+                        Comensales: <t t-esc="props.data.customer_count"/>
                     </div>
                 </t>
 
                 <!--
                     Waiter — OPTIONAL.
-                    Populated only when pos_restaurant_waiter is installed
+                    Only shown when pos_restaurant_waiter is installed
                     and a waiter has been assigned to the order.
-                    If neither condition holds, this block is simply hidden.
                 -->
                 <t t-if="props.data.waiter_name">
-                    <div style="font-size: 0.9em; font-weight: normal; margin-top: 4px;">
+                    <div style="font-size: 1em; font-weight: normal; margin-top: 4px;">
                         Mozo: <strong t-esc="props.data.waiter_name"/>
                     </div>
                 </t>
 
             </div>
+
 
             <div style="border-top: 1px dashed #ccc; margin: 8px 0;"/>
 

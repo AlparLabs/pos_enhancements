@@ -48,6 +48,14 @@ export class WaiterPopup extends Component {
         return this.props.title || _t("Who is serving this table?");
     }
 
+    // --- Translated labels for the template ---
+    get labelSearch() { return _t("Search waiter..."); }
+    get labelCurrentlyAssigned() { return _t("Currently assigned"); }
+    get labelNoWaiters() { return _t("No waiters found"); }
+    get labelAssignWaiter() { return _t("Assign Waiter"); }
+    get labelSkip() { return _t("Skip"); }
+    get labelConfirm() { return _t("Confirm"); }
+
     get filteredEmployees() {
         const query = this.state.searchQuery.toLowerCase().trim();
         if (!query) return this.props.employees;

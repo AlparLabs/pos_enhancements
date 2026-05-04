@@ -13,7 +13,7 @@
                         t-ref="search"
                         type="text"
                         class="form-control border-start-0 ps-0"
-                        placeholder="Search waiter..."
+                        t-att-placeholder="labelSearch"
                         t-model="state.searchQuery"
                     />
                 </div>
@@ -24,7 +24,7 @@
                 <div class="waiter-current-banner d-flex align-items-center gap-2 p-2 mb-3 rounded-3">
                     <i class="fa fa-user-circle waiter-current-icon" style="font-size: 1.5em;"/>
                     <div class="flex-grow-1">
-                        <div class="waiter-current-label">Currently assigned</div>
+                        <div class="waiter-current-label" t-esc="labelCurrentlyAssigned"/>
                         <div class="waiter-current-name" t-esc="props.currentWaiter.name"/>
                     </div>
                     <i class="fa fa-check-circle waiter-current-icon"/>
@@ -36,7 +36,7 @@
                 <t t-if="filteredEmployees.length === 0">
                     <div class="text-center text-muted py-5">
                         <i class="fa fa-user-slash fa-3x mb-3 d-block opacity-50"/>
-                        <span class="fs-6">No waiters found</span>
+                        <span class="fs-6" t-esc="labelNoWaiters"/>
                     </div>
                 </t>
                 <t t-foreach="filteredEmployees" t-as="employee" t-key="employee.id">
@@ -62,7 +62,7 @@
             <!-- Footer -->
             <t t-set-slot="footer">
                 <button class="btn btn-outline-secondary" t-on-click="skip">
-                    Skip
+                    <t t-esc="labelSkip"/>
                 </button>
                 <button
                     class="btn btn-primary ms-2"
@@ -70,7 +70,7 @@
                     t-on-click="confirm"
                 >
                     <i class="fa fa-check me-1"/>
-                    Confirm
+                    <t t-esc="labelConfirm"/>
                 </button>
             </t>
         </Dialog>
