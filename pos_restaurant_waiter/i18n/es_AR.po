@@ -1,0 +1,73 @@
+# Translation of Odoo Server.
+# This file contains the translation of the following modules:
+# * pos_restaurant_waiter
+#
+# Translators:
+# AlparData <info@alpardata.com.ar>
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: Odoo Server 18.0\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-05-04 00:00+0000\n"
+"PO-Revision-Date: 2026-05-04 00:00+0000\n"
+"Last-Translator: AlparData <info@alpardata.com.ar>\n"
+"Language-Team: Spanish (Argentina)\n"
+"Language: es_AR\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+#. --- Python model fields ---
+
+#: models/pos_order.py:10
+msgid "Waiter"
+msgstr "Mozo"
+
+#: models/pos_order.py:11
+msgid "The employee serving this table."
+msgstr "El empleado que atiende esta mesa."
+
+#. --- Backend views ---
+
+#: views/pos_order_views.xml:0
+msgid "Group By Waiter"
+msgstr "Agrupar por Mozo"
+
+#. --- JavaScript strings (_t) ---
+
+#: static/src/app/waiter_popup/waiter_popup.js
+#: static/src/app/overrides/models/pos_store.js
+msgid "Who is serving this table?"
+msgstr "¿Quién atiende esta mesa?"
+
+#: static/src/app/overrides/control_buttons/control_buttons.js
+msgid "Change Waiter"
+msgstr "Cambiar Mozo"
+
+#. --- OWL template static strings ---
+
+#: static/src/app/waiter_popup/waiter_popup.xml
+msgid "Search waiter..."
+msgstr "Buscar mozo..."
+
+#: static/src/app/waiter_popup/waiter_popup.xml
+msgid "Currently assigned"
+msgstr "Asignado actualmente"
+
+#: static/src/app/waiter_popup/waiter_popup.xml
+msgid "No waiters found"
+msgstr "No se encontraron mozos"
+
+#: static/src/app/waiter_popup/waiter_popup.xml
+msgid "Assign Waiter"
+msgstr "Asignar Mozo"
+
+#: static/src/app/waiter_popup/waiter_popup.xml
+msgid "Skip"
+msgstr "Omitir"
+
+#: static/src/app/waiter_popup/waiter_popup.xml
+msgid "Confirm"
+msgstr "Confirmar"

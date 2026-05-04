@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates id="template" xml:space="preserve">
+
+    <!-- ── PreCuentaButton component template ── -->
+    <t t-name="pos_restaurant_pre_cuenta.PreCuentaButton" owl="1">
+        <button t-if="isVisible"
+                class="btn btn-secondary btn-lg py-5"
+                t-on-click="() => this.click()">
+            <i class="fa fa-file-text-o me-2"/>
+            <span>Pre-cuenta</span>
+        </button>
+    </t>
+
+    <!-- ── Inject into the ControlButtons actions dialog ── -->
+    <t t-name="pos_restaurant_pre_cuenta.ControlButtons"
+       t-inherit="point_of_sale.ControlButtons"
+       t-inherit-mode="extension">
+        <xpath expr="//div[hasclass('control-buttons-modal')]" position="inside">
+            <PreCuentaButton/>
+        </xpath>
+    </t>
+
+</templates>

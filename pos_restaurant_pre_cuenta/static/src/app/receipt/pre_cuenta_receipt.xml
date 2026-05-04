@@ -1,0 +1,106 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates id="template" xml:space="preserve">
+    <t t-name="pos_restaurant_pre_cuenta.PreCuentaReceipt" owl="1">
+        <div class="pos-receipt">
+
+            <!-- ── 1. Company header ── -->
+            <div class="d-flex flex-column align-items-center mb-2">
+                <img t-attf-src="/web/image?model=res.company&amp;id={{props.data.company.id}}&amp;field=logo"
+                     alt="Logo" class="pos-receipt-logo"/>
+                <div class="pos-receipt-contact text-center mt-1">
+                    <div t-if="props.data.company.name"
+                         style="font-weight: bold;"
+                         t-esc="props.data.company.name"/>
+                    <t t-if="props.data.company.phone">
+                        <div>Tel: <span dir="ltr"><t t-esc="props.data.company.phone"/></span></div>
+                    </t>
+                    <t t-if="props.data.company.vat">
+                        <div>CUIT: <t t-esc="props.data.company.vat"/></div>
+                    </t>
+                    <div t-if="props.data.company.email" t-esc="props.data.company.email"/>
+                    <div t-if="props.data.company.website" t-esc="props.data.company.website"/>
+                </div>
+            </div>
+
+            <!-- ── 2. PRE-CUENTA title ── -->
+            <div class="pos-receipt-center-align"
+                 style="font-weight: bold; font-size: 1.5em; margin: 10px 0 2px;">
+                PRE-CUENTA
+            </div>
+            <div class="pos-receipt-center-align"
+                 style="font-size: 0.85em; margin-bottom: 10px; color: #666;">
+                No válido como factura
+            </div>
+
+            <!-- ── 3. Tracking / Order number ── -->
+            <t t-if="props.data.tracking_number">
+                <div class="pos-receipt-center-align"
+                     style="font-size: 2em; font-weight: bold; margin: 6px 0;">
+                    <t t-esc="props.data.tracking_number"/>
+                </div>
+            </t>
+
+            <div style="border-top: 1px dashed #ccc; margin: 8px 0;"/>
+
+            <!-- ── 4. Table · Guests · Waiter ── -->
+            <div class="pos-receipt-center-align"
+                 style="font-size: 1.15em; font-weight: bold; margin: 8px 0;">
+
+                <!-- Table + Guests -->
+                <t t-if="props.data.table">
+                    <div>
+                        Mesa: <t t-esc="props.data.table"/>
+                        <t t-if="props.data.customer_count">
+                            &amp;nbsp;·&amp;nbsp;
+                            Comensales: <t t-esc="props.data.customer_count"/>
+                        </t>
+                    </div>
+                </t>
+
+                <!--
+                    Waiter — OPTIONAL.
+                    Populated only when pos_restaurant_waiter is installed
+                    and a waiter has been assigned to the order.
+                    If neither condition holds, this block is simply hidden.
+                -->
+                <t t-if="props.data.waiter_name">
+                    <div style="font-size: 0.9em; font-weight: normal; margin-top: 4px;">
+                        Mozo: <strong t-esc="props.data.waiter_name"/>
+                    </div>
+                </t>
+
+            </div>
+
+            <div style="border-top: 1px dashed #ccc; margin: 8px 0;"/>
+
+            <!-- ── 5. Customer name (if set) ── -->
+            <t t-if="props.data.partner">
+                <div class="pos-receipt-contact" style="margin-bottom: 6px;">
+                    Cliente: <t t-esc="props.data.partner.name"/>
+                </div>
+            </t>
+
+            <!-- ── 6. Order lines ── -->
+            <div class="orderlines">
+                <t t-foreach="props.data.orderlines" t-as="line" t-key="line_index">
+                    <Orderline line="line"/>
+                </t>
+            </div>
+
+            <!-- ── 7. Total ── -->
+            <div style="border-top: 1px dashed #ccc; margin: 8px 0;"/>
+            <div class="pos-receipt-amount" style="font-size: 1.2em;">
+                TOTAL
+                <span class="pos-receipt-right-align"
+                      t-esc="props.formatCurrency(props.data.amount_total)"/>
+            </div>
+
+            <!-- ── 8. Footer note ── -->
+            <div class="pos-receipt-center-align"
+                 style="margin-top: 16px; font-size: 0.8em; color: #888;">
+                ¡Gracias por su visita!
+            </div>
+
+        </div>
+    </t>
+</templates>

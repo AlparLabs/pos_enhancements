@@ -21,13 +21,13 @@
 
             <!-- Currently assigned waiter banner -->
             <t t-if="props.currentWaiter">
-                <div class="waiter-current-banner d-flex align-items-center gap-2 p-2 mb-3 rounded-3 bg-primary bg-opacity-10 border border-primary border-opacity-25">
-                    <i class="fa fa-user-circle text-primary" style="font-size: 1.4em;"/>
+                <div class="waiter-current-banner d-flex align-items-center gap-2 p-2 mb-3 rounded-3">
+                    <i class="fa fa-user-circle waiter-current-icon" style="font-size: 1.5em;"/>
                     <div class="flex-grow-1">
-                        <div class="text-muted small">Currently assigned</div>
-                        <div class="fw-semibold" t-esc="props.currentWaiter.name"/>
+                        <div class="waiter-current-label">Currently assigned</div>
+                        <div class="waiter-current-name" t-esc="props.currentWaiter.name"/>
                     </div>
-                    <i class="fa fa-check-circle text-primary"/>
+                    <i class="fa fa-check-circle waiter-current-icon"/>
                 </div>
             </t>
 

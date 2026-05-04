@@ -105,9 +105,30 @@
     white-space: nowrap;
 }
 
-/* --- Current waiter banner --- */
+/* --- Current waiter banner — explicit colors, immune to POS theme overrides --- */
 .waiter-current-banner {
-    font-size: 0.9rem;
+    background-color: #f0fdf4;           /* very light green tint */
+    border: 1px solid #86efac;           /* medium green border */
+    border-left: 5px solid #16a34a;      /* thick green left accent */
+}
+
+.waiter-current-label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #15803d;                      /* dark green — high contrast on light bg */
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.waiter-current-name {
+    font-size: 1rem;
+    font-weight: 700;
+    color: #111827;                      /* near-black — maximum contrast */
+    margin-top: 1px;
+}
+
+.waiter-current-icon {
+    color: #16a34a;                      /* solid green icon */
 }
 
 /* =============================================================
