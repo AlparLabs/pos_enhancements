@@ -1,26 +1,28 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <templates id="template" xml:space="preserve">
-    <!--
-        Extends the ControlButtons template to add a "Change Waiter" button
-        in the actions menu (shown in the dialog/expanded view).
-        Follows the exact same pattern as pos_restaurant.ControlButtons.
-    -->
+
+    <!-- ChangeWaiterButton component template -->
+    <t t-name="pos_restaurant_waiter.ChangeWaiterButton" owl="1">
+        <button t-if="isVisible"
+                class="btn btn-secondary btn-lg py-5"
+                t-on-click="() => this.click()">
+            <i class="fa fa-user me-2"/>
+            <t t-if="currentWaiterName">
+                <span t-esc="currentWaiterName"/>
+            </t>
+            <t t-else="">
+                <span>Assign Waiter</span>
+            </t>
+        </button>
+    </t>
+
+    <!-- Inject ChangeWaiterButton into the ControlButtons actions dialog -->
     <t t-name="pos_restaurant_waiter.ControlButtons"
-       t-inherit="pos_restaurant.ControlButtons"
+       t-inherit="point_of_sale.ControlButtons"
        t-inherit-mode="extension">
-        <!-- Add in the dialog/expanded action buttons (same section as Split, Transfer) -->
-        <xpath expr="//t[@t-if='pos.config.module_pos_restaurant'][2]" position="inside">
-            <button class="btn btn-secondary btn-lg py-5"
-                    t-if="pos.config.module_pos_hr and pos.get_order()?.table_id"
-                    t-on-click="clickChangeWaiter">
-                <i class="fa fa-user me-2"/>
-                <t t-if="currentWaiterName">
-                    <span t-esc="currentWaiterName"/>
-                </t>
-                <t t-else="">
-                    <span>Assign Waiter</span>
-                </t>
-            </button>
+        <xpath expr="//div[hasclass('control-buttons-modal')]" position="inside">
+            <ChangeWaiterButton/>
         </xpath>
     </t>
+
 </templates>
