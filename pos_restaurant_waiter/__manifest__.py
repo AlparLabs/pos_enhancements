@@ -28,8 +28,11 @@
     ],
     'assets': {
         'point_of_sale._assets_pos': [
+            'pos_restaurant_waiter/static/src/app/waiter_popup/waiter_popup.css',
             'pos_restaurant_waiter/static/src/app/waiter_popup/waiter_popup.js',
             'pos_restaurant_waiter/static/src/app/waiter_popup/waiter_popup.xml',
+            'pos_restaurant_waiter/static/src/app/overrides/control_buttons/control_buttons.js',
+            'pos_restaurant_waiter/static/src/app/overrides/control_buttons/control_buttons.xml',
             'pos_restaurant_waiter/static/src/app/overrides/models/pos_store.js',
             'pos_restaurant_waiter/static/src/app/overrides/floor_screen/floor_screen.xml',
         ],
