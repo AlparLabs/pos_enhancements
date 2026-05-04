@@ -5,20 +5,28 @@
 
             <!-- ── 1. Company header ── -->
             <div class="d-flex flex-column align-items-center mb-2">
-                <img t-att-src="props.data.company_logo_url"
+                <!--
+                    Logo URL built inline from headerData.company.id — same pattern as
+                    pos_retail_pre_ticket. This avoids relying on a pre-computed string
+                    that could be undefined if this.pos.company.id was not yet resolved.
+                -->
+                <img t-attf-src="/web/image?model=res.company&amp;id={{props.data.headerData.company.id}}&amp;field=logo"
                      alt="Logo" class="pos-receipt-logo"/>
                 <div class="pos-receipt-contact text-center mt-1">
-                    <div t-if="props.data.company.name"
+                    <div t-if="props.data.headerData.company.name"
                          style="font-weight: bold;"
-                         t-esc="props.data.company.name"/>
-                    <t t-if="props.data.company.phone">
-                        <div>Tel: <span dir="ltr"><t t-esc="props.data.company.phone"/></span></div>
+                         t-esc="props.data.headerData.company.name"/>
+                    <t t-if="props.data.headerData.company.phone">
+                        <div>Tel: <span dir="ltr"><t t-esc="props.data.headerData.company.phone"/></span></div>
                     </t>
-                    <t t-if="props.data.company.vat">
-                        <div>CUIT: <t t-esc="props.data.company.vat"/></div>
+                    <t t-if="props.data.headerData.company.vat">
+                        <div>CUIT: <t t-esc="props.data.headerData.company.vat"/></div>
                     </t>
-                    <div t-if="props.data.company.email" t-esc="props.data.company.email"/>
-                    <div t-if="props.data.company.website" t-esc="props.data.company.website"/>
+                    <div t-if="props.data.headerData.company.email" t-esc="props.data.headerData.company.email"/>
+                    <div t-if="props.data.headerData.company.website" t-esc="props.data.headerData.company.website"/>
+                    <div t-if="props.data.headerData.header"
+                         style="white-space:pre-line"
+                         t-esc="props.data.headerData.header"/>
                 </div>
             </div>
 
@@ -33,29 +41,36 @@
             </div>
 
             <!-- ── 3. Tracking / Order number ── -->
-            <t t-if="props.data.tracking_number">
+            <t t-if="props.data.headerData.trackingNumber">
                 <div class="pos-receipt-center-align"
                      style="font-size: 2em; font-weight: bold; margin: 6px 0;">
-                    <t t-esc="props.data.tracking_number"/>
+                    <t t-esc="props.data.headerData.trackingNumber"/>
                 </div>
             </t>
 
             <div style="border-top: 1px dashed #ccc; margin: 8px 0;"/>
 
-            <!-- ── 4. Table / Guests / Waiter ── -->
+            <!-- ── 4. Table / Guests / Waiter / Cashier ── -->
             <div class="pos-receipt-center-align" style="margin: 8px 0;">
 
+                <!-- Cashier -->
+                <t t-if="props.data.headerData.cashier">
+                    <div style="font-size: 1em;">
+                        <t t-esc="props.data.headerData.cashier"/>
+                    </div>
+                </t>
+
                 <!-- Table number -->
-                <t t-if="props.data.table">
+                <t t-if="props.data.headerData.table">
                     <div style="font-size: 1.15em; font-weight: bold;">
-                        Mesa: <t t-esc="props.data.table"/>
+                        Mesa: <t t-esc="props.data.headerData.table"/>
                     </div>
                 </t>
 
                 <!-- Guest count -->
-                <t t-if="props.data.customer_count">
+                <t t-if="props.data.headerData.customer_count">
                     <div style="font-size: 1em; font-weight: bold;">
-                        Comensales: <t t-esc="props.data.customer_count"/>
+                        Comensales: <t t-esc="props.data.headerData.customer_count"/>
                     </div>
                 </t>
 
@@ -64,14 +79,13 @@
                     Only shown when pos_restaurant_waiter is installed
                     and a waiter has been assigned to the order.
                 -->
-                <t t-if="props.data.waiter_name">
+                <t t-if="props.data.headerData.waiter_name">
                     <div style="font-size: 1em; font-weight: bold; margin-top: 4px;">
-                        Mozo: <t t-esc="props.data.waiter_name"/>
+                        Mozo: <t t-esc="props.data.headerData.waiter_name"/>
                     </div>
                 </t>
 
             </div>
-
 
             <div style="border-top: 1px dashed #ccc; margin: 8px 0;"/>
 
