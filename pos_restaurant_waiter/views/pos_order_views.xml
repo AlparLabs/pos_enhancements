@@ -30,14 +30,14 @@
         <field name="model">pos.order</field>
         <field name="inherit_id" ref="point_of_sale.view_pos_order_filter"/>
         <field name="arch" type="xml">
-            <filter name="search_cashier" position="after">
-                <separator/>
-                <filter string="Waiter" name="search_waiter" domain="[]"/>
+            <!-- Add waiter field search after the existing separator -->
+            <xpath expr="//separator" position="after">
                 <field name="waiter_id" string="Waiter"/>
-            </filter>
-            <group string="Group By" position="inside">
-                <filter string="Waiter" name="group_by_waiter" context="{'group_by': 'waiter_id'}"/>
-            </group>
+            </xpath>
+            <!-- Add Group By Waiter inside the existing Group By group -->
+            <xpath expr="//group" position="inside">
+                <filter string="Waiter" name="group_by_waiter" domain="[]" context="{'group_by': 'waiter_id'}"/>
+            </xpath>
         </field>
     </record>
 </odoo>
