@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from odoo import models, fields, api
+from odoo import models, fields
 
 
 class PosOrder(models.Model):
@@ -11,9 +11,3 @@ class PosOrder(models.Model):
         help='The employee serving this table.',
         index=True,
     )
-
-    @api.model
-    def _load_pos_data_fields(self, config_id):
-        fields = super()._load_pos_data_fields(config_id)
-        fields += ['waiter_id']
-        return fields
