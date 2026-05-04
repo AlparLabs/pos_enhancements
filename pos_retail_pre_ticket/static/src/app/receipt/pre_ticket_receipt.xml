@@ -2,27 +2,80 @@
 <templates id="template" xml:space="preserve">
     <t t-name="pos_retail_pre_ticket.PreTicketReceipt" owl="1">
         <div class="pos-receipt">
-            <div style="font-size: 1.2em;">
-                <ReceiptHeader data="props.data.headerData" />
+
+            <!-- 1. Company logo, name, VAT, email, website -->
+            <div class="d-flex flex-column align-items-center">
+                <img t-attf-src="/web/image?model=res.company&amp;id={{props.data.headerData.company.id}}&amp;field=logo"
+                     alt="Logo" class="pos-receipt-logo"/>
+                <br/>
+                <div class="pos-receipt-contact text-center">
+                    <div t-if="props.data.headerData.company.name"
+                         t-esc="props.data.headerData.company.name"/>
+                    <t t-if="props.data.headerData.company.phone">
+                        <div>Tel: <span dir="ltr"><t t-esc="props.data.headerData.company.phone"/></span></div>
+                    </t>
+                    <t t-if="props.data.headerData.company.vat">
+                        <div>CUIT: <t t-esc="props.data.headerData.company.vat"/></div>
+                    </t>
+                    <div t-if="props.data.headerData.company.email"
+                         t-esc="props.data.headerData.company.email"/>
+                    <div t-if="props.data.headerData.company.website"
+                         t-esc="props.data.headerData.company.website"/>
+                    <div t-if="props.data.headerData.header"
+                         style="white-space:pre-line"
+                         t-esc="props.data.headerData.header"/>
+                </div>
             </div>
 
-            <div class="pos-receipt-center-align" style="font-weight: bold; font-size: 1.5em; margin-top: 10px; margin-bottom: 5px;">
+            <!-- 2. PRE-TICKET title -->
+            <div class="pos-receipt-center-align" style="font-weight: bold; font-size: 1.5em; margin-top: 14px; margin-bottom: 4px;">
                 PRE-TICKET
             </div>
             <div class="pos-receipt-center-align" style="margin-bottom: 10px;">
                 No válido como factura
             </div>
 
-            <br />
-            <div t-if="props.data.partner" class="pos-receipt-contact">
-                Cliente: <t t-esc="props.data.partner.name" /><br/>
+            <!-- 3. Order number (tracking number) -->
+            <t t-if="props.data.headerData.trackingNumber">
+                <div class="pos-receipt-center-align" style="margin: 6px 0;">
+                    <t t-if="props.data.headerData.bigTrackingNumber">
+                        <span class="tracking-number text-center"
+                              style="font-size: 100px; display: block; line-height: 1;"
+                              t-esc="props.data.headerData.trackingNumber"/>
+                    </t>
+                    <t t-else="">
+                        <span class="tracking-number fs-1"
+                              t-esc="props.data.headerData.trackingNumber"/>
+                    </t>
+                </div>
+            </t>
+
+            <!-- 4. Cashier and Table (bigger) -->
+            <div class="pos-receipt-center-align" style="font-size: 1.25em; font-weight: bold; margin: 10px 0;">
+                <t t-if="props.data.headerData.cashier">
+                    <div t-esc="props.data.headerData.cashier"/>
+                </t>
+                <t t-if="props.data.headerData.table">
+                    <t t-if="props.data.headerData.customer_count">
+                        <div>Mesa: <t t-esc="props.data.headerData.table"/>, Comensales: <t t-esc="props.data.headerData.customer_count"/></div>
+                    </t>
+                    <t t-else="">
+                        <div>Mesa: <t t-esc="props.data.headerData.table"/></div>
+                    </t>
+                </t>
             </div>
-            <br />
+
+            <!-- 5. Cliente, Orderlines, Total, Barcode -->
+            <br/>
+            <div t-if="props.data.partner" class="pos-receipt-contact">
+                Cliente: <t t-esc="props.data.partner.name"/><br/>
+            </div>
+            <br/>
 
             <!-- Orderlines -->
             <div class="orderlines">
                 <t t-foreach="props.data.orderlines" t-as="line" t-key="line_index">
-                    <Orderline line="line" />
+                    <Orderline line="line"/>
                 </t>
             </div>
 
@@ -35,12 +88,13 @@
             </div>
             <br/>
 
-            <!-- Print order barcode -->
+            <!-- Barcode -->
             <div t-if="props.data.name" class="pos-receipt-center-align">
                 <br/>
-                <img t-att-src="'/report/barcode/Code128/' + props.data.name" style="width:250px; height:50px;" alt="Barcode"/>
+                <img t-att-src="'/report/barcode/Code128/' + props.data.name"
+                     style="width:250px; height:50px;" alt="Barcode"/>
                 <br/>
-                <t t-esc="props.data.name" />
+                <t t-esc="props.data.name"/>
             </div>
 
         </div>
