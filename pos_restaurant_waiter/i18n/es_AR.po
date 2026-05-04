@@ -19,7 +19,7 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
-#. --- Python model fields ---
+# Python model fields
 
 #: models/pos_order.py:10
 msgid "Waiter"
@@ -29,13 +29,13 @@ msgstr "Mozo"
 msgid "The employee serving this table."
 msgstr "El empleado que atiende esta mesa."
 
-#. --- Backend views ---
+# Backend views
 
 #: views/pos_order_views.xml:0
 msgid "Group By Waiter"
 msgstr "Agrupar por Mozo"
 
-#. --- JavaScript strings (_t) ---
+# JavaScript strings
 
 #: static/src/app/waiter_popup/waiter_popup.js
 #: static/src/app/overrides/models/pos_store.js
@@ -46,7 +46,7 @@ msgstr "¿Quién atiende esta mesa?"
 msgid "Change Waiter"
 msgstr "Cambiar Mozo"
 
-#. --- OWL template static strings ---
+# OWL template strings
 
 #: static/src/app/waiter_popup/waiter_popup.xml
 msgid "Search waiter..."
@@ -71,3 +71,9 @@ msgstr "Omitir"
 #: static/src/app/waiter_popup/waiter_popup.xml
 msgid "Confirm"
 msgstr "Confirmar"
+
+# Pre-ticket receipt
+
+#: static/src/app/overrides/pre_ticket/pre_ticket_receipt.xml
+msgid "Mozo: "
+msgstr "Mozo: "

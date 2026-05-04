@@ -19,7 +19,7 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
-#. --- Receipt static strings ---
+# Receipt static strings
 
 #: static/src/app/receipt/pre_cuenta_receipt.xml
 msgid "PRE-CUENTA"
@@ -53,7 +53,7 @@ msgstr "TOTAL"
 msgid "¡Gracias por su visita!"
 msgstr "¡Gracias por su visita!"
 
-#. --- Button label ---
+# Button label
 
 #: static/src/app/pre_cuenta_button/pre_cuenta_button.xml
 msgid "Pre-cuenta"
