@@ -19,42 +19,38 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
-# Receipt static strings
-
-#: static/src/app/receipt/pre_cuenta_receipt.xml
+#. module: pos_restaurant_pre_cuenta
 msgid "PRE-CUENTA"
 msgstr "PRE-CUENTA"
 
-#: static/src/app/receipt/pre_cuenta_receipt.xml
+#. module: pos_restaurant_pre_cuenta
 msgid "No válido como factura"
 msgstr "No válido como factura"
 
-#: static/src/app/receipt/pre_cuenta_receipt.xml
+#. module: pos_restaurant_pre_cuenta
 msgid "Mesa: "
 msgstr "Mesa: "
 
-#: static/src/app/receipt/pre_cuenta_receipt.xml
+#. module: pos_restaurant_pre_cuenta
 msgid "Comensales: "
 msgstr "Comensales: "
 
-#: static/src/app/receipt/pre_cuenta_receipt.xml
+#. module: pos_restaurant_pre_cuenta
 msgid "Mozo: "
 msgstr "Mozo: "
 
-#: static/src/app/receipt/pre_cuenta_receipt.xml
+#. module: pos_restaurant_pre_cuenta
 msgid "Cliente: "
 msgstr "Cliente: "
 
-#: static/src/app/receipt/pre_cuenta_receipt.xml
+#. module: pos_restaurant_pre_cuenta
 msgid "TOTAL"
 msgstr "TOTAL"
 
-#: static/src/app/receipt/pre_cuenta_receipt.xml
+#. module: pos_restaurant_pre_cuenta
 msgid "¡Gracias por su visita!"
 msgstr "¡Gracias por su visita!"
 
-# Button label
-
-#: static/src/app/pre_cuenta_button/pre_cuenta_button.xml
+#. module: pos_restaurant_pre_cuenta
 msgid "Pre-cuenta"
 msgstr "Pre-cuenta"

@@ -19,61 +19,46 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
-# Python model fields
-
-#: models/pos_order.py:10
+#. module: pos_restaurant_waiter
 msgid "Waiter"
 msgstr "Mozo"
 
-#: models/pos_order.py:11
+#. module: pos_restaurant_waiter
 msgid "The employee serving this table."
 msgstr "El empleado que atiende esta mesa."
 
-# Backend views
-
-#: views/pos_order_views.xml:0
+#. module: pos_restaurant_waiter
 msgid "Group By Waiter"
 msgstr "Agrupar por Mozo"
 
-# JavaScript strings
-
-#: static/src/app/waiter_popup/waiter_popup.js
-#: static/src/app/overrides/models/pos_store.js
+#. module: pos_restaurant_waiter
 msgid "Who is serving this table?"
 msgstr "¿Quién atiende esta mesa?"
 
-#: static/src/app/overrides/control_buttons/control_buttons.js
+#. module: pos_restaurant_waiter
 msgid "Change Waiter"
 msgstr "Cambiar Mozo"
 
-# OWL template strings
-
-#: static/src/app/waiter_popup/waiter_popup.xml
+#. module: pos_restaurant_waiter
 msgid "Search waiter..."
 msgstr "Buscar mozo..."
 
-#: static/src/app/waiter_popup/waiter_popup.xml
+#. module: pos_restaurant_waiter
 msgid "Currently assigned"
 msgstr "Asignado actualmente"
 
-#: static/src/app/waiter_popup/waiter_popup.xml
+#. module: pos_restaurant_waiter
 msgid "No waiters found"
 msgstr "No se encontraron mozos"
 
-#: static/src/app/waiter_popup/waiter_popup.xml
+#. module: pos_restaurant_waiter
 msgid "Assign Waiter"
 msgstr "Asignar Mozo"
 
-#: static/src/app/waiter_popup/waiter_popup.xml
+#. module: pos_restaurant_waiter
 msgid "Skip"
 msgstr "Omitir"
 
-#: static/src/app/waiter_popup/waiter_popup.xml
+#. module: pos_restaurant_waiter
 msgid "Confirm"
 msgstr "Confirmar"
-
-# Pre-ticket receipt
-
-#: static/src/app/overrides/pre_ticket/pre_ticket_receipt.xml
-msgid "Mozo: "
-msgstr "Mozo: "
