@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+    <t t-name="pos_restaurant_waiter.WaiterPopup">
+        <Dialog title="title" size="'md'" contentClass="'waiter-popup'">
+            <!-- Search bar -->
+            <div class="waiter-popup-search mb-3">
+                <input
+                    t-ref="search"
+                    type="text"
+                    class="form-control"
+                    placeholder="Search employee..."
+                    t-model="state.searchQuery"
+                />
+            </div>
+
+            <!-- Employee grid -->
+            <div class="waiter-popup-grid">
+                <t t-if="filteredEmployees.length === 0">
+                    <div class="text-center text-muted py-4">
+                        <i class="fa fa-user-times fa-2x mb-2 d-block"/>
+                        <span>No employees found</span>
+                    </div>
+                </t>
+                <t t-foreach="filteredEmployees" t-as="employee" t-key="employee.id">
+                    <button
+                        t-attf-class="waiter-card {{ isSelected(employee) ? 'selected' : '' }}"
+                        t-on-click="() => this.selectEmployee(employee)"
+                    >
+                        <i class="fa fa-user-circle waiter-card-icon"/>
+                        <span class="waiter-card-name" t-esc="employee.name"/>
+                        <t t-if="isSelected(employee)">
+                            <i class="fa fa-check-circle waiter-card-check"/>
+                        </t>
+                    </button>
+                </t>
+            </div>
+
+            <!-- Footer -->
+            <t t-set-slot="footer">
+                <button class="btn btn-secondary me-2" t-on-click="skip">
+                    Skip
+                </button>
+                <button
+                    class="btn btn-primary"
+                    t-att-disabled="!state.selectedEmployee"
+                    t-on-click="confirm"
+                >
+                    Confirm
+                </button>
+            </t>
+        </Dialog>
+    </t>
+</templates>

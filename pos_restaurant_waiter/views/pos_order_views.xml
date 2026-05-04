@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+    <!-- Extend the POS Order list view to include the Waiter column -->
+    <record id="view_pos_pos_form_waiter" model="ir.ui.view">
+        <field name="name">pos.order.form.waiter</field>
+        <field name="model">pos.order</field>
+        <field name="inherit_id" ref="point_of_sale.view_pos_pos_form"/>
+        <field name="arch" type="xml">
+            <field name="employee_id" position="after">
+                <field name="waiter_id" string="Waiter"/>
+            </field>
+        </field>
+    </record>
+
+    <!-- Extend the POS Order tree/list view to show the Waiter column -->
+    <record id="view_pos_order_tree_waiter" model="ir.ui.view">
+        <field name="name">pos.order.tree.waiter</field>
+        <field name="model">pos.order</field>
+        <field name="inherit_id" ref="point_of_sale.view_pos_order_tree"/>
+        <field name="arch" type="xml">
+            <field name="employee_id" position="after">
+                <field name="waiter_id" string="Waiter" optional="show"/>
+            </field>
+        </field>
+    </record>
+
+    <!-- Extend the POS Order search view to filter/group by waiter -->
+    <record id="view_pos_order_search_waiter" model="ir.ui.view">
+        <field name="name">pos.order.search.waiter</field>
+        <field name="model">pos.order</field>
+        <field name="inherit_id" ref="point_of_sale.view_pos_order_filter"/>
+        <field name="arch" type="xml">
+            <filter name="search_cashier" position="after">
+                <separator/>
+                <filter string="Waiter" name="search_waiter" domain="[]"/>
+                <field name="waiter_id" string="Waiter"/>
+            </filter>
+            <group string="Group By" position="inside">
+                <filter string="Waiter" name="group_by_waiter" context="{'group_by': 'waiter_id'}"/>
+            </group>
+        </field>
+    </record>
+</odoo>
