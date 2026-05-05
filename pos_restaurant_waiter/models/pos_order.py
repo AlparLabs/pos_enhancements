@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from odoo import models, fields, api
+from odoo import models, fields
 
 
 class PosOrder(models.Model):
@@ -12,9 +12,3 @@ class PosOrder(models.Model):
         index=True,
     )
 
-    @api.model
-    def _load_pos_data_fields(self, config_id):
-        params = super()._load_pos_data_fields(config_id)
-        if 'waiter_id' not in params:
-            params.append('waiter_id')
-        return params
