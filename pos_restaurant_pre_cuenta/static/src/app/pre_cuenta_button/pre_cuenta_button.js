@@ -35,7 +35,7 @@ export class PreCuentaButton extends Component {
             return;
         }
 
-        // Build the standard POS header data (includes table, customer_count, cashier)
+        // Build the standard POS header data (includes table, customer_count, cashier, company…)
         const headerData = this.pos.getReceiptHeaderData(order);
 
         // ── Waiter injection (optional) ──────────────────────────────────────────
@@ -51,16 +51,12 @@ export class PreCuentaButton extends Component {
             headerData
         );
 
+        // Keep headerData as a nested sub-object — same pattern as pos_retail_pre_ticket.
+        // A flat spread (...headerData, ...exportData) can cause key collisions where
+        // exportData.company overwrites headerData.company, breaking the logo and contact info.
         const receiptData = {
-            // Flatten header fields (table, customer_count, cashier, company…)
-            ...headerData,
-            // Flatten export fields (orderlines, amount_total, partner, name…)
             ...exportData,
-            // Explicitly pin company from the POS store — prevents exportData
-            // from overwriting it if export_for_printing returns its own company key.
-            company: this.pos.company,
-            // Pre-built logo URL so the template doesn't need to access company.id
-            company_logo_url: `/web/image?model=res.company&id=${this.pos.company.id}&field=logo`,
+            headerData: headerData,
         };
 
         await this.printer.print(

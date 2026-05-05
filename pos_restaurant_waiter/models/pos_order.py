@@ -11,3 +11,4 @@ class PosOrder(models.Model):
         help='The employee serving this table.',
         index=True,
     )
+
