@@ -21,7 +21,7 @@
         </div>
       </div>
 
-      <!-- ── Progress bar (shown once qty is set) ── -->
+      <!-- ── Progress bar ── -->
       <div t-if="state.totalQty > 0" class="mb-3">
         <div class="d-flex justify-content-between align-items-center mb-1">
           <small class="text-muted">Progreso de selección</small>
@@ -45,15 +45,14 @@
       <t t-foreach="props.comboGroups" t-as="combo" t-key="combo.id">
         <div
           class="combo-quick-group card mb-3"
-          t-att-class="isGroupComplete(combo.id) ? 'border-success combo-quick-group-done' : 'border-light'">
+          t-att-class="isGroupFullyComplete(combo.id) ? 'border-success combo-quick-group-done' : 'border-light'">
 
           <!-- Group header -->
           <div class="card-header d-flex justify-content-between align-items-center py-2">
             <div class="d-flex align-items-center gap-2">
-              <i t-att-class="'fa fa-circle fa-xs ' + (isGroupComplete(combo.id) ? 'text-success' : 'text-muted')"/>
+              <i t-att-class="'fa fa-circle fa-xs ' + (isGroupFullyComplete(combo.id) ? 'text-success' : 'text-muted')"/>
               <span class="fw-bold"><t t-esc="combo.name"/></span>
             </div>
-            <!-- Counter badge -->
             <span
               t-att-class="'badge rounded-pill fs-6 ' + (isGroupComplete(combo.id) ? 'bg-success' : 'bg-secondary')">
               <t t-esc="getGroupTotal(combo.id)"/>
@@ -67,39 +66,70 @@
               <t t-foreach="combo.combo_item_ids" t-as="item" t-key="item.id">
                 <div class="col-6 col-md-4">
                   <div
-                    class="combo-quick-item d-flex align-items-center justify-content-between p-2 border rounded-2 h-100"
+                    class="combo-quick-item border rounded-2 h-100 p-2"
                     t-att-class="state.qty[combo.id][item.id] > 0 ? 'selected' : ''">
 
-                    <!-- Item name + price_extra badge -->
-                    <div class="combo-quick-item-label me-2 flex-grow-1">
-                      <span class="small fw-semibold lh-sm"><t t-esc="item.name"/></span>
-                      <div t-if="item.extra_price > 0" class="mt-1">
-                        <span class="badge bg-warning text-dark" style="font-size: 0.65rem;">
-                          +<t t-esc="item.extra_price"/>
+                    <!-- Top row: name + price + controls -->
+                    <div class="d-flex align-items-center justify-content-between">
+                      <div class="combo-quick-item-label me-2 flex-grow-1">
+                        <span class="small fw-semibold lh-sm"><t t-esc="item.name"/></span>
+                        <div t-if="item.extra_price > 0" class="mt-1">
+                          <span class="badge bg-warning text-dark" style="font-size: 0.65rem;">
+                            +<t t-esc="item.extra_price"/>
+                          </span>
+                        </div>
+                      </div>
+                      <!-- +/- controls -->
+                      <div class="combo-quick-item-controls d-flex align-items-center gap-1 flex-shrink-0">
+                        <button
+                          class="btn btn-sm btn-outline-danger combo-quick-btn"
+                          t-att-disabled="state.qty[combo.id][item.id] === 0 ? true : undefined"
+                          t-on-click="() => this.decrement(combo.id, item.id)">
+                          <i class="fa fa-minus"/>
+                        </button>
+                        <span
+                          class="fw-bold text-center combo-quick-qty-display"
+                          t-att-class="state.qty[combo.id][item.id] > 0 ? 'text-success' : 'text-muted'">
+                          <t t-esc="state.qty[combo.id][item.id]"/>
                         </span>
+                        <button
+                          class="btn btn-sm combo-quick-btn"
+                          t-att-class="'btn-outline-' + (canIncrement(combo.id) ? 'success' : 'secondary')"
+                          t-att-disabled="!canIncrement(combo.id) ? true : undefined"
+                          t-on-click="() => this.increment(combo.id, item.id)">
+                          <i class="fa fa-plus"/>
+                        </button>
                       </div>
                     </div>
 
-                    <!-- +/- controls -->
-                    <div class="combo-quick-item-controls d-flex align-items-center gap-1 flex-shrink-0">
-                      <button
-                        class="btn btn-sm btn-outline-danger combo-quick-btn"
-                        t-att-disabled="state.qty[combo.id][item.id] === 0 ? true : undefined"
-                        t-on-click="() => this.decrement(combo.id, item.id)">
-                        <i class="fa fa-minus"/>
-                      </button>
-                      <span
-                        class="fw-bold text-center combo-quick-qty-display"
-                        t-att-class="state.qty[combo.id][item.id] > 0 ? 'text-success' : 'text-muted'">
-                        <t t-esc="state.qty[combo.id][item.id]"/>
-                      </span>
-                      <button
-                        class="btn btn-sm combo-quick-btn"
-                        t-att-class="'btn-outline-' + (canIncrement(combo.id) ? 'success' : 'secondary')"
-                        t-att-disabled="!canIncrement(combo.id) ? true : undefined"
-                        t-on-click="() => this.increment(combo.id, item.id)">
-                        <i class="fa fa-plus"/>
-                      </button>
+                    <!-- Inline attribute selectors (shown only when this item is selected) -->
+                    <div
+                      t-if="state.qty[combo.id][item.id] > 0 and item.attribute_lines and item.attribute_lines.length > 0"
+                      class="combo-quick-attrs mt-2 pt-2 border-top">
+                      <t t-foreach="item.attribute_lines" t-as="attrLine" t-key="attrLine.id">
+                        <div class="mb-2">
+                          <div class="d-flex align-items-center gap-1 mb-1">
+                            <!-- Warning icon when attr not yet selected -->
+                            <i t-att-class="'fa fa-xs ' + (state.attrs[combo.id][item.id][attrLine.id] > 0 ? 'fa-check-circle text-success' : 'fa-exclamation-circle text-warning')"/>
+                            <small class="text-muted fw-bold" style="font-size: 0.68rem; text-transform: uppercase;">
+                              <t t-esc="attrLine.name"/>
+                            </small>
+                          </div>
+                          <div class="d-flex gap-1 flex-wrap">
+                            <t t-foreach="attrLine.values" t-as="val" t-key="val.id">
+                              <button
+                                t-att-class="'btn btn-xs fw-semibold ' + (state.attrs[combo.id][item.id][attrLine.id] == val.id ? 'btn-primary' : 'btn-outline-secondary')"
+                                style="font-size: 0.7rem; padding: 2px 10px; border-radius: 20px;"
+                                t-on-click="() => this.selectAttr(combo.id, item.id, attrLine.id, val.id)">
+                                <t t-esc="val.name"/>
+                                <t t-if="val.price_extra > 0">
+                                  <span class="ms-1 opacity-75">(+<t t-esc="val.price_extra"/>)</span>
+                                </t>
+                              </button>
+                            </t>
+                          </div>
+                        </div>
+                      </t>
                     </div>
 
                   </div>

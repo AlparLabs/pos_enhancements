@@ -4,23 +4,6 @@ import { Component, useState } from "@odoo/owl";
 import { usePos } from "@point_of_sale/app/store/pos_hook";
 import { Dialog } from "@web/core/dialog/dialog";
 
-/**
- * ComboQuickPopup
- *
- * Allows the cashier to:
- *  1. Select the total number of menus (totalQty).
- *  2. Distribute choices for each combo group (e.g., Mains, Beverages)
- *     across those menus using +/- buttons.
- *
- * On confirm, builds a payload consumed by product_screen_patch.js which
- * uses computeComboItems() + addLineToCurrentOrder() to create the order lines.
- *
- * Props:
- *   - productTemplate  {Object}   The combo product (product.product record)
- *   - comboGroups      {Array}    [{ id, name, qty_free, qty_max, combo_item_ids: [{id, name, extra_price, _record}] }]
- *   - getPayload       {Function} Called with the final payload on confirm
- *   - close            {Function} Injected by dialog service
- */
 export class ComboQuickPopup extends Component {
     static template = "pos_combo_quick.ComboQuickPopup";
     static components = { Dialog };
@@ -36,16 +19,25 @@ export class ComboQuickPopup extends Component {
 
         // qty[comboId][itemId] = selected quantity for that item
         const initialQty = {};
+        // attrs[comboId][itemId][lineId] = selected attribute value id (0 = unset)
+        const initialAttrs = {};
+
         for (const combo of this.props.comboGroups) {
             initialQty[combo.id] = {};
+            initialAttrs[combo.id] = {};
             for (const item of combo.combo_item_ids) {
                 initialQty[combo.id][item.id] = 0;
+                initialAttrs[combo.id][item.id] = {};
+                for (const line of (item.attribute_lines || [])) {
+                    initialAttrs[combo.id][item.id][line.id] = 0;
+                }
             }
         }
 
         this.state = useState({
             totalQty: 0,
             qty: initialQty,
+            attrs: initialAttrs,
         });
     }
 
@@ -53,27 +45,23 @@ export class ComboQuickPopup extends Component {
 
     setTotalQty(n) {
         this.state.totalQty = n;
-        // Reset all selections whenever total quantity changes
+        // Reset all qty and attr selections
         for (const combo of this.props.comboGroups) {
             for (const item of combo.combo_item_ids) {
                 this.state.qty[combo.id][item.id] = 0;
+                for (const line of (item.attribute_lines || [])) {
+                    this.state.attrs[combo.id][item.id][line.id] = 0;
+                }
             }
         }
     }
 
     // ─── Per-item quantity controls ───────────────────────────────────────────
 
-    /**
-     * Sum of all selected quantities within a combo group.
-     */
     getGroupTotal(comboId) {
         return Object.values(this.state.qty[comboId] || {}).reduce((s, q) => s + q, 0);
     }
 
-    /**
-     * Returns true if we can still add one more of this item to this group.
-     * Capped at totalQty (each group slot fills the same pool of N menus).
-     */
     canIncrement(comboId) {
         return (
             this.state.totalQty > 0 &&
@@ -89,7 +77,29 @@ export class ComboQuickPopup extends Component {
     decrement(comboId, itemId) {
         if (this.state.qty[comboId][itemId] > 0) {
             this.state.qty[comboId][itemId]--;
+            // Reset attr selections when item is deselected
+            if (this.state.qty[comboId][itemId] === 0) {
+                const combo = this.props.comboGroups.find((c) => c.id === comboId);
+                const item = combo?.combo_item_ids.find((i) => i.id === itemId);
+                for (const line of (item?.attribute_lines || [])) {
+                    this.state.attrs[comboId][itemId][line.id] = 0;
+                }
+            }
         }
+    }
+
+    // ─── Attribute selection ──────────────────────────────────────────────────
+
+    selectAttr(comboId, itemId, lineId, valueId) {
+        this.state.attrs[comboId][itemId][lineId] = valueId;
+    }
+
+    /**
+     * True if this item has no attr lines, or all attr lines have a value selected.
+     */
+    isItemAttrComplete(comboId, itemId) {
+        const attrState = this.state.attrs[comboId]?.[itemId] || {};
+        return Object.values(attrState).every((v) => v > 0);
     }
 
     // ─── Validation ───────────────────────────────────────────────────────────
@@ -101,9 +111,21 @@ export class ComboQuickPopup extends Component {
         );
     }
 
+    /**
+     * Group is fully done: qty filled AND all selected items have all attrs set.
+     */
+    isGroupFullyComplete(comboId) {
+        if (!this.isGroupComplete(comboId)) return false;
+        const combo = this.props.comboGroups.find((c) => c.id === comboId);
+        return (combo?.combo_item_ids || []).every((item) => {
+            if (this.state.qty[comboId][item.id] === 0) return true;
+            return this.isItemAttrComplete(comboId, item.id);
+        });
+    }
+
     get allGroupsComplete() {
         if (this.state.totalQty === 0) return false;
-        return this.props.comboGroups.every((combo) => this.isGroupComplete(combo.id));
+        return this.props.comboGroups.every((combo) => this.isGroupFullyComplete(combo.id));
     }
 
     get progressPercent() {
@@ -118,15 +140,6 @@ export class ComboQuickPopup extends Component {
 
     // ─── Instance resolution (sequential distribution) ────────────────────────
 
-    /**
-     * Given instance index i (0-based), determines which item was assigned
-     * to this instance for a given combo group.
-     *
-     * Example: qty = { Milanesa: 3, Spaghetti: 1, Salmon: 1 }, totalQty=5
-     *   i=0,1,2 → Milanesa  (ids from entries 0..2)
-     *   i=3     → Spaghetti
-     *   i=4     → Salmon
-     */
     _resolveItemForInstance(comboId, instanceIndex) {
         const groupQty = this.state.qty[comboId];
         let counter = 0;
@@ -136,19 +149,11 @@ export class ComboQuickPopup extends Component {
                 return parseInt(itemId);
             }
         }
-        // Fallback (should never happen when allGroupsComplete)
         return parseInt(Object.keys(groupQty)[0]);
     }
 
     // ─── Confirm ──────────────────────────────────────────────────────────────
 
-    /**
-     * Builds one payload-per-instance, then calls getPayload with the full array.
-     * The patch will group identical instance payloads into a single order line.
-     *
-     * Each element of the returned array = one menu instance:
-     *   [ { combo_item_id: <record>, configuration: {...}, qty: 1 }, ... ]
-     */
     confirm() {
         if (!this.allGroupsComplete) return;
 
@@ -157,13 +162,15 @@ export class ComboQuickPopup extends Component {
             const instanceConf = this.props.comboGroups.map((combo) => {
                 const chosenItemId = this._resolveItemForInstance(combo.id, i);
                 const item = combo.combo_item_ids.find((ci) => ci.id === chosenItemId);
+                // Collect selected attribute value ids for this item
+                const attrState = this.state.attrs[combo.id][chosenItemId] || {};
+                const attribute_value_ids = Object.values(attrState).filter((v) => v > 0);
                 return {
                     combo_item_id: item._record,
                     configuration: {
-                        attribute_value_ids: [],
+                        attribute_value_ids,
                         attribute_custom_values: {},
                     },
-                    qty: 1,
                 };
             });
             instances.push(instanceConf);
