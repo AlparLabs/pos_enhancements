@@ -17,9 +17,10 @@ export class ComboQuickPopup extends Component {
     setup() {
         this.pos = usePos();
 
-        // qty[comboId][itemId] = selected quantity for that item
+        // qty[comboId][itemId]  = total units selected for that item
+        // attrs[comboId][itemId] = ARRAY — one {lineId: valueId} object per unit
+        //   e.g. if 3x Pizza selected: attrs[c][pizza] = [{size: 0}, {size: large}, {size: small}]
         const initialQty = {};
-        // attrs[comboId][itemId][lineId] = selected attribute value id (0 = unset)
         const initialAttrs = {};
 
         for (const combo of this.props.comboGroups) {
@@ -27,10 +28,7 @@ export class ComboQuickPopup extends Component {
             initialAttrs[combo.id] = {};
             for (const item of combo.combo_item_ids) {
                 initialQty[combo.id][item.id] = 0;
-                initialAttrs[combo.id][item.id] = {};
-                for (const line of (item.attribute_lines || [])) {
-                    initialAttrs[combo.id][item.id][line.id] = 0;
-                }
+                initialAttrs[combo.id][item.id] = []; // grows/shrinks with qty
             }
         }
 
@@ -41,17 +39,14 @@ export class ComboQuickPopup extends Component {
         });
     }
 
-    // ─── Total menu quantity selector ─────────────────────────────────────────
+    // ─── Total quantity selector ───────────────────────────────────────────────
 
     setTotalQty(n) {
         this.state.totalQty = n;
-        // Reset all qty and attr selections
         for (const combo of this.props.comboGroups) {
             for (const item of combo.combo_item_ids) {
                 this.state.qty[combo.id][item.id] = 0;
-                for (const line of (item.attribute_lines || [])) {
-                    this.state.attrs[combo.id][item.id][line.id] = 0;
-                }
+                this.state.attrs[combo.id][item.id] = [];
             }
         }
     }
@@ -72,34 +67,50 @@ export class ComboQuickPopup extends Component {
     increment(comboId, itemId) {
         if (!this.canIncrement(comboId)) return;
         this.state.qty[comboId][itemId]++;
+        // Push a new empty attr-selection object for this new unit
+        const combo = this.props.comboGroups.find((c) => c.id === comboId);
+        const item = combo?.combo_item_ids.find((i) => i.id === itemId);
+        const newUnitAttrs = {};
+        for (const line of (item?.attribute_lines || [])) {
+            newUnitAttrs[line.id] = 0;
+        }
+        this.state.attrs[comboId][itemId].push(newUnitAttrs);
     }
 
     decrement(comboId, itemId) {
         if (this.state.qty[comboId][itemId] > 0) {
             this.state.qty[comboId][itemId]--;
-            // Reset attr selections when item is deselected
-            if (this.state.qty[comboId][itemId] === 0) {
-                const combo = this.props.comboGroups.find((c) => c.id === comboId);
-                const item = combo?.combo_item_ids.find((i) => i.id === itemId);
-                for (const line of (item?.attribute_lines || [])) {
-                    this.state.attrs[comboId][itemId][line.id] = 0;
-                }
-            }
+            this.state.attrs[comboId][itemId].pop(); // remove last unit's selections
         }
     }
 
     // ─── Attribute selection ──────────────────────────────────────────────────
 
-    selectAttr(comboId, itemId, lineId, valueId) {
-        this.state.attrs[comboId][itemId][lineId] = valueId;
+    /**
+     * Set the selected attribute value for a specific unit of a specific item.
+     * @param {number} comboId
+     * @param {number} itemId
+     * @param {number} unitIndex  - 0-based index within this item's selected units
+     * @param {number} lineId     - attribute line id
+     * @param {number} valueId    - selected product.template.attribute.value id
+     */
+    selectAttr(comboId, itemId, unitIndex, lineId, valueId) {
+        this.state.attrs[comboId][itemId][unitIndex][lineId] = valueId;
     }
 
     /**
-     * True if this item has no attr lines, or all attr lines have a value selected.
+     * True if all attribute lines for ONE specific unit are filled.
+     */
+    isUnitAttrComplete(unitAttrs) {
+        return Object.keys(unitAttrs).length === 0 || Object.values(unitAttrs).every((v) => v > 0);
+    }
+
+    /**
+     * True if every unit of an item has all its attributes selected.
      */
     isItemAttrComplete(comboId, itemId) {
-        const attrState = this.state.attrs[comboId]?.[itemId] || {};
-        return Object.values(attrState).every((v) => v > 0);
+        const units = this.state.attrs[comboId]?.[itemId] || [];
+        return units.every((unitAttrs) => this.isUnitAttrComplete(unitAttrs));
     }
 
     // ─── Validation ───────────────────────────────────────────────────────────
@@ -111,9 +122,7 @@ export class ComboQuickPopup extends Component {
         );
     }
 
-    /**
-     * Group is fully done: qty filled AND all selected items have all attrs set.
-     */
+    /** Qty filled AND all selected units have all their attrs set. */
     isGroupFullyComplete(comboId) {
         if (!this.isGroupComplete(comboId)) return false;
         const combo = this.props.comboGroups.find((c) => c.id === comboId);
@@ -138,18 +147,29 @@ export class ComboQuickPopup extends Component {
         return Math.round((totalSelected / maxTotal) * 100);
     }
 
-    // ─── Instance resolution (sequential distribution) ────────────────────────
+    // ─── Instance resolution ──────────────────────────────────────────────────
 
-    _resolveItemForInstance(comboId, instanceIndex) {
+    /**
+     * Given instance index i, returns { itemId, unitIndex } for a combo group.
+     * Items are "consumed" sequentially: all units of item A first, then item B, etc.
+     *
+     * Example: qty = { pizza: 3, pasta: 2 }, totalQty = 5
+     *   i=0 → pizza, unit 0
+     *   i=1 → pizza, unit 1
+     *   i=2 → pizza, unit 2
+     *   i=3 → pasta, unit 0
+     *   i=4 → pasta, unit 1
+     */
+    _resolveInstanceSlot(comboId, instanceIndex) {
         const groupQty = this.state.qty[comboId];
         let counter = 0;
         for (const [itemId, qty] of Object.entries(groupQty)) {
-            counter += qty;
-            if (instanceIndex < counter) {
-                return parseInt(itemId);
+            if (instanceIndex < counter + qty) {
+                return { itemId: parseInt(itemId), unitIndex: instanceIndex - counter };
             }
+            counter += qty;
         }
-        return parseInt(Object.keys(groupQty)[0]);
+        return { itemId: parseInt(Object.keys(groupQty)[0]), unitIndex: 0 };
     }
 
     // ─── Confirm ──────────────────────────────────────────────────────────────
@@ -160,11 +180,11 @@ export class ComboQuickPopup extends Component {
         const instances = [];
         for (let i = 0; i < this.state.totalQty; i++) {
             const instanceConf = this.props.comboGroups.map((combo) => {
-                const chosenItemId = this._resolveItemForInstance(combo.id, i);
+                const { itemId: chosenItemId, unitIndex } = this._resolveInstanceSlot(combo.id, i);
                 const item = combo.combo_item_ids.find((ci) => ci.id === chosenItemId);
-                // Collect selected attribute value ids for this item
-                const attrState = this.state.attrs[combo.id][chosenItemId] || {};
-                const attribute_value_ids = Object.values(attrState).filter((v) => v > 0);
+                // Get this specific unit's attribute selections
+                const unitAttrs = this.state.attrs[combo.id][chosenItemId][unitIndex] || {};
+                const attribute_value_ids = Object.values(unitAttrs).filter((v) => v > 0);
                 return {
                     combo_item_id: item._record,
                     configuration: {
