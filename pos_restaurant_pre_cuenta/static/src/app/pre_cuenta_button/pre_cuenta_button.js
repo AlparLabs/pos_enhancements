@@ -29,6 +29,63 @@ export class PreCuentaButton extends Component {
         );
     }
 
+    /**
+     * Build a grouped list of display rows for the pre-cuenta receipt.
+     *
+     * - Combo parent lines (combo_line_ids.length > 0) are collapsed into ONE
+     *   row: the parent product name, its quantity, and the combined price
+     *   (sum of price_subtotal_incl for the parent + every child line).
+     * - Combo child lines are skipped — they are folded into the parent row.
+     * - Regular (non-combo) lines pass through unchanged via getDisplayData().
+     *
+     * @param {PosOrder} order  live order model instance
+     * @returns {Array<{productName, qty, unit, price, customerNote, isComboGroup}>}
+     */
+    buildGroupedOrderlines(order) {
+        const fmt = this.env.utils.formatCurrency;
+        const rows = [];
+
+        for (const line of order.getSortedOrderlines()) {
+            // Skip children — they are already folded into the parent row.
+            if (line.combo_parent_id) {
+                continue;
+            }
+
+            if (line.combo_line_ids && line.combo_line_ids.length > 0) {
+                // ── Combo parent: collapse all lines (parent + children) ──
+                // Sum price_subtotal_incl (tax-included line total) across
+                // the entire combo tree.
+                const allLines = line.getAllLinesInCombo();
+                const comboTotal = allLines.reduce(
+                    (sum, l) => sum + (l.price_subtotal_incl || 0),
+                    0
+                );
+
+                rows.push({
+                    productName: line.get_full_product_name(),
+                    qty: line.get_quantity_str(),
+                    unit: line.product_id.uom_id ? line.product_id.uom_id.name : "",
+                    price: fmt(comboTotal),
+                    customerNote: line.get_customer_note() || "",
+                    isComboGroup: true,
+                });
+            } else {
+                // ── Regular (non-combo) line ──
+                const d = line.getDisplayData();
+                rows.push({
+                    productName: d.productName,
+                    qty: d.qty,
+                    unit: d.unit,
+                    price: d.price,
+                    customerNote: d.customerNote,
+                    isComboGroup: false,
+                });
+            }
+        }
+
+        return rows;
+    }
+
     async click() {
         const order = this.currentOrder;
         if (!order || order.get_orderlines().length === 0) {
@@ -57,6 +114,8 @@ export class PreCuentaButton extends Component {
         const receiptData = {
             ...exportData,
             headerData: headerData,
+            // Grouped list: combos are collapsed into a single row each.
+            groupedOrderlines: this.buildGroupedOrderlines(order),
         };
 
         await this.printer.print(

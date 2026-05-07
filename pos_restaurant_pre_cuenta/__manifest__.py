@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 {
     'name': 'POS Restaurant Pre-Cuenta',
-    'version': '18.0.1.0.1',
+    'version': '18.0.1.0.2',
     'category': 'Sales/Point of Sale',
     'summary': 'Prints a "Pre-cuenta" for restaurant tables directly from the POS actions menu.',
     'description': """
