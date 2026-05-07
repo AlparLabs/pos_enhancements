@@ -17,8 +17,3 @@ class PosOrder(models.Model):
         help='Set automatically when the Pre-Cuenta is printed for this order.',
     )
 
-    @api.model
-    def _load_pos_data_fields(self, config_id):
-        result = super()._load_pos_data_fields(config_id)
-        result += ['is_table_verified', 'pre_cuenta_printed']
-        return result
