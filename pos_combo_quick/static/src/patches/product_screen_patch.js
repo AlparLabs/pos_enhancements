@@ -61,14 +61,26 @@ patch(ProductScreen.prototype, {
             return await super.addProductToOrder(product);
         }
 
-        // Fall back to native popup if any item requires variant/attribute configuration
-        const hasConfigurableItems = product.combo_ids.some((combo) =>
-            (combo.combo_item_ids || []).some((item) => item.product_id?.isConfigurable?.())
+        // Only fall back to native if a sub-item genuinely needs a variant configurator popup.
+        // isConfigurable() is too broad — it returns true for specific product.product variants
+        // that have 2+ template values but are already fully resolved (no popup needed).
+        // needToConfigure() correctly checks if a dialog must be shown (no_variant / custom attrs).
+        // We exclude the isCombo() part of needToConfigure() since combo items are never combos.
+        const needsVariantConfig = product.combo_ids.some((combo) =>
+            (combo.combo_item_ids || []).some((item) => {
+                const p = item.product_id;
+                if (!p || !p.attribute_line_ids?.length) return false;
+                // True only if it has attribute lines that require user selection
+                return p.attribute_line_ids.some((line) =>
+                    line.product_template_value_ids?.length > 1 &&
+                    line.attribute_id?.create_variant !== "always"
+                );
+            })
         );
-        console.log("[pos_combo_quick] hasConfigurableItems:", hasConfigurableItems);
+        console.log("[pos_combo_quick] needsVariantConfig:", needsVariantConfig);
 
-        if (hasConfigurableItems) {
-            console.log("[pos_combo_quick] → Has configurable items, falling back to native popup");
+        if (needsVariantConfig) {
+            console.log("[pos_combo_quick] → Sub-item needs variant config, falling back to native popup");
             return await super.addProductToOrder(product);
         }
 
