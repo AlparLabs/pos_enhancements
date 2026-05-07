@@ -111,11 +111,13 @@
                       t-esc="props.formatCurrency(props.data.amount_total)"/>
             </div>
 
-            <!-- ── 8. Footer note ── -->
-            <div class="pos-receipt-center-align"
-                 style="margin-top: 16px; font-size: 0.8em; color: #888;">
-                ¡Gracias por su visita!
-            </div>
+            <!-- ── 8. Personalized footer from POS settings ── -->
+            <t t-if="props.data.footer">
+                <div class="pos-receipt-center-align"
+                     style="margin-top: 16px; font-size: 0.85em; white-space: pre-line;">
+                    <t t-esc="props.data.footer"/>
+                </div>
+            </t>
 
         </div>
     </t>

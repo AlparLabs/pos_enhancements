@@ -4,19 +4,24 @@
     <!-- ── PreCuentaButton component template ── -->
     <t t-name="pos_restaurant_pre_cuenta.PreCuentaButton" owl="1">
         <button t-if="isVisible"
-                class="btn btn-secondary btn-lg py-5"
+                class="control-button btn btn-light rounded-0 fw-bolder mb-2"
                 t-on-click="() => this.click()">
-            <i class="fa fa-file-text-o me-2"/>
+            <i class="fa fa-print me-1" role="img" aria-label="Pre-cuenta" title="Pre-cuenta"/>
             <span>Pre-cuenta</span>
         </button>
     </t>
 
-    <!-- ── Inject into the ControlButtons actions dialog ── -->
+    <!-- ── Inject into the ControlButtons ── -->
     <t t-name="pos_restaurant_pre_cuenta.ControlButtons"
        t-inherit="point_of_sale.ControlButtons"
        t-inherit-mode="extension">
+        <!-- Visible directly in the bar on non-small screens -->
+        <xpath expr="//button[hasclass('more-btn')]" position="before">
+            <PreCuentaButton t-if="!props.showRemainingButtons and !ui.isSmall"/>
+        </xpath>
+        <!-- Inside the "more" modal on small screens / overflow -->
         <xpath expr="//div[hasclass('control-buttons-modal')]" position="inside">
-            <PreCuentaButton/>
+            <PreCuentaButton t-if="props.showRemainingButtons"/>
         </xpath>
     </t>
 
