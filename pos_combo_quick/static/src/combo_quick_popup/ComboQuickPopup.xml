@@ -1,0 +1,135 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+  <t t-name="pos_combo_quick.ComboQuickPopup">
+    <Dialog title="props.productTemplate.display_name + ' — Selección Rápida'" size="'lg'">
+
+      <!-- ── Step 1: Total quantity selector ── -->
+      <div class="combo-quick-qty-section mb-4">
+        <label class="form-label fw-bold fs-6 text-muted text-uppercase letter-spacing-1">
+          <i class="fa fa-hashtag me-1"/>
+          ¿Cuántos menús?
+        </label>
+        <div class="d-flex gap-2 flex-wrap mt-2">
+          <t t-foreach="[1,2,3,4,5,6,7,8,9,10]" t-as="n" t-key="n">
+            <button
+              t-att-class="'btn btn-lg fw-bold combo-quick-qty-btn ' + (state.totalQty === n ? 'btn-primary active' : 'btn-outline-secondary')"
+              style="min-width: 52px; min-height: 52px;"
+              t-on-click="() => this.setTotalQty(n)">
+              <t t-esc="n"/>
+            </button>
+          </t>
+        </div>
+      </div>
+
+      <!-- ── Progress bar (shown once qty is set) ── -->
+      <div t-if="state.totalQty > 0" class="mb-3">
+        <div class="d-flex justify-content-between align-items-center mb-1">
+          <small class="text-muted">Progreso de selección</small>
+          <small class="fw-bold" t-att-class="allGroupsComplete ? 'text-success' : 'text-secondary'">
+            <t t-esc="progressPercent"/>%
+          </small>
+        </div>
+        <div class="progress" style="height: 8px; border-radius: 4px;">
+          <div
+            class="progress-bar"
+            t-att-class="allGroupsComplete ? 'bg-success' : 'bg-primary'"
+            role="progressbar"
+            t-att-style="'width: ' + progressPercent + '%; transition: width 0.25s ease;'"
+            t-att-aria-valuenow="progressPercent"
+            aria-valuemin="0"
+            aria-valuemax="100"/>
+        </div>
+      </div>
+
+      <!-- ── Step 2: One card per combo group ── -->
+      <t t-foreach="props.comboGroups" t-as="combo" t-key="combo.id">
+        <div
+          class="combo-quick-group card mb-3"
+          t-att-class="isGroupComplete(combo.id) ? 'border-success combo-quick-group-done' : 'border-light'">
+
+          <!-- Group header -->
+          <div class="card-header d-flex justify-content-between align-items-center py-2">
+            <div class="d-flex align-items-center gap-2">
+              <i t-att-class="'fa fa-circle fa-xs ' + (isGroupComplete(combo.id) ? 'text-success' : 'text-muted')"/>
+              <span class="fw-bold"><t t-esc="combo.name"/></span>
+            </div>
+            <!-- Counter badge -->
+            <span
+              t-att-class="'badge rounded-pill fs-6 ' + (isGroupComplete(combo.id) ? 'bg-success' : 'bg-secondary')">
+              <t t-esc="getGroupTotal(combo.id)"/>
+              <span class="opacity-75"> / <t t-esc="state.totalQty"/></span>
+            </span>
+          </div>
+
+          <!-- Items grid -->
+          <div class="card-body pb-2">
+            <div class="row g-2">
+              <t t-foreach="combo.combo_item_ids" t-as="item" t-key="item.id">
+                <div class="col-6 col-md-4">
+                  <div
+                    class="combo-quick-item d-flex align-items-center justify-content-between p-2 border rounded-2 h-100"
+                    t-att-class="state.qty[combo.id][item.id] > 0 ? 'selected' : ''">
+
+                    <!-- Item name + price_extra badge -->
+                    <div class="combo-quick-item-label me-2 flex-grow-1">
+                      <span class="small fw-semibold lh-sm"><t t-esc="item.name"/></span>
+                      <div t-if="item.extra_price > 0" class="mt-1">
+                        <span class="badge bg-warning text-dark" style="font-size: 0.65rem;">
+                          +<t t-esc="item.extra_price"/>
+                        </span>
+                      </div>
+                    </div>
+
+                    <!-- +/- controls -->
+                    <div class="combo-quick-item-controls d-flex align-items-center gap-1 flex-shrink-0">
+                      <button
+                        class="btn btn-sm btn-outline-danger combo-quick-btn"
+                        t-att-disabled="state.qty[combo.id][item.id] === 0 ? true : undefined"
+                        t-on-click="() => this.decrement(combo.id, item.id)">
+                        <i class="fa fa-minus"/>
+                      </button>
+                      <span
+                        class="fw-bold text-center combo-quick-qty-display"
+                        t-att-class="state.qty[combo.id][item.id] > 0 ? 'text-success' : 'text-muted'">
+                        <t t-esc="state.qty[combo.id][item.id]"/>
+                      </span>
+                      <button
+                        class="btn btn-sm combo-quick-btn"
+                        t-att-class="'btn-outline-' + (canIncrement(combo.id) ? 'success' : 'secondary')"
+                        t-att-disabled="!canIncrement(combo.id) ? true : undefined"
+                        t-on-click="() => this.increment(combo.id, item.id)">
+                        <i class="fa fa-plus"/>
+                      </button>
+                    </div>
+
+                  </div>
+                </div>
+              </t>
+            </div>
+          </div>
+
+        </div>
+      </t>
+
+      <!-- ── Footer ── -->
+      <t t-set-slot="footer">
+        <button class="btn btn-secondary btn-lg" t-on-click="props.close">
+          <i class="fa fa-times me-2"/>
+          Cancelar
+        </button>
+        <button
+          t-att-class="'btn btn-lg fw-bold ' + (allGroupsComplete ? 'btn-success' : 'btn-secondary')"
+          t-att-disabled="!allGroupsComplete ? true : undefined"
+          t-on-click="confirm">
+          <i class="fa fa-check me-2"/>
+          Agregar
+          <span class="mx-1 badge bg-white text-success fs-6" t-if="allGroupsComplete">
+            <t t-esc="state.totalQty"/>
+          </span>
+          menú<t t-if="state.totalQty !== 1">s</t> a la orden
+        </button>
+      </t>
+
+    </Dialog>
+  </t>
+</templates>
