@@ -22,13 +22,20 @@ import { computeComboItems } from "@point_of_sale/app/models/utils/compute_combo
  *  3. For each unique group, calls addLineToCurrentOrder with configure=false and
  *     a pre-built combo_line_ids array (constructed via computeComboItems)
  */
+
+console.log("%c[pos_combo_quick] ✅ Module loaded — ProductScreen patch registered", "color: #4CAF50; font-weight: bold;");
+
 patch(ProductScreen.prototype, {
 
     /**
      * Entry point — intercepts combo products, delegates the rest to super.
      */
     async addProductToOrder(product) {
+        console.log("[pos_combo_quick] addProductToOrder called:", product?.display_name);
+        console.log("[pos_combo_quick] isCombo():", product?.isCombo?.(), "combo_ids.length:", product?.combo_ids?.length);
+
         if (!product.isCombo() || !product.combo_ids?.length) {
+            console.log("[pos_combo_quick] → NOT a combo, falling back to native");
             return await super.addProductToOrder(product);
         }
 
@@ -43,8 +50,14 @@ patch(ProductScreen.prototype, {
             );
         });
 
+        console.log("[pos_combo_quick] hasGroupsNeedingChoice:", hasGroupsNeedingChoice);
+        console.log("[pos_combo_quick] combo_ids detail:", product.combo_ids.map(c => ({
+            name: c.name,
+            itemCount: (c.combo_item_ids || []).length,
+        })));
+
         if (!hasGroupsNeedingChoice) {
-            // All groups have exactly 1 non-configurable item — let native auto-confirm
+            console.log("[pos_combo_quick] → All groups have 1 item, delegating to native auto-confirm");
             return await super.addProductToOrder(product);
         }
 
@@ -52,10 +65,14 @@ patch(ProductScreen.prototype, {
         const hasConfigurableItems = product.combo_ids.some((combo) =>
             (combo.combo_item_ids || []).some((item) => item.product_id?.isConfigurable?.())
         );
+        console.log("[pos_combo_quick] hasConfigurableItems:", hasConfigurableItems);
+
         if (hasConfigurableItems) {
+            console.log("[pos_combo_quick] → Has configurable items, falling back to native popup");
             return await super.addProductToOrder(product);
         }
 
+        console.log("[pos_combo_quick] → Opening ComboQuickPopup");
         await this._openComboQuickPopup(product);
     },
 
