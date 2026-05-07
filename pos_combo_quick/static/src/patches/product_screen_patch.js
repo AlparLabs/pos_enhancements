@@ -61,26 +61,18 @@ patch(ProductScreen.prototype, {
             return await super.addProductToOrder(product);
         }
 
-        // Only fall back to native if a sub-item genuinely needs a variant configurator popup.
-        // isConfigurable() is too broad — it returns true for specific product.product variants
-        // that have 2+ template values but are already fully resolved (no popup needed).
-        // needToConfigure() correctly checks if a dialog must be shown (no_variant / custom attrs).
-        // We exclude the isCombo() part of needToConfigure() since combo items are never combos.
-        const needsVariantConfig = product.combo_ids.some((combo) =>
-            (combo.combo_item_ids || []).some((item) => {
-                const p = item.product_id;
-                if (!p || !p.attribute_line_ids?.length) return false;
-                // True only if it has attribute lines that require user selection
-                return p.attribute_line_ids.some((line) =>
-                    line.product_template_value_ids?.length > 1 &&
-                    line.attribute_id?.create_variant !== "always"
-                );
-            })
+        // Only fall back if an item has ONLY custom (free-text) attribute values — we can't
+        // render a text input inline. Multi-choice no_variant attrs are handled in our popup.
+        const hasCustomOnlyAttrs = product.combo_ids.some((combo) =>
+            (combo.combo_item_ids || []).some((item) =>
+                (item.product_id?.attribute_line_ids || []).some((line) =>
+                    (line.product_template_value_ids || []).length > 0 &&
+                    (line.product_template_value_ids || []).every((v) => v.is_custom)
+                )
+            )
         );
-        console.log("[pos_combo_quick] needsVariantConfig:", needsVariantConfig);
-
-        if (needsVariantConfig) {
-            console.log("[pos_combo_quick] → Sub-item needs variant config, falling back to native popup");
+        if (hasCustomOnlyAttrs) {
+            console.log("[pos_combo_quick] → Custom-only attrs detected, falling back to native");
             return await super.addProductToOrder(product);
         }
 
@@ -101,12 +93,37 @@ patch(ProductScreen.prototype, {
             .map((combo) => ({
                 id: combo.id,
                 name: combo.name,
-                combo_item_ids: (combo.combo_item_ids || []).map((item) => ({
-                    id: item.id,
-                    name: item.product_id.display_name,
-                    extra_price: item.extra_price || 0,
-                    _record: item, // raw record needed for computeComboItems
-                })),
+                combo_item_ids: (combo.combo_item_ids || []).map((item) => {
+                    // Collect no_variant / dynamic attribute lines that need user selection.
+                    // "always" create_variant lines are already resolved in product.product.
+                    const attribute_lines = (item.product_id.attribute_line_ids || [])
+                        .filter((line) => {
+                            const vals = line.product_template_value_ids || [];
+                            return (
+                                line.attribute_id?.create_variant !== "always" &&
+                                vals.length > 1 &&
+                                vals.some((v) => !v.is_custom)
+                            );
+                        })
+                        .map((line) => ({
+                            id: line.id,
+                            name: line.attribute_id?.name || "",
+                            values: (line.product_template_value_ids || [])
+                                .filter((v) => !v.is_custom)
+                                .map((v) => ({
+                                    id: v.id,
+                                    name: v.name,
+                                    price_extra: v.price_extra || 0,
+                                })),
+                        }));
+                    return {
+                        id: item.id,
+                        name: item.product_id.display_name,
+                        extra_price: item.extra_price || 0,
+                        _record: item,
+                        attribute_lines,
+                    };
+                }),
             }));
 
         if (!comboGroups.length) {
@@ -194,7 +211,11 @@ patch(ProductScreen.prototype, {
         const groups = new Map();
 
         for (const instanceConf of instancePayloads) {
-            const key = instanceConf.map((slot) => slot.combo_item_id.id).join(",");
+            // Include attribute selections in the key so different attr combos get separate lines
+            const key = instanceConf.map((slot) => {
+                const attrKey = (slot.configuration.attribute_value_ids || []).slice().sort().join("|");
+                return `${slot.combo_item_id.id}:${attrKey}`;
+            }).join(",");
             if (groups.has(key)) {
                 groups.get(key).qty++;
             } else {
