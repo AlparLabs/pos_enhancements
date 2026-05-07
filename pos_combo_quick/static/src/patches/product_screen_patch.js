@@ -12,7 +12,8 @@ import { computeComboItems } from "@point_of_sale/app/models/utils/compute_combo
  *
  * Falls back to the native flow when:
  *  - The product is not a combo
- *  - Any combo group contains a configurable product (variant/attributes)
+ *  - Any combo group only has 1 item (native auto-selects those)
+ *  - Any combo item requires variant/attribute configuration
  *  - The combo has no groups defined
  *
  * On confirm, the patch:
@@ -31,9 +32,25 @@ patch(ProductScreen.prototype, {
             return await super.addProductToOrder(product);
         }
 
-        // Fall back to native popup if any item requires variant configuration
+        // Use same shouldShowCombo logic as the native popup:
+        // A combo group is "visible" if it has >1 item OR the single item is configurable.
+        // If NO group needs user interaction, native auto-confirms — we do the same.
+        const hasGroupsNeedingChoice = product.combo_ids.some((combo) => {
+            const items = combo.combo_item_ids || [];
+            return (
+                items.length > 1 ||
+                (items.length === 1 && items[0].product_id?.isConfigurable?.())
+            );
+        });
+
+        if (!hasGroupsNeedingChoice) {
+            // All groups have exactly 1 non-configurable item — let native auto-confirm
+            return await super.addProductToOrder(product);
+        }
+
+        // Fall back to native popup if any item requires variant/attribute configuration
         const hasConfigurableItems = product.combo_ids.some((combo) =>
-            combo.combo_item_ids?.some((item) => item.product_id?.isConfigurable?.())
+            (combo.combo_item_ids || []).some((item) => item.product_id?.isConfigurable?.())
         );
         if (hasConfigurableItems) {
             return await super.addProductToOrder(product);
@@ -48,20 +65,24 @@ patch(ProductScreen.prototype, {
      */
     async _openComboQuickPopup(product) {
         // Build the comboGroups descriptor passed to the popup.
-        // We use combo_item_ids (the real Odoo 18 field) and keep _record
-        // references so the patch can call computeComboItems with real records.
-        const comboGroups = product.combo_ids.map((combo) => ({
-            id: combo.id,
-            name: combo.name,
-            qty_free: combo.qty_free,
-            qty_max: combo.qty_max,
-            combo_item_ids: combo.combo_item_ids.map((item) => ({
-                id: item.id,
-                name: item.product_id.display_name,
-                extra_price: item.extra_price || 0,
-                _record: item, // raw record needed for computeComboItems
-            })),
-        }));
+        // Only include groups that have items. Exclude qty_free/qty_max — they
+        // don't exist in product.combo in Odoo 18.
+        const comboGroups = product.combo_ids
+            .filter((combo) => (combo.combo_item_ids || []).length > 0)
+            .map((combo) => ({
+                id: combo.id,
+                name: combo.name,
+                combo_item_ids: (combo.combo_item_ids || []).map((item) => ({
+                    id: item.id,
+                    name: item.product_id.display_name,
+                    extra_price: item.extra_price || 0,
+                    _record: item, // raw record needed for computeComboItems
+                })),
+            }));
+
+        if (!comboGroups.length) {
+            return await super.addProductToOrder(product);
+        }
 
         // makeAwaitable wraps the dialog.add() pattern to return a promise.
         // getPayload is called by the popup's confirm() method.
@@ -74,23 +95,10 @@ patch(ProductScreen.prototype, {
 
         // ── Smart grouping ───────────────────────────────────────────────────
         // Each element of instancePayloads = one menu instance:
-        //   [{ combo_item_id: <record>, configuration: {...}, qty: 1 }, ...]
+        //   [{ combo_item_id: <record>, configuration: {...} }, ...]
         //
         // We group instances with identical item selections into one order line
         // with qty > 1, and create separate lines for different selections.
-        //
-        // Example: 5 menus where mains = 3 Milanesa + 1 Spaghetti + 1 Salmon
-        //          beverages = 2 Coca + 2 Agua + 1 Fanta (sequential assignment)
-        //
-        // Sequential pairing:
-        //   i=0: Milanesa + Coca   ─┐ identical
-        //   i=1: Milanesa + Coca   ─┘ → qty=2
-        //   i=2: Milanesa + Agua       → qty=1
-        //   i=3: Spaghetti + Agua      → qty=1
-        //   i=4: Salmon + Fanta        → qty=1
-        //
-        // Result: 4 parent order lines instead of 5.
-
         const groupedInstances = this._groupIdenticalInstances(instancePayloads);
 
         const order = this.pos.get_order();
@@ -108,6 +116,7 @@ patch(ProductScreen.prototype, {
             );
 
             // Build the combo_line_ids payload exactly as pos_store.js does natively.
+            // Sub-lines always have qty=1 (each represents one unique combo configuration).
             const comboLineIds = comboPrices.map((cp) => [
                 "create",
                 {
@@ -117,7 +126,7 @@ patch(ProductScreen.prototype, {
                     price_unit: cp.price_unit,
                     price_type: "original",
                     order_id: order,
-                    qty: qty, // sub-line qty matches the grouped parent qty
+                    qty: 1,
                     attribute_value_ids: (cp.attribute_value_ids || []).map((attr) => ["link", attr]),
                     custom_attribute_value_ids: Object.entries(
                         cp.attribute_custom_values || {}
