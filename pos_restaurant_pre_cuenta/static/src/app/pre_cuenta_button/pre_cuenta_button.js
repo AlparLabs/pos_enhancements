@@ -43,47 +43,68 @@ export class PreCuentaButton extends Component {
      */
     buildGroupedOrderlines(order) {
         const fmt = this.env.utils.formatCurrency;
-        const rows = [];
+
+        // ── Pass 1: accumulate raw numeric values per product name ──────────────
+        // Key: productName   Value: { qty (number), priceTotal (number), unit, customerNote, isComboGroup }
+        const groupMap = new Map();
 
         for (const line of order.getSortedOrderlines()) {
-            // Skip children — they are already folded into the parent row.
+            // Skip combo children — folded into the parent row.
             if (line.combo_parent_id) {
                 continue;
             }
 
-            if (line.combo_line_ids && line.combo_line_ids.length > 0) {
-                // ── Combo parent: collapse all lines (parent + children) ──
-                // Sum price_subtotal_incl (tax-included line total) across
-                // the entire combo tree.
-                const allLines = line.getAllLinesInCombo();
-                const comboTotal = allLines.reduce(
-                    (sum, l) => sum + (l.price_subtotal_incl || 0),
-                    0
-                );
+            let productName, numQty, numPrice, unit, customerNote, isComboGroup;
 
-                rows.push({
-                    productName: line.get_full_product_name(),
-                    qty: line.get_quantity_str(),
-                    unit: line.product_id.uom_id ? line.product_id.uom_id.name : "",
-                    price: fmt(comboTotal),
-                    customerNote: line.get_customer_note() || "",
-                    isComboGroup: true,
-                });
+            if (line.combo_line_ids && line.combo_line_ids.length > 0) {
+                // ── Combo parent: collapse the entire combo tree ──
+                const allLines = line.getAllLinesInCombo();
+                numPrice = allLines.reduce((sum, l) => sum + (l.price_subtotal_incl || 0), 0);
+                productName = line.get_full_product_name();
+                numQty = line.get_quantity();
+                unit = line.product_id.uom_id ? line.product_id.uom_id.name : "";
+                customerNote = line.get_customer_note() || "";
+                isComboGroup = true;
             } else {
-                // ── Regular (non-combo) line ──
-                const d = line.getDisplayData();
-                rows.push({
-                    productName: d.productName,
-                    qty: d.qty,
-                    unit: d.unit,
-                    price: d.price,
-                    customerNote: d.customerNote,
-                    isComboGroup: false,
+                // ── Regular line ──
+                numPrice = line.price_subtotal_incl || 0;
+                productName = line.get_full_product_name();
+                numQty = line.get_quantity();
+                unit = line.product_id.uom_id ? line.product_id.uom_id.name : "";
+                customerNote = line.get_customer_note() || "";
+                isComboGroup = false;
+            }
+
+            // Merge into the map: same productName → add qty and price.
+            if (groupMap.has(productName)) {
+                const entry = groupMap.get(productName);
+                entry.numQty += numQty;
+                entry.numPrice += numPrice;
+                // Append distinct customer notes
+                if (customerNote && !entry.customerNote.includes(customerNote)) {
+                    entry.customerNote = entry.customerNote
+                        ? `${entry.customerNote}; ${customerNote}`
+                        : customerNote;
+                }
+            } else {
+                groupMap.set(productName, {
+                    productName, numQty, numPrice, unit, customerNote, isComboGroup,
                 });
             }
         }
 
-        return rows;
+        // ── Pass 2: format and return as display rows ────────────────────────────
+        return [...groupMap.values()].map((entry) => ({
+            productName: entry.productName,
+            // Format qty: show as integer when whole, or with up to 3 decimals
+            qty: entry.numQty % 1 === 0
+                ? entry.numQty.toFixed(0)
+                : parseFloat(entry.numQty.toFixed(3)).toString(),
+            unit: entry.unit,
+            price: fmt(entry.numPrice),
+            customerNote: entry.customerNote,
+            isComboGroup: entry.isComboGroup,
+        }));
     }
 
     async click() {
@@ -126,6 +147,18 @@ export class PreCuentaButton extends Component {
             },
             { webPrintFallback: true }
         );
+
+        // ── Mark the table as "Pre-Cuenta printed" ───────────────────────────────
+        // pre_cuenta_printed is declared by pos_restaurant_table_status.
+        // The optional-chaining check makes this a no-op when that module is absent,
+        // so pos_restaurant_pre_cuenta can be used standalone without it.
+        if ('pre_cuenta_printed' in order) {
+            order.update({ pre_cuenta_printed: true });
+            if (typeof order.id === "number") {
+                this.pos.addPendingOrder([order.id]);
+            }
+        }
+        // ─────────────────────────────────────────────────────────────────────────
     }
 }
 
