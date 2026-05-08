@@ -66,7 +66,7 @@
                 <!-- Item row: name + price + +/- controls -->
                 <div class="d-flex align-items-center justify-content-between"
                   t-att-style="canIncrement(combo.id) ? 'cursor: pointer;' : ''"
-                  t-on-click="() => { if(canIncrement(combo.id)) this.increment(combo.id, item.id); }">
+                  t-on-click="() => canIncrement(combo.id) ? this.increment(combo.id, item.id) : null">
                   <div class="flex-grow-1 me-2">
                     <span class="fw-semibold"><t t-esc="item.name"/></span>
                     <span t-if="item.extra_price > 0" class="badge bg-warning text-dark ms-2" style="font-size: 0.65rem;">
