@@ -125,6 +125,15 @@
                 </div>
             </t>
 
+            <!-- ── 9. Safety Margin (Anti-Cut) ── -->
+            <!-- 
+                This empty space forces the thermal printer to feed the paper 
+                past the physical cutting blade. Even if the logo fails to load offline 
+                and the height is miscalculated, this margin absorbs the error so the 
+                TOTAL and orderlines are never cut.
+            -->
+            <div style="height: 20px; width: 100%;"/>
+
         </div>
     </t>
 </templates>
