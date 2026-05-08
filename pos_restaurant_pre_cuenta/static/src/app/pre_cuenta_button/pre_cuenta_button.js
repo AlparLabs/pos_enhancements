@@ -53,10 +53,10 @@ export class PreCuentaButton extends Component {
         // To prevent the thermal printer from cutting early due to slow image loads,
         // we inject the base64 logo that Odoo already pre-loaded into memory during
         // POS startup. This is 100% instantaneous, offline-safe, and uses 0 network.
-        if (headerData.company?.id && this.pos.company_logo_base64) {
+        if (headerData.company?.id && this.pos.company?.logo) {
             headerData.company = {
                 ...headerData.company,
-                logoDataUrl: this.pos.company_logo_base64,
+                logoDataUrl: `data:image/png;base64,${this.pos.company.logo}`,
             };
         }
         // ─────────────────────────────────────────────────────────────────────────
