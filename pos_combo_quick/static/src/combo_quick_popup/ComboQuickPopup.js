@@ -132,7 +132,14 @@ export class ComboQuickPopup extends Component {
         });
     }
 
+    /** True when every combo group has its quantity slots filled (attrs optional). */
     get allGroupsComplete() {
+        if (this.state.totalQty === 0) return false;
+        return this.props.comboGroups.every((combo) => this.isGroupComplete(combo.id));
+    }
+
+    /** True when every combo group has qty filled AND all selected attrs chosen. */
+    get allGroupsAttrComplete() {
         if (this.state.totalQty === 0) return false;
         return this.props.comboGroups.every((combo) => this.isGroupFullyComplete(combo.id));
     }
@@ -175,7 +182,7 @@ export class ComboQuickPopup extends Component {
     // ─── Confirm ──────────────────────────────────────────────────────────────
 
     confirm() {
-        if (!this.allGroupsComplete) return;
+        if (!this.allGroupsComplete) return; // qty must be filled; attrs are optional
 
         const instances = [];
         for (let i = 0; i < this.state.totalQty; i++) {
