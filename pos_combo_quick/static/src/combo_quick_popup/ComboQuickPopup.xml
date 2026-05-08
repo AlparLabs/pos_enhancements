@@ -64,7 +64,9 @@
                 t-att-class="state.qty[combo.id][item.id] > 0 ? 'selected' : ''">
 
                 <!-- Item row: name + price + +/- controls -->
-                <div class="d-flex align-items-center justify-content-between">
+                <div class="d-flex align-items-center justify-content-between"
+                  t-att-style="canIncrement(combo.id) ? 'cursor: pointer;' : ''"
+                  t-on-click="() => { if(canIncrement(combo.id)) this.increment(combo.id, item.id); }">
                   <div class="flex-grow-1 me-2">
                     <span class="fw-semibold"><t t-esc="item.name"/></span>
                     <span t-if="item.extra_price > 0" class="badge bg-warning text-dark ms-2" style="font-size: 0.65rem;">
@@ -74,7 +76,7 @@
                   <div class="d-flex align-items-center gap-2 flex-shrink-0">
                     <button class="btn btn-sm btn-outline-danger"
                       t-att-disabled="state.qty[combo.id][item.id] === 0 ? true : undefined"
-                      t-on-click="() => this.decrement(combo.id, item.id)">
+                      t-on-click.stop="() => this.decrement(combo.id, item.id)">
                       <i class="fa fa-minus"/>
                     </button>
                     <span class="fw-bold" style="min-width: 20px; text-align: center;"
@@ -84,7 +86,7 @@
                     <button class="btn btn-sm"
                       t-att-class="'btn-outline-' + (canIncrement(combo.id) ? 'success' : 'secondary')"
                       t-att-disabled="!canIncrement(combo.id) ? true : undefined"
-                      t-on-click="() => this.increment(combo.id, item.id)">
+                      t-on-click.stop="() => this.increment(combo.id, item.id)">
                       <i class="fa fa-plus"/>
                     </button>
                   </div>
