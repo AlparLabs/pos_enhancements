@@ -1,7 +1,6 @@
 /** @odoo-module **/
 
 import { Component } from "@odoo/owl";
-import { Orderline } from "@point_of_sale/app/generic_components/orderline/orderline";
 
 /**
  * PreCuentaReceipt — OWL component for the restaurant pre-bill.
@@ -12,9 +11,10 @@ import { Orderline } from "@point_of_sale/app/generic_components/orderline/order
  */
 export class PreCuentaReceipt extends Component {
     static template = "pos_restaurant_pre_cuenta.PreCuentaReceipt";
-    static components = { Orderline };
+    static components = {};
     static props = {
         data: Object,
         formatCurrency: Function,
     };
 }
+
