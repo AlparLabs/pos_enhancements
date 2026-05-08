@@ -162,7 +162,8 @@ patch(ProductScreen.prototype, {
             );
 
             // Build the combo_line_ids payload exactly as pos_store.js does natively.
-            // Sub-lines always have qty=1 (each represents one unique combo configuration).
+            // Sub-lines carry the same qty as the parent so pricing is correct when
+            // multiple identical menus are grouped into a single order line.
             const comboLineIds = comboPrices.map((cp) => [
                 "create",
                 {
@@ -172,7 +173,7 @@ patch(ProductScreen.prototype, {
                     price_unit: cp.price_unit,
                     price_type: "original",
                     order_id: order,
-                    qty: 1,
+                    qty,                     // ← matches parent qty (fixes multi-unit pricing)
                     attribute_value_ids: (cp.attribute_value_ids || []).map((attr) => ["link", attr]),
                     custom_attribute_value_ids: Object.entries(
                         cp.attribute_custom_values || {}

@@ -25,13 +25,13 @@
       <div t-if="state.totalQty > 0" class="mb-3">
         <div class="d-flex justify-content-between align-items-center mb-1">
           <small class="text-muted">Progreso de selección</small>
-          <small class="fw-bold" t-att-class="allGroupsComplete ? 'text-success' : 'text-secondary'">
+          <small class="fw-bold" t-att-class="allGroupsAttrComplete ? 'text-success' : (allGroupsComplete ? 'text-warning' : 'text-secondary')">
             <t t-esc="progressPercent"/>%
           </small>
         </div>
         <div class="progress" style="height: 8px; border-radius: 4px;">
           <div class="progress-bar"
-            t-att-class="allGroupsComplete ? 'bg-success' : 'bg-primary'"
+            t-att-class="allGroupsAttrComplete ? 'bg-success' : 'bg-primary'"
             role="progressbar"
             t-att-style="'width: ' + progressPercent + '%; transition: width 0.25s ease;'"
             t-att-aria-valuenow="progressPercent"
@@ -42,7 +42,7 @@
       <!-- ── Step 2: One card per combo group ── -->
       <t t-foreach="props.comboGroups" t-as="combo" t-key="combo.id">
         <div class="combo-quick-group card mb-3"
-          t-att-class="isGroupFullyComplete(combo.id) ? 'border-success combo-quick-group-done' : 'border-light'">
+          t-att-class="isGroupFullyComplete(combo.id) ? 'border-success combo-quick-group-done' : (isGroupComplete(combo.id) ? 'border-warning' : 'border-light')">
 
           <!-- Group header -->
           <div class="card-header d-flex justify-content-between align-items-center py-2">
@@ -148,12 +148,14 @@
           Cancelar
         </button>
         <button
-          t-att-class="'btn btn-lg fw-bold ' + (allGroupsComplete ? 'btn-success' : 'btn-secondary')"
+          t-att-class="'btn btn-lg fw-bold ' + (allGroupsAttrComplete ? 'btn-success' : (allGroupsComplete ? 'btn-warning' : 'btn-secondary'))"
           t-att-disabled="!allGroupsComplete ? true : undefined"
           t-on-click="confirm">
           <i class="fa fa-check me-2"/>
           Agregar
-          <span class="mx-1 badge bg-white text-success fs-6" t-if="allGroupsComplete">
+          <span class="mx-1 badge bg-white fs-6"
+            t-att-class="allGroupsAttrComplete ? 'text-success' : 'text-warning'"
+            t-if="allGroupsComplete">
             <t t-esc="state.totalQty"/>
           </span>
           menú<t t-if="state.totalQty !== 1">s</t> a la orden
