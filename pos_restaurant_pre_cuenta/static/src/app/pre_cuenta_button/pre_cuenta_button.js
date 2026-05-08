@@ -39,8 +39,6 @@ export class PreCuentaButton extends Component {
         const headerData = this.pos.getReceiptHeaderData(order);
 
         // ── Waiter injection (optional) ──────────────────────────────────────────
-        // order.waiter_id only exists when pos_restaurant_waiter is installed.
-        // If not installed, waiter_id is undefined → condition is false → no crash.
         if (order.waiter_id) {
             headerData.waiter_name = order.waiter_id.name;
         }
@@ -51,9 +49,19 @@ export class PreCuentaButton extends Component {
             headerData
         );
 
-        // Keep headerData as a nested sub-object — same pattern as pos_retail_pre_ticket.
-        // A flat spread (...headerData, ...exportData) can cause key collisions where
-        // exportData.company overwrites headerData.company, breaking the logo and contact info.
+        // ── Logo preload ──────────────────────────────────────────────────────────
+        // To prevent the thermal printer from cutting early due to slow image loads,
+        // we inject the base64 logo that Odoo already pre-loaded into memory during
+        // POS startup. This is 100% instantaneous, offline-safe, and uses 0 network.
+        if (headerData.company?.id && this.pos.company_logo_base64) {
+            headerData.company = {
+                ...headerData.company,
+                logoDataUrl: this.pos.company_logo_base64,
+            };
+        }
+        // ─────────────────────────────────────────────────────────────────────────
+
+        // Keep headerData as a nested sub-object to avoid collisions
         const receiptData = {
             ...exportData,
             headerData: headerData,

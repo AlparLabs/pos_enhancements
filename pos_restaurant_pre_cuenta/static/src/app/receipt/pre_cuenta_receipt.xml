@@ -10,7 +10,13 @@
                     pos_retail_pre_ticket. This avoids relying on a pre-computed string
                     that could be undefined if this.pos.company.id was not yet resolved.
                 -->
-                <img t-attf-src="/web/image?model=res.company&amp;id={{props.data.headerData.company.id}}&amp;field=logo"
+                <!--
+                    Use the preloaded base64 data URL when available (set by PreCuentaButton
+                    to avoid the race condition between image load and window.print()).
+                    Fall back to the regular /web/image URL if for some reason it was skipped.
+                -->
+                <img t-att-src="props.data.headerData.company.logoDataUrl ||
+                                ('/web/image?model=res.company&amp;id=' + props.data.headerData.company.id + '&amp;field=logo')"
                      alt="Logo" class="pos-receipt-logo"/>
                 <div class="pos-receipt-contact text-center mt-1">
                     <div t-if="props.data.headerData.company.name"
