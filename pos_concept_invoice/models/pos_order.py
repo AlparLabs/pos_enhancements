@@ -36,6 +36,18 @@ class PosOrder(models.Model):
             ('company_id', '=', self.env.company.id),
         ], limit=1)
 
+        # Fallback to a non-included 21% tax (common in l10n_ar)
+        if not tax:
+            tax = self.env['account.tax'].search([
+                ('type_tax_use', '=', 'sale'),
+                ('amount', '=', 21.0),
+                ('company_id', '=', self.env.company.id),
+            ], limit=1)
+            
+        price_unit = order.amount_total
+        if tax and not tax.price_include:
+            price_unit = order.amount_total / (1 + tax.amount / 100.0)
+
         account = concept_product.property_account_income_id or concept_product.categ_id.property_account_income_categ_id
         if not account:
             account = self.env['account.account'].search([
@@ -56,6 +68,7 @@ class PosOrder(models.Model):
                 'product_id': concept_product.id,
                 'account_id': account.id,
                 'tax_ids': [(6, 0, tax.ids)] if tax else [(5,)],
+                'price_unit': price_unit,
             }
         }
         order.with_context(**ctx)._generate_pos_order_invoice()
@@ -77,7 +90,7 @@ class PosOrder(models.Model):
                 'product_id': ctx['product_id'],
                 'account_id': ctx['account_id'],
                 'quantity': 1.0,
-                'price_unit': self.amount_total,
+                'price_unit': ctx.get('price_unit', self.amount_total),
                 'tax_ids': ctx['tax_ids'],
             })]
         return super()._prepare_invoice_lines()
