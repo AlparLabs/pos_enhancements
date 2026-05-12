@@ -1,0 +1,25 @@
+.concept-invoice-btn {
+    width: 100%;
+    margin-bottom: 0.5rem;
+    border-color: #6366f1;
+    color: #4f46e5;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+    transition: background 0.15s ease, color 0.15s ease;
+
+    i {
+        opacity: 0.8;
+    }
+
+    &:hover:not(:disabled) {
+        background: #6366f1;
+        color: #fff;
+        border-color: #6366f1;
+    }
+
+    &.disabled,
+    &:disabled {
+        opacity: 0.4;
+        cursor: not-allowed;
+    }
+}
