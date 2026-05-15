@@ -4,7 +4,8 @@ import { ReceiptScreen } from "@point_of_sale/app/screens/receipt_screen/receipt
 import { OrderReceipt } from "@point_of_sale/app/screens/receipt_screen/receipt/order_receipt";
 import { ConceptInvoicePopup } from "@pos_concept_invoice/app/concept_invoice_popup/concept_invoice_popup";
 import { patch } from "@web/core/utils/patch";
-import { useService, useTrackedAsync } from "@web/core/utils/hooks";
+import { useService } from "@web/core/utils/hooks";
+import { useTrackedAsync } from "@point_of_sale/app/utils/hooks";
 
 patch(ReceiptScreen.prototype, {
     setup() {
