@@ -5,6 +5,8 @@ import { useTrackedAsync } from "@point_of_sale/app/utils/hooks";
 import { PaymentScreen } from "@point_of_sale/app/screens/payment_screen/payment_screen";
 import { ReceiptScreen } from "@point_of_sale/app/screens/receipt_screen/receipt_screen";
 import { PosOrder } from "@point_of_sale/app/models/pos_order";
+import { PosOrderline } from "@point_of_sale/app/models/pos_order_line";
+import { formatCurrency } from "@point_of_sale/app/models/utils/currency";
 import { OrderReceipt } from "@point_of_sale/app/screens/receipt_screen/receipt/order_receipt";
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -152,5 +154,24 @@ patch(ReceiptScreen.prototype, {
             },
             { webPrintFallback: true }
         );
+    },
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Patch 4: PosOrderline.getDisplayData
+//
+// Show the full combo unit price on the parent line instead of $0.00.
+// getComboTotalPrice() already calculates at qty=1, so it is the per-unit value.
+// ─────────────────────────────────────────────────────────────────────────────
+patch(PosOrderline.prototype, {
+    getDisplayData() {
+        const data = super.getDisplayData(...arguments);
+        if (this.combo_line_ids?.length > 0) {
+            const total = this.getComboTotalPrice?.();
+            if (total !== undefined) {
+                data.unitPrice = formatCurrency(total, this.currency);
+            }
+        }
+        return data;
     },
 });
