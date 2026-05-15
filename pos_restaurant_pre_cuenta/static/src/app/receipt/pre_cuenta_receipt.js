@@ -6,14 +6,16 @@ import { patch } from "@web/core/utils/patch";
 import { PosOrderline } from "@point_of_sale/app/models/pos_order_line";
 import { formatCurrency } from "@point_of_sale/app/models/utils/currency";
 
-// Show the full combo unit price on the parent line instead of $0.00.
+// Fix combo parent line price display: show correct unit price and line total.
+// getComboTotalPrice() uses get_all_prices(1) so it is always per-unit.
 patch(PosOrderline.prototype, {
     getDisplayData() {
         const data = super.getDisplayData(...arguments);
         if (this.combo_line_ids?.length > 0) {
-            const total = this.getComboTotalPrice?.();
-            if (total !== undefined) {
-                data.unitPrice = formatCurrency(total, this.currency);
+            const unitTotal = this.getComboTotalPrice?.();
+            if (unitTotal !== undefined) {
+                data.unitPrice = formatCurrency(unitTotal, this.currency);
+                data.price = formatCurrency(unitTotal * this.qty, this.currency);
             }
         }
         return data;
