@@ -9,12 +9,10 @@ patch(ReceiptScreen.prototype, {
     setup() {
         super.setup(...arguments);
         this.orm = useService("orm");
-        this.invoiceService = useService("account_move");
     },
 
     get isConceptInvoiceDisabled() {
         const order = this.currentOrder;
-        // Disable if there's no order, or no lines, or it's already invoiced
         return !order || order.lines.length === 0 || order.account_move || order.is_to_invoice();
     },
 
@@ -26,32 +24,35 @@ patch(ReceiptScreen.prototype, {
         this.dialog.add(ConceptInvoicePopup, {
             order: order,
             onConfirm: async ({ concept, partnerId }) => {
+                let result;
                 try {
-                    // Call backend to generate concept invoice
-                    const result = await this.orm.call(
+                    result = await this.orm.call(
                         "pos.order",
                         "create_concept_invoice",
                         [order.uuid, concept, partnerId || false]
                     );
-
-                    this.notification.add(
-                        `✓ Factura ${result.invoice_name} generada correctamente`,
-                        { type: "success", sticky: false }
-                    );
-
-                    // Update UI state so the invoice is linked and we don't allow duplicates
-                    order.account_move = result.invoice_id;
-                    order.set_to_invoice(true);
-
-                    // Download PDF
-                    if (result.invoice_id) {
-                        await this.invoiceService.downloadPdf(result.invoice_id);
-                    }
-
                 } catch (error) {
                     this.notification.add(
                         error?.data?.message || "Error al generar la factura concepto.",
                         { type: "danger", sticky: true }
+                    );
+                    return;
+                }
+
+                this.notification.add(
+                    `✓ Factura ${result.invoice_name} generada correctamente`,
+                    { type: "success", sticky: false }
+                );
+
+                order.account_move = result.invoice_id;
+                order.set_to_invoice(true);
+
+                // Open PDF in a new tab — separate from invoice creation so a
+                // download failure never triggers the error notification above.
+                if (result.invoice_id) {
+                    window.open(
+                        `/report/pdf/account.report_invoice/${result.invoice_id}`,
+                        "_blank"
                     );
                 }
             },
