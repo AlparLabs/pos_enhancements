@@ -167,9 +167,10 @@ patch(PosOrderline.prototype, {
     getDisplayData() {
         const data = super.getDisplayData(...arguments);
         if (this.combo_line_ids?.length > 0) {
-            const total = this.getComboTotalPrice?.();
-            if (total !== undefined) {
-                data.unitPrice = formatCurrency(total, this.currency);
+            const unitTotal = this.getComboTotalPrice?.();
+            if (unitTotal !== undefined) {
+                data.unitPrice = formatCurrency(unitTotal, this.currency);
+                data.price = formatCurrency(unitTotal * this.qty, this.currency);
             }
         }
         return data;

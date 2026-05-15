@@ -17,10 +17,12 @@ patch(PosOrderline.prototype, {
         const data = super.getDisplayData(...arguments);
 
         // If this line is a combo parent (has children), inject the total price.
+        // getComboTotalPrice() uses get_all_prices(1) — a per-unit value — so
+        // multiply by qty to get the correct line total for data.price.
         if (this.combo_line_ids?.length > 0) {
-            const total = this.getComboTotalPrice?.();
-            if (total !== undefined) {
-                data.price = formatCurrency(total, this.currency);
+            const unitTotal = this.getComboTotalPrice?.();
+            if (unitTotal !== undefined) {
+                data.price = formatCurrency(unitTotal * this.qty, this.currency);
             }
         }
 
