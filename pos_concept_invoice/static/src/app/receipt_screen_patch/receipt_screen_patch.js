@@ -57,18 +57,49 @@ patch(ReceiptScreen.prototype, {
         const invoiceId = order?.account_move;
         if (!invoiceId) return;
 
+        // Fetch AR fiscal data (EMISOR, RECEPTOR, CAE, QR, etc.)
         try {
-            const data = await this.orm.call(
+            const arData = await this.orm.call(
                 "pos.order",
                 "get_l10n_ar_receipt_data_by_move",
                 [invoiceId]
             );
-            if (data) order.l10n_ar_data = data;
+            if (arData) order.l10n_ar_data = arData;
         } catch (e) {
             console.warn("[concept_invoice] Could not fetch AR receipt data:", e);
         }
 
+        // Fetch the concept invoice lines to replace the POS order lines.
+        // The receipt must show the single concept line, not the original products.
+        let conceptLines = null;
+        try {
+            const rawLines = await this.orm.call(
+                "pos.order",
+                "get_concept_invoice_receipt_lines",
+                [invoiceId]
+            );
+            if (rawLines?.length) {
+                const fmt = this.env.utils.formatCurrency;
+                conceptLines = rawLines.map((l) => ({
+                    ...l,
+                    qty: String(l.qty % 1 === 0 ? l.qty.toFixed(2) : l.qty),
+                    unitPrice: fmt(l.unitPrice),
+                    price: fmt(l.price),
+                    price_without_discount: fmt(l.price_without_discount),
+                    discount: l.discount ? String(l.discount) : "",
+                }));
+            }
+        } catch (e) {
+            console.warn("[concept_invoice] Could not fetch concept invoice lines:", e);
+        }
+
         const receiptData = this.pos.orderExportForPrinting(order);
+
+        // Replace POS order lines with the concept invoice lines.
+        if (conceptLines) {
+            receiptData.orderlines = conceptLines;
+        }
+
         await this.pos.printer.print(
             OrderReceipt,
             { data: receiptData, formatCurrency: this.env.utils.formatCurrency, basic_receipt: false },

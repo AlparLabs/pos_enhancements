@@ -78,6 +78,36 @@ class PosOrder(models.Model):
             'invoice_name': order.account_move.name,
         }
 
+    @api.model
+    def get_concept_invoice_receipt_lines(self, invoice_id):
+        """
+        Returns the invoice lines of a concept invoice formatted for display
+        in the POS receipt Orderline component. Called by _printConceptInvoiceReceipt
+        to replace the original POS order lines with the single concept line.
+        Returns a list of dicts matching the shape of PosOrderline.getDisplayData().
+        """
+        move = self.env['account.move'].sudo().browse(invoice_id)
+        if not move.exists():
+            return []
+        lines = []
+        for line in move.invoice_line_ids.filtered(lambda l: l.display_type == 'product'):
+            lines.append({
+                'productName': line.name or '',
+                'qty': line.quantity,
+                'unit': line.product_uom_id.name if line.product_uom_id else '',
+                'unitPrice': line.price_unit,
+                'price': abs(line.price_total),
+                'discount': line.discount or 0,
+                'customerNote': '',
+                'internalNote': '',
+                'comboParent': '',
+                'packLotLines': [],
+                'taxGroupLabels': '',
+                'oldUnitPrice': '',
+                'price_without_discount': line.price_unit,
+            })
+        return lines
+
     def _prepare_invoice_lines(self):
         """
         Override to inject our single concept line when generating a concept invoice,
