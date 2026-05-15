@@ -2,11 +2,21 @@
 <templates id="template" xml:space="preserve">
     <t t-inherit="point_of_sale.ReceiptScreen" t-inherit-mode="extension" owl="1">
         <xpath expr="//div[hasclass('receipt-options')]" position="inside">
-            <button class="button btn btn-lg btn-primary w-100 py-3 mt-2" 
-                    t-on-click="clickConceptInvoice" 
+            <button class="button btn btn-lg btn-primary w-100 py-3 mt-2"
+                    t-on-click="clickConceptInvoice"
                     t-att-disabled="isConceptInvoiceDisabled">
-                <i class="fa fa-file-text-o me-1" /> Factura Concepto
+                <i class="fa fa-file-text-o me-1"/> Factura Concepto
             </button>
+            <div t-if="currentOrder.account_move and !currentOrder.is_to_invoice()"
+                 class="d-flex gap-1 mt-1">
+                <button class="button btn btn-lg btn-warning w-100 py-3"
+                        t-on-click="() => doConceptPrint.call()"
+                        title="Imprimir comprobante fiscal de factura concepto">
+                    <i t-attf-class="fa {{ doConceptPrint.status === 'loading' ? 'fa-fw fa-spin fa-circle-o-notch' : 'fa-file-text-o' }} me-1"/>
+                    <t t-if="doConceptPrint.status === 'loading'">Imprimiendo...</t>
+                    <t t-else="">Imprimir Factura Concepto</t>
+                </button>
+            </div>
         </xpath>
     </t>
 </templates>

@@ -14,7 +14,7 @@
     'author': 'AlparData',
     'website': 'https://www.alpardata.com.ar',
     'license': 'LGPL-3',
-    'depends': ['point_of_sale', 'account', 'product'],
+    'depends': ['point_of_sale', 'account', 'product', 'pos_l10n_ar_receipt'],
     'data': [
         'data/product_data.xml',
     ],
