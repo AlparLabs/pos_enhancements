@@ -45,7 +45,6 @@ patch(ReceiptScreen.prototype, {
                 );
 
                 order.account_move = result.invoice_id;
-                order.set_to_invoice(true);
 
                 // Open PDF in a new tab — separate from invoice creation so a
                 // download failure never triggers the error notification above.
