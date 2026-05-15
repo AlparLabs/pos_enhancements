@@ -117,9 +117,16 @@ class PosMercadoPagoWebhook(http.Controller):
             _logger.warning('merchant_order webhook: could not resolve external_reference for resource %s', resource_id)
             return http.Response('OK', status=200)
 
-        # Validate signature with matched payment method secret key (best-effort)
+        # Validate signature with matched payment method secret key (best-effort).
+        # For merchant_order webhooks the signature id is the notification id from
+        # data['id'] or the query param, not the merchant_order resource id.
         if matched_pm.mp_webhook_secret_key:
-            webhook_id = resource_id
+            webhook_id = (
+                data.get('id')
+                or request.params.get('data.id')
+                or request.params.get('id')
+                or resource_id
+            )
             signed_template = f"id:{webhook_id};request-id:{x_request_id};ts:{ts};"
             cyphed = hmac.new(
                 matched_pm.mp_webhook_secret_key.encode(),
