@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!--
+        Generic service product used as the backing product for concept invoice lines.
+        The cashier's entered text overrides the name on each invoice line.
+        Taxes are intentionally left empty here — the backend method applies
+        IVA 21% ventas (price_include=True) dynamically at invoice creation time.
+        The income account should be configured on this product after installation.
+    -->
+    <record id="product_concept" model="product.product">
+        <field name="name">Concepto</field>
+        <field name="type">service</field>
+        <field name="sale_ok" eval="True"/>
+        <field name="purchase_ok" eval="False"/>
+        <field name="list_price">0.0</field>
+        <field name="taxes_id" eval="[(5, 0, 0)]"/>
+    </record>
+</odoo>
