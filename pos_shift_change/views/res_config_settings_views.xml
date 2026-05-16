@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+    <record id="res_config_settings_view_form_shift_change" model="ir.ui.view">
+        <field name="name">res.config.settings.view.form.inherit.pos_shift_change</field>
+        <field name="model">res.config.settings</field>
+        <field name="inherit_id" ref="pos_restaurant.res_config_settings_view_form"/>
+        <field name="arch" type="xml">
+            <setting id="floor_and_table_map" position="after">
+                <setting
+                    id="pos_shift_change_enabled"
+                    string="Shift Change"
+                    help="Allow closing the session while transferring open (draft) table orders to the next shift instead of cancelling them."
+                    invisible="not pos_module_pos_restaurant"
+                >
+                    <field name="pos_pos_shift_change_enabled" widget="boolean_toggle"/>
+                </setting>
+            </setting>
+        </field>
+    </record>
+</odoo>
