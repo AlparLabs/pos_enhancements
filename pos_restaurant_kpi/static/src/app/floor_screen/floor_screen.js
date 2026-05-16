@@ -84,7 +84,7 @@ patch(FloorScreen.prototype, {
         return Math.round(totalMinutes / activeOrders.length);
     },
     openKpiDashboard() {
-        this.env.services.dialog.add(KpiDashboardModal, {
+        this.dialog.add(KpiDashboardModal, {
             occupancyRate: this.occupancyRate,
             turnoverRate: this.turnoverRate,
             openAmount: this.openAmount,
