@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+    <t t-name="pos_restaurant_waiter.WaiterPopup">
+        <Dialog title="title" size="'md'" contentClass="'waiter-popup'">
+
+            <div class="waiter-search-bar mb-3">
+                <div class="input-group">
+                    <span class="input-group-text bg-transparent border-end-0">
+                        <i class="fa fa-search text-muted"/>
+                    </span>
+                    <input
+                        t-ref="search"
+                        type="text"
+                        class="form-control border-start-0 ps-0"
+                        t-att-placeholder="labelSearch"
+                        t-model="state.searchQuery"
+                    />
+                </div>
+            </div>
+
+            <t t-if="props.currentWaiter">
+                <div class="waiter-current-banner d-flex align-items-center gap-2 p-2 mb-3 rounded-3">
+                    <i class="fa fa-user-circle waiter-current-icon" style="font-size: 1.5em;"/>
+                    <div class="flex-grow-1">
+                        <div class="waiter-current-label" t-esc="labelCurrentlyAssigned"/>
+                        <div class="waiter-current-name" t-esc="props.currentWaiter.name"/>
+                    </div>
+                    <i class="fa fa-check-circle waiter-current-icon"/>
+                </div>
+            </t>
+
+            <div class="waiter-employee-grid">
+                <t t-if="filteredEmployees.length === 0">
+                    <div class="text-center text-muted py-5">
+                        <i class="fa fa-user-slash fa-3x mb-3 d-block opacity-50"/>
+                        <span class="fs-6" t-esc="labelNoWaiters"/>
+                    </div>
+                </t>
+                <t t-foreach="filteredEmployees" t-as="employee" t-key="employee.id">
+                    <button
+                        t-attf-class="waiter-employee-card {{ isSelected(employee) ? 'selected' : '' }}"
+                        t-on-click="() => this.selectEmployee(employee)"
+                    >
+                        <div class="waiter-avatar" t-attf-style="background-color: {{ getAvatarColor(employee) }}">
+                            <span t-esc="getInitials(employee.name)"/>
+                            <t t-if="isSelected(employee)">
+                                <div class="waiter-avatar-check">
+                                    <i class="fa fa-check"/>
+                                </div>
+                            </t>
+                        </div>
+                        <div class="waiter-employee-name" t-esc="employee.name"/>
+                    </button>
+                </t>
+            </div>
+
+            <t t-set-slot="footer">
+                <button class="btn btn-outline-secondary" t-on-click="skip">
+                    <t t-esc="labelSkip"/>
+                </button>
+                <button
+                    class="btn btn-primary ms-2"
+                    t-att-disabled="!state.selectedEmployee"
+                    t-on-click="confirm"
+                >
+                    <i class="fa fa-check me-1"/>
+                    <t t-esc="labelConfirm"/>
+                </button>
+            </t>
+        </Dialog>
+    </t>
+</templates>
