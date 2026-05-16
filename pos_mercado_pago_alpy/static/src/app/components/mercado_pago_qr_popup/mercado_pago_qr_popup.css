@@ -1,0 +1,150 @@
+/* ─────────────────────────────────────────────────────────────────────────
+   Mercado Pago QR Popup — POS overlay styles
+   ───────────────────────────────────────────────────────────────────────── */
+
+.mercadopago-qr-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    background: rgba(0, 0, 0, 0.72);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    animation: mp-qr-fade-in 0.25s ease;
+}
+
+@keyframes mp-qr-fade-in {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+}
+
+.mercadopago-qr-card {
+    background: #ffffff;
+    border-radius: 20px;
+    padding: 36px 32px 28px;
+    max-width: 420px;
+    width: 90%;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+    animation: mp-qr-slide-up 0.3s ease;
+}
+
+@keyframes mp-qr-slide-up {
+    from { transform: translateY(30px); opacity: 0; }
+    to   { transform: translateY(0);    opacity: 1; }
+}
+
+.mercadopago-qr-header {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+}
+
+.mercadopago-qr-logo {
+    height: 32px;
+    object-fit: contain;
+    margin-bottom: 4px;
+}
+
+.mercadopago-qr-title {
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: #1a1a2e;
+    margin: 0;
+}
+
+.mercadopago-qr-subtitle {
+    font-size: 0.9rem;
+    color: #666;
+    margin: 0;
+    line-height: 1.4;
+}
+
+.mercadopago-qr-image-wrapper {
+    position: relative;
+    width: 260px;
+    height: 260px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 3px solid #009ee3;
+    border-radius: 16px;
+    overflow: hidden;
+    background: #f8fafc;
+}
+
+.mercadopago-qr-image {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    display: block;
+    padding: 8px;
+}
+
+.mercadopago-qr-spinner,
+.mercadopago-qr-error {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    color: #009ee3;
+}
+
+.mercadopago-qr-error { color: #e53935; }
+
+.mercadopago-qr-amount-wrapper {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+}
+
+.mercadopago-qr-amount-label {
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #888;
+}
+
+.mercadopago-qr-amount {
+    font-size: 2rem;
+    font-weight: 800;
+    color: #009ee3;
+    letter-spacing: -0.02em;
+}
+
+.mercadopago-qr-waiting {
+    font-size: 0.85rem;
+    color: #666;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.mercadopago-qr-waiting .fa-spin { color: #009ee3; }
+
+.mercadopago-qr-actions { width: 100%; }
+
+.mercadopago-qr-cancel-btn {
+    width: 100%;
+    padding: 10px;
+    border-radius: 10px;
+    font-size: 0.95rem;
+    font-weight: 600;
+    border: 2px solid #ddd;
+    background: transparent;
+    color: #555;
+    transition: background 0.2s, color 0.2s, border-color 0.2s;
+}
+
+.mercadopago-qr-cancel-btn:hover {
+    background: #fce4e4;
+    border-color: #e53935;
+    color: #e53935;
+}
