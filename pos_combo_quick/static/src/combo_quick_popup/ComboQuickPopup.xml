@@ -1,0 +1,165 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+  <t t-name="pos_combo_quick.ComboQuickPopup">
+    <Dialog title="props.productTemplate.display_name + ' — Selección Rápida'" size="'lg'">
+
+      <!-- ── Step 1: Total quantity selector ── -->
+      <div class="combo-quick-qty-section mb-4">
+        <label class="form-label fw-bold fs-6 text-muted text-uppercase">
+          <i class="fa fa-hashtag me-1"/>
+          ¿Cuántos menús?
+        </label>
+        <div class="d-flex gap-2 flex-wrap mt-2">
+          <t t-foreach="[1,2,3,4,5,6,7,8,9,10]" t-as="n" t-key="n">
+            <button
+              t-att-class="'btn btn-lg fw-bold combo-quick-qty-btn ' + (state.totalQty === n ? 'btn-primary active' : 'btn-outline-secondary')"
+              style="min-width: 52px; min-height: 52px;"
+              t-on-click="() => this.setTotalQty(n)">
+              <t t-esc="n"/>
+            </button>
+          </t>
+        </div>
+      </div>
+
+      <!-- ── Progress bar ── -->
+      <div t-if="state.totalQty > 0" class="mb-3">
+        <div class="d-flex justify-content-between align-items-center mb-1">
+          <small class="text-muted">Progreso de selección</small>
+          <small class="fw-bold" t-att-class="allGroupsAttrComplete ? 'text-success' : (allGroupsComplete ? 'text-warning' : 'text-secondary')">
+            <t t-esc="progressPercent"/>%
+          </small>
+        </div>
+        <div class="progress" style="height: 8px; border-radius: 4px;">
+          <div class="progress-bar"
+            t-att-class="allGroupsAttrComplete ? 'bg-success' : 'bg-primary'"
+            role="progressbar"
+            t-att-style="'width: ' + progressPercent + '%; transition: width 0.25s ease;'"
+            t-att-aria-valuenow="progressPercent"
+            aria-valuemin="0" aria-valuemax="100"/>
+        </div>
+      </div>
+
+      <!-- ── Step 2: One card per combo group ── -->
+      <t t-foreach="props.comboGroups" t-as="combo" t-key="combo.id">
+        <div class="combo-quick-group card mb-3"
+          t-att-class="isGroupFullyComplete(combo.id) ? 'border-success combo-quick-group-done' : (isGroupComplete(combo.id) ? 'border-warning' : 'border-light')">
+
+          <!-- Group header -->
+          <div class="card-header d-flex justify-content-between align-items-center py-2">
+            <div class="d-flex align-items-center gap-2">
+              <i t-att-class="'fa fa-circle fa-xs ' + (isGroupFullyComplete(combo.id) ? 'text-success' : 'text-muted')"/>
+              <span class="fw-bold"><t t-esc="combo.name"/></span>
+            </div>
+            <span t-att-class="'badge rounded-pill fs-6 ' + (isGroupComplete(combo.id) ? 'bg-success' : 'bg-secondary')">
+              <t t-esc="getGroupTotal(combo.id)"/>
+              <span class="opacity-75"> / <t t-esc="state.totalQty"/></span>
+            </span>
+          </div>
+
+          <!-- Items list -->
+          <div class="card-body pb-2">
+            <t t-foreach="combo.combo_item_ids" t-as="item" t-key="item.id">
+              <div t-if="state.qty[combo.id][item.id] > 0 or canIncrement(combo.id)"
+                class="combo-quick-item border rounded-2 mb-2 p-2"
+                t-att-class="state.qty[combo.id][item.id] > 0 ? 'selected' : ''">
+
+                <!-- Item row: name + price + +/- controls -->
+                <div class="d-flex align-items-center justify-content-between">
+                  <div class="flex-grow-1 me-2">
+                    <span class="fw-semibold"><t t-esc="item.name"/></span>
+                    <span t-if="item.extra_price > 0" class="badge bg-warning text-dark ms-2" style="font-size: 0.65rem;">
+                      +<t t-esc="item.extra_price"/>
+                    </span>
+                  </div>
+                  <div class="d-flex align-items-center gap-2 flex-shrink-0">
+                    <button class="btn btn-sm btn-outline-danger"
+                      t-att-disabled="state.qty[combo.id][item.id] === 0 ? true : undefined"
+                      t-on-click="() => this.decrement(combo.id, item.id)">
+                      <i class="fa fa-minus"/>
+                    </button>
+                    <span class="fw-bold" style="min-width: 20px; text-align: center;"
+                      t-att-class="state.qty[combo.id][item.id] > 0 ? 'text-success' : 'text-muted'">
+                      <t t-esc="state.qty[combo.id][item.id]"/>
+                    </span>
+                    <button class="btn btn-sm"
+                      t-att-class="'btn-outline-' + (canIncrement(combo.id) ? 'success' : 'secondary')"
+                      t-att-disabled="!canIncrement(combo.id) ? true : undefined"
+                      t-on-click="() => this.increment(combo.id, item.id)">
+                      <i class="fa fa-plus"/>
+                    </button>
+                  </div>
+                </div>
+
+                <!-- ── Per-unit attribute selectors ───────────────────────── -->
+                <div t-if="state.qty[combo.id][item.id] > 0 and item.attribute_lines and item.attribute_lines.length > 0"
+                  class="combo-quick-attrs mt-2 pt-2 border-top">
+
+                  <t t-foreach="state.attrs[combo.id][item.id]" t-as="unitAttrs" t-key="unitAttrs_index">
+                    <div class="d-flex align-items-start gap-2 mb-1 py-1"
+                      t-att-class="unitAttrs_index > 0 ? 'border-top' : ''">
+
+                      <!-- Unit label + completion icon -->
+                      <div class="flex-shrink-0 d-flex align-items-center gap-1" style="min-width: 65px;">
+                        <i t-att-class="'fa fa-xs ' + (isUnitAttrComplete(unitAttrs) ? 'fa-check-circle text-success' : 'fa-circle-o text-warning')"/>
+                        <small class="text-muted fw-bold" style="font-size: 0.7rem;">
+                          Und. <t t-esc="unitAttrs_index + 1"/>
+                        </small>
+                      </div>
+
+                      <!-- Attribute chips per attribute line -->
+                      <div class="flex-grow-1">
+                        <t t-foreach="item.attribute_lines" t-as="attrLine" t-key="attrLine.id">
+                          <div class="d-flex flex-wrap gap-1 mb-1">
+                            <small class="text-muted me-1" style="font-size: 0.65rem; line-height: 24px;">
+                              <t t-esc="attrLine.name"/>:
+                            </small>
+                            <t t-foreach="attrLine.values" t-as="val" t-key="val.id">
+                              <button
+                                t-att-class="'btn fw-semibold ' + (unitAttrs[attrLine.id] == val.id ? 'btn-primary' : 'btn-outline-secondary')"
+                                style="font-size: 0.72rem; padding: 2px 10px; border-radius: 20px; line-height: 1.4;"
+                                t-on-click="() => this.selectAttr(combo.id, item.id, unitAttrs_index, attrLine.id, val.id)">
+                                <t t-esc="val.name"/>
+                                <t t-if="val.price_extra > 0">
+                                  <span class="opacity-75 ms-1">(+<t t-esc="val.price_extra"/>)</span>
+                                </t>
+                              </button>
+                            </t>
+                          </div>
+                        </t>
+                      </div>
+
+                    </div>
+                  </t>
+                </div>
+
+              </div>
+            </t>
+          </div>
+
+        </div>
+      </t>
+
+      <!-- ── Footer ── -->
+      <t t-set-slot="footer">
+        <button class="btn btn-secondary btn-lg" t-on-click="props.close">
+          <i class="fa fa-times me-2"/>
+          Cancelar
+        </button>
+        <button
+          t-att-class="'btn btn-lg fw-bold ' + (allGroupsAttrComplete ? 'btn-success' : (allGroupsComplete ? 'btn-warning' : 'btn-secondary'))"
+          t-att-disabled="!allGroupsComplete ? true : undefined"
+          t-on-click="confirm">
+          <i class="fa fa-check me-2"/>
+          Agregar
+          <span class="mx-1 badge bg-white fs-6"
+            t-att-class="allGroupsAttrComplete ? 'text-success' : 'text-warning'"
+            t-if="allGroupsComplete">
+            <t t-esc="state.totalQty"/>
+          </span>
+          menú<t t-if="state.totalQty !== 1">s</t> a la orden
+        </button>
+      </t>
+
+    </Dialog>
+  </t>
+</templates>
