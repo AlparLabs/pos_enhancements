@@ -24,7 +24,7 @@ patch(PaymentScreen.prototype, {
             const order = this.currentOrder;
             const line = order.get_selected_paymentline?.() || order.payment_ids[order.payment_ids.length - 1];
 
-            const terminalDetails = await makeAwaitable(this.env.services.dialog, TerminalDetailsPopup, {
+            const terminalDetails = await makeAwaitable(this.dialog, TerminalDetailsPopup, {
                 title: "Detalles de Terminal",
                 startingValue: {
                     lot_number: "",
