@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates id="template" xml:space="preserve">
+    <t t-inherit="pos_restaurant.FloorScreen" t-inherit-mode="extension" owl="1">
+        <xpath expr="//div[hasclass('table')]" position="inside">
+            <t t-set="tableStatusStyle" t-value="getTableStatusStyle(table)"/>
+            <div
+                t-if="tableStatusStyle"
+                class="position-absolute top-0 start-0 w-100 h-100"
+                t-att-style="tableStatusStyle"
+            />
+        </xpath>
+    </t>
+</templates>
