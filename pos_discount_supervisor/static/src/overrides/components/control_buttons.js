@@ -75,6 +75,7 @@ async function requestSupervisorPin(pos, dialog, notification) {
 patch(ControlButtons.prototype, {
     setup() {
         super.setup(...arguments);
+        this.dialog = useService("dialog");
         this.notification = useService("notification");
     },
 
