@@ -5,12 +5,12 @@
     <t t-name="pos_restaurant_table_status.TableStatusButton" owl="1">
         <button
             t-if="isVisible"
-            class="btn btn-secondary btn-lg py-5"
-            t-att-class="{ 'btn-success': isVerified, 'btn-secondary': !isVerified }"
+            class="btn btn-lg py-5"
+            t-att-class="isVerified ? 'btn-success' : 'btn-secondary'"
             t-on-click="() => this.click()"
         >
             <i t-att-class="isVerified ? 'fa fa-check-circle me-2' : 'fa fa-circle-o me-2'"/>
-            <span t-esc="isVerified ? 'Verificado' : 'Verificar Mesa'"/>
+            <span t-esc="label"/>
         </button>
     </t>
 

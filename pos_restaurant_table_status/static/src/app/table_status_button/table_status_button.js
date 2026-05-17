@@ -2,6 +2,7 @@
 
 import { Component } from "@odoo/owl";
 import { usePos } from "@point_of_sale/app/store/pos_hook";
+import { _t } from "@web/core/l10n/translation";
 import { ControlButtons } from "@point_of_sale/app/screens/product_screen/control_buttons/control_buttons";
 
 export class TableStatusButton extends Component {
@@ -26,11 +27,12 @@ export class TableStatusButton extends Component {
         );
     }
 
-    /**
-     * Returns true when the current order is marked as verified.
-     */
     get isVerified() {
         return Boolean(this.currentOrder?.is_table_verified);
+    }
+
+    get label() {
+        return this.isVerified ? _t("Verificado") : _t("Verificar Mesa");
     }
 
     /**
