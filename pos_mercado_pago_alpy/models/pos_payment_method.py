@@ -111,11 +111,15 @@ class PosPaymentMethod(models.Model):
             "unit_measure": "unit",
             "external_code": "POS-SALE",
         }]
+        base_url = self.env['ir.config_parameter'].sudo().get_param('web.base.url', '')
+        notification_url = f"{base_url}/pos_mercado_pago_alpy/notification"
+
         order_payload = {
             "type": "qr",
             "total_amount": amount_str,
             "description": infos.get('title', 'Venta POS'),
             "external_reference": infos['external_reference'],
+            "notification_url": notification_url,
             "config": {
                 "qr": {"external_pos_id": record.mp_external_pos_id}
             },
@@ -190,9 +194,9 @@ class PosPaymentMethod(models.Model):
 
     def action_get_mp_pos_list(self):
         self.ensure_one()
-        if not self.mp_bearer_token:
+        if not self.sudo().mp_bearer_token:
             raise UserError(_("Please configure the Production User Token first."))
-        mercado_pago = MercadoPagoPosRequest(self.mp_bearer_token)
+        mercado_pago = MercadoPagoPosRequest(self.sudo().mp_bearer_token)
         resp = mercado_pago.call_mercado_pago("get", "/pos", {})
         if 'results' in resp and resp['results']:
             if len(resp['results']) == 1:

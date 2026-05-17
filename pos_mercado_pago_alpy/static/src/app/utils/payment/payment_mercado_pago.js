@@ -150,7 +150,6 @@ export class PaymentMercadoPago extends PaymentInterface {
             external_reference: extRef,
             title: `Orden POS #${order.sequence_number || order.uid}`,
             items: items,
-            notification_url: `${window.location.origin}/pos_mercado_pago_alpy/notification`,
         };
         return await this.env.services.orm.silent.call(
             "pos.payment.method",
@@ -348,6 +347,7 @@ export class PaymentMercadoPago extends PaymentInterface {
                 } catch (e) { /* ignore */ }
                 if (pollCount > 18) {
                     clearInterval(pollInterval);
+                    resolve(false);
                 }
             }, 5000);
         });
@@ -483,7 +483,7 @@ export class PaymentMercadoPago extends PaymentInterface {
         if (!("id" in this.mp_order)) return;
 
         let last_status_order = await this._getOrderStatus();
-        if (this.mp_order.id != last_status_order.id) return;
+        if (this.mp_order.id !== last_status_order.id) return;
 
         if (["closed", "processed", "finished", "canceled", "failed", "expired"].includes(last_status_order.status)) {
             return await handleFinishedPayment(last_status_order);
