@@ -1,4 +1,5 @@
 from odoo import models
+from odoo.tools.misc import formatLang as _format_lang
 
 
 class ReportSessionControl(models.AbstractModel):
@@ -10,8 +11,11 @@ class ReportSessionControl(models.AbstractModel):
         sale_details = self.env['report.point_of_sale.report_saledetails'].get_sale_details(
             session_ids=list(docids)
         )
+        env = self.env
         return {
             'docs': sessions,
             'currency': sessions[0].currency_id if sessions else self.env.company.currency_id,
+            # formatLang must be passed explicitly — it is NOT auto-injected in custom reports.
+            'formatLang': lambda amount, **kwargs: _format_lang(env, amount, **kwargs),
             **sale_details,
         }

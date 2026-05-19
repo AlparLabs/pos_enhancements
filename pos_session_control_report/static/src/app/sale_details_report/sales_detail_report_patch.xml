@@ -106,6 +106,20 @@
                                     <t t-esc="formatCurrency(payment['money_difference'], false)"/>
                                 </span>
                             </div>
+                            <!-- ── Movimientos IN / OUT ──────────────────── -->
+                            <t t-if="payment['cash_moves'] and payment['cash_moves'].length">
+                                <div class="pos-receipt-left-padding">
+                                    <em>Movimientos:</em>
+                                </div>
+                                <t t-foreach="payment['cash_moves']" t-as="move" t-key="move_index">
+                                    <div class="responsive-price pos-receipt-left-padding">
+                                        <span><t t-esc="move['name']"/></span>
+                                        <span class="pos-receipt-right-align">
+                                            <t t-esc="formatCurrency(move['amount'], false)"/>
+                                        </span>
+                                    </div>
+                                </t>
+                            </t>
                             <br/>
                         </t>
                     </t>
