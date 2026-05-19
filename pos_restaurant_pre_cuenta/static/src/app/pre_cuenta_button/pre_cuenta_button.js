@@ -75,6 +75,14 @@ export class PreCuentaButton extends Component {
             },
             { webPrintFallback: true }
         );
+
+        // If pos_restaurant_table_status is installed, flag the table as pre-cuenta printed.
+        if (order.pre_cuenta_printed !== undefined) {
+            order.update({ pre_cuenta_printed: true });
+            if (typeof order.id === "number") {
+                this.pos.addPendingOrder([order.id]);
+            }
+        }
     }
 }
 

@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates id="template" xml:space="preserve">
+
+    <!--
+        Adds a "Control Sesión" PDF button to the closing popup footer,
+        placed immediately after the existing "Daily Sale" button.
+    -->
+    <t t-inherit="point_of_sale.ClosePosPopup" t-inherit-mode="extension" owl="1">
+        <xpath expr="//button[@t-on-click='downloadSalesReport']" position="after">
+            <button
+                class="button icon btn btn-secondary"
+                t-on-click="downloadSessionControlReport"
+                t-att-class="this.ui.isSmall ? 'w-100' : 'btn-lg'"
+                title="Descargar resumen de control de sesión (pagos, descuentos, efectivo)">
+                Control Sesión
+                <i t-if="!this.ui.isSmall" class="fa fa-download" role="img"/>
+            </button>
+        </xpath>
+    </t>
+
+</templates>

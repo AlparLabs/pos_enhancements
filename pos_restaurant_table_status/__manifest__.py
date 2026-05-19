@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 {
     'name': 'POS Restaurant Table Status',
     'version': '18.0.1.0.0',
