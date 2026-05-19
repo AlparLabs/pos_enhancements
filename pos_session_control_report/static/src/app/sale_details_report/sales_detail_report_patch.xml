@@ -1,0 +1,143 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates id="template" xml:space="preserve">
+
+    <!--
+        Replaces the body of the standard POS Sales Detail receipt with a
+        condensed "session control" layout:
+
+          • Removes: Sold products, Refunded products, Taxes breakdown
+          • Keeps:   Payments summary
+          • Adds:    Discounts total, Cash Control (expected/counted/difference),
+                     Opening and Closing notes
+    -->
+    <t t-inherit="point_of_sale.SaleDetailsReport" t-inherit-mode="extension" owl="1">
+        <xpath expr="//div[@class='pos-receipt']" position="replace">
+            <div class="pos-receipt">
+
+                <!-- ── Header ─────────────────────────────────────────────── -->
+                <t t-if="pos.company_logo_base64">
+                    <img class="pos-receipt-logo" t-att-src="pos.company_logo_base64" alt="Logo"/>
+                    <br/>
+                </t>
+                <t t-if="!pos.company_logo_base64">
+                    <div class="pos-receipt-center-align">
+                        <h2 t-esc="pos.company.name"/>
+                    </div>
+                    <br/>
+                </t>
+
+                <div class="pos-receipt-center-align">
+                    <strong>CONTROL DE SESIÓN</strong>
+                </div>
+                <t t-if="session_name">
+                    <div class="pos-receipt-center-align">
+                        <t t-esc="session_name"/>
+                    </div>
+                </t>
+                <br/>
+                <div>------------------------</div>
+                <br/>
+
+                <!-- ── Pagos ──────────────────────────────────────────────── -->
+                <div><strong>PAGOS</strong></div>
+                <br/>
+                <t t-foreach="payments" t-as="payment" t-key="payment_index">
+                    <div class="responsive-price">
+                        <t t-esc="payment['name']"/>
+                        <span class="pos-receipt-right-align">
+                            <t t-esc="formatCurrency(payment['total'], false)"/>
+                        </span>
+                    </div>
+                </t>
+                <br/>
+                <div class="responsive-price">
+                    <strong>TOTAL</strong>
+                    <span class="pos-receipt-right-align">
+                        <strong><t t-esc="formatCurrency(currency['total_paid'], false)"/></strong>
+                    </span>
+                </div>
+                <br/>
+                <div>------------------------</div>
+                <br/>
+
+                <!-- ── Descuentos ─────────────────────────────────────────── -->
+                <div><strong>DESCUENTOS</strong></div>
+                <br/>
+                <div class="responsive-price">
+                    <span>Cantidad de órdenes</span>
+                    <span class="pos-receipt-right-align">
+                        <t t-esc="discount_number"/>
+                    </span>
+                </div>
+                <div class="responsive-price">
+                    <span>Monto total</span>
+                    <span class="pos-receipt-right-align">
+                        <t t-esc="formatCurrency(discount_amount, false)"/>
+                    </span>
+                </div>
+                <br/>
+                <div>------------------------</div>
+                <br/>
+
+                <!-- ── Control de efectivo ───────────────────────────────── -->
+                <t t-set="has_control" t-value="payments.some(p => p['count'])"/>
+                <t t-if="has_control">
+                    <div><strong>CONTROL DE EFECTIVO</strong></div>
+                    <br/>
+                    <t t-foreach="payments" t-as="payment" t-key="'ctrl_' + payment_index">
+                        <t t-if="payment['count']">
+                            <div><u><t t-esc="payment['name']"/></u></div>
+                            <div class="responsive-price">
+                                <span>Esperado</span>
+                                <span class="pos-receipt-right-align">
+                                    <t t-esc="formatCurrency(payment['final_count'], false)"/>
+                                </span>
+                            </div>
+                            <div class="responsive-price">
+                                <span>Contado</span>
+                                <span class="pos-receipt-right-align">
+                                    <t t-esc="formatCurrency(payment['money_counted'], false)"/>
+                                </span>
+                            </div>
+                            <div class="responsive-price"
+                                 t-att-style="payment['money_difference'] != 0 ? 'font-weight: bold;' : ''">
+                                <span>Diferencia</span>
+                                <span class="pos-receipt-right-align">
+                                    <t t-esc="formatCurrency(payment['money_difference'], false)"/>
+                                </span>
+                            </div>
+                            <br/>
+                        </t>
+                    </t>
+                    <div>------------------------</div>
+                    <br/>
+                </t>
+
+                <!-- ── Notas ─────────────────────────────────────────────── -->
+                <t t-if="opening_note or closing_note">
+                    <div><strong>NOTAS</strong></div>
+                    <br/>
+                    <t t-if="opening_note">
+                        <div>Apertura:</div>
+                        <div class="pos-receipt-left-padding"><t t-esc="opening_note"/></div>
+                        <br/>
+                    </t>
+                    <t t-if="closing_note">
+                        <div>Cierre:</div>
+                        <div class="pos-receipt-left-padding"><t t-esc="closing_note"/></div>
+                        <br/>
+                    </t>
+                    <div>------------------------</div>
+                    <br/>
+                </t>
+
+                <!-- ── Footer ────────────────────────────────────────────── -->
+                <div class="pos-receipt-order-data">
+                    <div><t t-esc="date"/></div>
+                </div>
+
+            </div>
+        </xpath>
+    </t>
+
+</templates>
