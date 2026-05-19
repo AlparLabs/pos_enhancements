@@ -44,24 +44,24 @@
                                             <tr t-att-class="payment.get('money_difference') and payment.get('money_difference') != 0 and 'table-warning' or ''">
                                                 <td><t t-esc="payment['name']"/></td>
                                                 <td class="text-end">
-                                                    <t t-esc="formatLang(payment['total'], currency_obj=currency)"/>
+                                                    <t t-esc="formatLang(payment['total'], currency_obj=currency_id)"/>
                                                 </td>
                                                 <td class="text-end">
                                                     <t t-if="payment.get('count')">
-                                                        <t t-esc="formatLang(payment.get('final_count', 0), currency_obj=currency)"/>
+                                                        <t t-esc="formatLang(payment.get('final_count', 0), currency_obj=currency_id)"/>
                                                     </t>
                                                     <t t-else="">—</t>
                                                 </td>
                                                 <td class="text-end">
                                                     <t t-if="payment.get('count')">
-                                                        <t t-esc="formatLang(payment.get('money_counted', 0), currency_obj=currency)"/>
+                                                        <t t-esc="formatLang(payment.get('money_counted', 0), currency_obj=currency_id)"/>
                                                     </t>
                                                     <t t-else="">—</t>
                                                 </td>
                                                 <td class="text-end"
                                                     t-att-style="payment.get('money_difference') and payment.get('money_difference') != 0 and 'color: red; font-weight: bold;' or ''">
                                                     <t t-if="payment.get('count')">
-                                                        <t t-esc="formatLang(payment.get('money_difference', 0), currency_obj=currency)"/>
+                                                        <t t-esc="formatLang(payment.get('money_difference', 0), currency_obj=currency_id)"/>
                                                     </t>
                                                     <t t-else="">—</t>
                                                 </td>
@@ -72,7 +72,7 @@
                                         <tr class="fw-bold">
                                             <td>TOTAL</td>
                                             <td class="text-end">
-                                                <t t-esc="formatLang(total_paid, currency_obj=currency)"/>
+                                                <t t-esc="formatLang(total_paid, currency_obj=currency_id)"/>
                                             </td>
                                             <td colspan="3"/>
                                         </tr>
@@ -96,7 +96,7 @@
                                         <tr>
                                             <td>Monto total de descuentos</td>
                                             <td class="text-end">
-                                                <t t-esc="formatLang(discount_amount, currency_obj=currency)"/>
+                                                <t t-esc="formatLang(discount_amount, currency_obj=currency_id)"/>
                                             </td>
                                         </tr>
                                     </tbody>
@@ -118,7 +118,7 @@
                                                     <tr>
                                                         <td><t t-esc="move['name']"/></td>
                                                         <td class="text-end">
-                                                            <t t-esc="formatLang(move['amount'], currency_obj=currency)"/>
+                                                            <t t-esc="formatLang(move['amount'], currency_obj=currency_id)"/>
                                                         </td>
                                                     </tr>
                                                 </t>

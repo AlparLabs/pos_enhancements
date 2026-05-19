@@ -12,9 +12,14 @@ class ReportSessionControl(models.AbstractModel):
             session_ids=list(docids)
         )
         env = self.env
+        # NOTE: sale_details already contains a 'currency' key which is a plain dict
+        # (symbol, position, total_paid, precision). We pass the actual res.currency
+        # recordset under 'currency_id' so formatLang receives a proper recordset with
+        # the .decimal_places attribute it needs.
+        currency_id = sessions[0].currency_id if sessions else self.env.company.currency_id
         return {
             'docs': sessions,
-            'currency': sessions[0].currency_id if sessions else self.env.company.currency_id,
+            'currency_id': currency_id,
             # formatLang must be passed explicitly — it is NOT auto-injected in custom reports.
             'formatLang': lambda amount, **kwargs: _format_lang(env, amount, **kwargs),
             **sale_details,
