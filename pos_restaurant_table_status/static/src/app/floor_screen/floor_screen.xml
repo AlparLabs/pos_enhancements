@@ -4,15 +4,17 @@
         Injects a full-coverage colour overlay inside each table tile based on
         order status flags:
 
-          • is_table_verified  → teal  overlay (#10B981, 85% opacity)
-          • pre_cuenta_printed → amber overlay (#F59E0B, 85% opacity)
+          • is_table_verified  → teal  overlay (#10B981, 82% opacity)
+          • pre_cuenta_printed → amber overlay (#F59E0B, 82% opacity)
 
-        The overlay is position-absolute, pointer-events: none, and sits above
-        the native table background but below the existing badges.
-        z-index: 1 keeps it under the time/waiter badges (z-index: 10).
+        The overlay is injected BEFORE the .label div (table number) inside
+        .info, so the number always renders on top via natural DOM order —
+        no z-index fight needed. The .info overflow:hidden + border-radius
+        already clips the overlay to the correct table shape, so no
+        border-radius is required on the overlay itself.
     -->
     <t t-inherit="pos_restaurant.FloorScreen" t-inherit-mode="extension" owl="1">
-        <xpath expr="//div[hasclass('table')]" position="inside">
+        <xpath expr="//div[hasclass('table')]//div[hasclass('label')]" position="before">
             <t t-set="tableStatusStyle" t-value="getTableStatusStyle(table)"/>
             <div
                 t-if="tableStatusStyle"
