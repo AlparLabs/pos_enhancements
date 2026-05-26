@@ -20,7 +20,7 @@ async function requestSupervisorPin(pos, dialog, notification) {
     if (!pos.config.module_pos_hr) {
         return true;
     }
-    const cashier = pos.get_cashier();
+    const cashier = pos.getCashier();
     if (cashier?._role === "manager") {
         return true;
     }

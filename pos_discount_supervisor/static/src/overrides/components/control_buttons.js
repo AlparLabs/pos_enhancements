@@ -32,7 +32,7 @@ async function requestSupervisorPin(pos, dialog, notification) {
     }
 
     // 2. If the current cashier is already a manager, allow freely
-    const cashier = pos.get_cashier();
+    const cashier = pos.getCashier();
     if (cashier?._role === "manager") {
         return true;
     }
