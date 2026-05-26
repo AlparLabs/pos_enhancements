@@ -10,7 +10,7 @@ patch(PosStore.prototype, {
         super.set_order(...arguments);
     },
     addCourse({ backendCourse } = {}) {
-        const order = this.get_order();
+        const order = this.getOrder();
         if (!order) {
             return;
         }
@@ -22,9 +22,9 @@ patch(PosStore.prototype, {
             name: backendCourse ? backendCourse.name : _t("Course ") + nextIdx,
         });
         let selectedCourse = course;
-        if (order.course_ids.length === 1 && order.get_orderlines().length > 0) {
+        if (order.course_ids.length === 1 && order.getOrderlines().length > 0) {
             // Assign existing order lines to the first course
-            order.get_orderlines().forEach((line) => (line.course_id = course));
+            order.getOrderlines().forEach((line) => (line.course_id = course));
             // Create a second empty course and select it
             selectedCourse = this.models["restaurant.order.course"].create({
                 order_id: order,

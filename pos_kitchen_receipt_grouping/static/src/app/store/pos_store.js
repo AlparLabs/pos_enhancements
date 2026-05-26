@@ -43,7 +43,7 @@ patch(PosStore.prototype, {
      * @returns {Promise<any>}
      */
     async getRenderedReceipt(order, title, lines, fullReceipt = false, diningModeUpdate) {
-        const orderlines = order.get_orderlines();
+        const orderlines = order.getOrderlines();
 
         // Build a lookup: uuid → orderline, for fast access
         const lineByUuid = {};

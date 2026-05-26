@@ -58,7 +58,7 @@ patch(PosStore.prototype, {
 
     _setPricelist(pricelist) {
         if (!pricelist) return;
-        const order = this.get_order();
+        const order = this.getOrder();
         if (!order) return;
 
         if (typeof order.set_pricelist === "function") {

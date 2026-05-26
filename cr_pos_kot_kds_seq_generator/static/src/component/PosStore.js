@@ -17,7 +17,7 @@ patch(PosStore.prototype, {
         let kotIsSet = false;
 
         // Loop through each order line to add KOT details
-        order.get_orderlines().forEach(orderline => {
+        order.getOrderlines().forEach(orderline => {
             if (!orderline.kot_is_set && !kotIsSet) {
                 orderline.kot_note = kotNumber;
                 orderline.kot_is_set = true;

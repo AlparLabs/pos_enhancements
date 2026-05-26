@@ -3,15 +3,16 @@
 import { Component } from "@odoo/owl";
 import { ReceiptHeader } from "@point_of_sale/app/screens/receipt_screen/receipt/receipt_header/receipt_header";
 import { Orderline } from "@point_of_sale/app/components/orderline/orderline";
+import { formatCurrency } from "@web/core/currency";
 
 export class PreTicketReceipt extends Component {
     static template = "pos_retail_pre_ticket.PreTicketReceipt";
-    static components = {
-        ReceiptHeader,
-        Orderline,
-    };
+    static components = { ReceiptHeader, Orderline };
     static props = {
-        data: { type: Object },
-        formatCurrency: { type: Function },
+        order: Object,
     };
+
+    formatCurrency(amount) {
+        return formatCurrency(amount, this.props.order.currency.id);
+    }
 }

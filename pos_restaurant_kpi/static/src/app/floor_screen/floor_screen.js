@@ -23,7 +23,7 @@ patch(FloorScreen.prototype, {
         }
         const totalAmount = this.pos.models["pos.order"]
             .filter((order) => order.state === "draft" && order.table_id)
-            .reduce((sum, order) => sum + order.get_total_with_tax(), 0);
+            .reduce((sum, order) => sum + order.priceIncl, 0);
         return totalAmount / customers;
     },
     /**
@@ -44,7 +44,7 @@ patch(FloorScreen.prototype, {
         }
         const totalAmount = this.pos.models["pos.order"]
             .filter((order) => order.state !== "draft" && order.state !== "cancel" && order.table_id)
-            .reduce((sum, order) => sum + order.get_total_with_tax(), 0);
+            .reduce((sum, order) => sum + order.priceIncl, 0);
         return totalAmount / customers;
     },
     get occupancyRate() {
@@ -68,7 +68,7 @@ patch(FloorScreen.prototype, {
     get openAmount() {
         return this.pos.models["pos.order"]
             .filter((order) => order.state === "draft" && order.table_id)
-            .reduce((sum, order) => sum + order.get_total_with_tax(), 0);
+            .reduce((sum, order) => sum + order.priceIncl, 0);
     },
     get avgTableTime() {
         const activeOrders = this.pos.models["pos.order"].filter((order) => order.state === "draft" && order.table_id);

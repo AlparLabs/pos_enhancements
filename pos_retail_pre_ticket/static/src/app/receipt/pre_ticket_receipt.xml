@@ -1,12 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <templates id="template" xml:space="preserve">
     <t t-name="pos_retail_pre_ticket.PreTicketReceipt" owl="1">
+        <t t-set="order" t-value="props.order"/>
         <div class="pos-receipt">
-            <ReceiptHeader data="props.data.headerData" />
-            <div class="pos-receipt-contact">
-                <strong><t t-esc="props.data.company_name" /></strong>
-            </div>
-            
+
+            <ReceiptHeader order="order"/>
+
             <div class="pos-receipt-center-align" style="font-weight: bold; font-size: 1.5em; margin-top: 10px; margin-bottom: 5px;">
                 PRE-TICKET
             </div>
@@ -14,30 +13,35 @@
                 No válido como factura
             </div>
 
-            <br />
-            <div t-if="props.data.partner" class="pos-receipt-contact">
-                Cliente: <t t-esc="props.data.partner.name" /><br/>
+            <br/>
+            <div t-if="order.partner_id" class="pos-receipt-contact">
+                Cliente: <t t-esc="order.partner_id.name"/><br/>
             </div>
-            <br />
+            <br/>
 
             <!-- Orderlines -->
             <div class="orderlines">
-                <t t-foreach="props.data.orderlines" t-as="line" t-key="line_index">
-                    <Orderline line="line" />
+                <t t-foreach="order.lines" t-as="line" t-key="line.uuid">
+                    <Orderline line="line" mode="'receipt'"/>
                 </t>
             </div>
 
-            <!-- Subtotal -->
-            <t t-set="taxIncluded" t-value="Math.abs(props.data.subtotal - props.data.amount_total) &lt;= 0.000001" />
-            <t t-if="!taxIncluded">
+            <!-- Subtotal + taxes (only shown when tax is not included in price) -->
+            <t t-set="taxTotals" t-value="order.prices.taxDetails"/>
+            <t t-if="taxTotals and taxTotals.has_tax_groups">
                 <div class="pos-receipt-right-align">--------</div>
                 <br/>
-                <div>Subtotal<span t-esc="props.formatCurrency(props.data.subtotal)" class="pos-receipt-right-align"/></div>
-                <t t-foreach="props.data.tax_details" t-as="tax" t-key="tax_index">
-                    <div class="responsive-price">
-                        <t t-esc="tax.tax.name" />
-                        <span t-esc="props.formatCurrency(tax.amount)" class="pos-receipt-right-align"/>
-                    </div>
+                <div class="d-flex">
+                    <span>Subtotal</span>
+                    <span t-esc="formatCurrency(order.priceExcl)" class="pos-receipt-right-align"/>
+                </div>
+                <t t-foreach="taxTotals.subtotals" t-as="subtotal" t-key="subtotal.name">
+                    <t t-foreach="subtotal.tax_groups" t-as="tax_group" t-key="tax_group.id">
+                        <div class="responsive-price">
+                            <t t-esc="tax_group.group_name"/>
+                            <span t-esc="formatCurrency(tax_group.tax_amount_currency)" class="pos-receipt-right-align"/>
+                        </div>
+                    </t>
                 </t>
             </t>
 
@@ -46,16 +50,16 @@
             <br/>
             <div class="pos-receipt-amount">
                 TOTAL
-                <span t-esc="props.formatCurrency(props.data.amount_total)" class="pos-receipt-right-align"/>
+                <span t-esc="formatCurrency(order.priceIncl)" class="pos-receipt-right-align"/>
             </div>
             <br/>
 
-            <!-- Print order barcode -->
-            <div t-if="props.data.name" class="pos-receipt-center-align">
+            <!-- Order barcode -->
+            <div t-if="order.name" class="pos-receipt-center-align">
                 <br/>
-                <img t-att-src="'/report/barcode/Code128/' + props.data.name" style="width:250px; height:50px;" alt="Barcode"/>
+                <img t-att-src="'/report/barcode/Code128/' + order.name" style="width:250px; height:50px;" alt="Barcode"/>
                 <br/>
-                <t t-esc="props.data.name" />
+                <t t-esc="order.name"/>
             </div>
 
         </div>

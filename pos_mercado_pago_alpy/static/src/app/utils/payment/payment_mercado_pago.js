@@ -30,7 +30,7 @@ export class PaymentMercadoPago extends PaymentInterface {
     // ── Find payment line ────────────────────────────────────────────────────
 
     _findPaymentLine(cid) {
-        const order = this.pos.get_order();
+        const order = this.pos.getOrder();
         if (!order) return undefined;
         if (cid) {
             return order.payment_ids.find((pl) => pl.uuid === cid);
@@ -41,7 +41,7 @@ export class PaymentMercadoPago extends PaymentInterface {
     // ── RPC helpers (Terminal Smart) ─────────────────────────────────────────
 
     async _createOrder(cid) {
-        const order = this.pos.get_order();
+        const order = this.pos.getOrder();
         const line = this._findPaymentLine(cid);
         if (!line) return null;
         const sessionId =
@@ -117,7 +117,7 @@ export class PaymentMercadoPago extends PaymentInterface {
     // ── RPC helpers (QR) ─────────────────────────────────────────────────────
 
     async _createQrOrder(cid) {
-        const order = this.pos.get_order();
+        const order = this.pos.getOrder();
         const line = this._findPaymentLine(cid);
         if (!line) return null;
         const sessionId =
@@ -127,7 +127,7 @@ export class PaymentMercadoPago extends PaymentInterface {
             this.pos.config?.current_session_id ||
             "0";
 
-        const items = order.get_orderlines().map((ol) => {
+        const items = order.getOrderlines().map((ol) => {
             const unitPrice = Math.round(ol.get_unit_price() * 100) / 100;
             const qty = ol.get_quantity ? ol.get_quantity() : (ol.quantity || 1);
             const total = Math.round(unitPrice * qty * 100) / 100;
@@ -187,7 +187,7 @@ export class PaymentMercadoPago extends PaymentInterface {
                 onCancel: () => {
                     const currentLine = this._findPaymentLine(this.pending_cid);
                     if (currentLine) {
-                        this.sendPaymentCancel(this.pos.get_order(), this.pending_cid);
+                        this.sendPaymentCancel(this.pos.getOrder(), this.pending_cid);
                     }
                 },
             },

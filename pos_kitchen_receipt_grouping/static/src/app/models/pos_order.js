@@ -12,7 +12,7 @@ patch(PosOrder.prototype, {
         let res = super.computeChanges(categories);
         
         const appendComboParentName = (changeList) => {
-            const orderlines = this.get_orderlines();
+            const orderlines = this.getOrderlines();
             
             for (let change of changeList) {
                 // Si es subproducto, agregar nota del padre

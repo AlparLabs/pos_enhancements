@@ -20,7 +20,7 @@ patch(PosStore.prototype, {
             return;
         }
 
-        const order = this.get_order();
+        const order = this.getOrder();
         if (order && order.lines.length === 0 && !order.finalized && !order.waiter_id) {
             await this.askWaiter(order);
         }

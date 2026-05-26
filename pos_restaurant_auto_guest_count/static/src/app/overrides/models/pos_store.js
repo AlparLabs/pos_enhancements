@@ -13,7 +13,7 @@ patch(PosStore.prototype, {
     async setTableFromUi(table, orderUuid = null) {
         await super.setTableFromUi(...arguments);
         if (this.config.module_pos_restaurant) {
-            const order = this.get_order();
+            const order = this.getOrder();
             // Prompt for guest count if the order is new (no lines) and hasn't been finalized.
             // Odoo 18 defaults guest count to 1, but we want to confirm it.
             if (order && order.lines.length === 0 && !order.finalized) {

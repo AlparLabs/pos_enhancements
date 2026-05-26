@@ -122,13 +122,13 @@ function buildReceiptData(line, order, pos, headerData) {
  * @param {object} env  – OWL component env (for formatCurrency)
  */
 export async function printBarTicketsForOrder(order, pos, printer, env) {
-    if (!order || order.get_orderlines().length === 0) {
+    if (!order || order.getOrderlines().length === 0) {
         return;
     }
 
     const headerData = pos.getReceiptHeaderData(order);
 
-    for (const line of order.get_orderlines()) {
+    for (const line of order.getOrderlines()) {
         // Skip if already printed at payment time
         if (!shouldSplitLine(line, pos) || line.bar_ticket_paid_and_printed) {
             continue;
@@ -167,13 +167,13 @@ export async function printBarTicketsForOrder(order, pos, printer, env) {
  * @param {object} env  – OWL component env (for formatCurrency)
  */
 export async function reprintBarTicketsForOrder(order, pos, printer, env) {
-    if (!order || order.get_orderlines().length === 0) {
+    if (!order || order.getOrderlines().length === 0) {
         return;
     }
 
     const headerData = pos.getReceiptHeaderData(order);
 
-    for (const line of order.get_orderlines()) {
+    for (const line of order.getOrderlines()) {
         if (!shouldSplitLine(line, pos)) {
             continue;
         }

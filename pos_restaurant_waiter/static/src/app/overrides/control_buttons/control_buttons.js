@@ -18,7 +18,7 @@ export class ChangeWaiterButton extends Component {
     }
 
     get currentOrder() {
-        return this.pos.get_order();
+        return this.pos.getOrder();
     }
 
     get currentWaiterName() {

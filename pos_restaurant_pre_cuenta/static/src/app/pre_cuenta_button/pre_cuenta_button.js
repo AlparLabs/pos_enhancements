@@ -16,7 +16,7 @@ export class PreCuentaButton extends Component {
     }
 
     get currentOrder() {
-        return this.pos.get_order();
+        return this.pos.getOrder();
     }
 
     get isVisible() {
@@ -26,43 +26,16 @@ export class PreCuentaButton extends Component {
         );
     }
 
+    /**
+     * Print a pre-cuenta (non-fiscal bill) for the current table order.
+     * @returns {Promise<void>}
+     */
     async click() {
         const order = this.currentOrder;
-        if (!order || order.get_orderlines().length === 0) {
+        if (!order || order.getOrderlines().length === 0) {
             return;
         }
-
-        const headerData = this.pos.getReceiptHeaderData(order);
-
-        if (order.waiter_id) {
-            headerData.waiter_name = order.waiter_id.name;
-        }
-
-        const exportData = order.export_for_printing(
-            this.pos.session._base_url,
-            headerData
-        );
-
-        if (headerData.company?.id && this.pos.company?.logo) {
-            headerData.company = {
-                ...headerData.company,
-                logoDataUrl: `data:image/png;base64,${this.pos.company.logo}`,
-            };
-        }
-
-        const receiptData = {
-            ...exportData,
-            headerData: headerData,
-        };
-
-        await this.printer.print(
-            PreCuentaReceipt,
-            {
-                data: receiptData,
-                formatCurrency: this.env.utils.formatCurrency,
-            },
-            { webPrintFallback: true }
-        );
+        await this.printer.print(PreCuentaReceipt, { order }, { webPrintFallback: true });
     }
 }
 

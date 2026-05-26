@@ -117,7 +117,7 @@ patch(ProductScreen.prototype, {
         if (!instancePayloads) return;
 
         const groupedInstances = this._groupIdenticalInstances(instancePayloads);
-        const order = this.pos.get_order();
+        const order = this.pos.getOrder();
 
         for (const { instanceConf, qty } of groupedInstances) {
             // Pass the product variant as required by computeComboItems in Odoo 19.

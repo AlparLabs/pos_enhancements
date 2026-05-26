@@ -23,7 +23,7 @@ export class BarReprintButton extends Component {
     }
 
     get currentOrder() {
-        return this.pos.get_order();
+        return this.pos.getOrder();
     }
 
     get isOrderFinalized() {
@@ -37,10 +37,10 @@ export class BarReprintButton extends Component {
      */
     get hasReprintableLines() {
         const order = this.currentOrder;
-        if (!order || order.get_orderlines().length === 0) {
+        if (!order || order.getOrderlines().length === 0) {
             return false;
         }
-        return order.get_orderlines().some(
+        return order.getOrderlines().some(
             (line) => shouldSplitLine(line, this.pos) && line.bar_ticket_paid_and_printed
         );
     }

@@ -93,7 +93,7 @@ patch(PosOrder.prototype, {
         }
     },
     removeCourse(course) {
-        const courseLines = this.get_orderlines().filter((l) => l.course_id?.uuid === course.uuid);
+        const courseLines = this.getOrderlines().filter((l) => l.course_id?.uuid === course.uuid);
         for (const line of courseLines) {
             line.course_id = false;
         }

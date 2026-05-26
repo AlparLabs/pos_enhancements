@@ -39,12 +39,12 @@ patch(PaymentScreen.prototype, {
             // Find and remove the surcharge product line added by this payment method
             const productId = line.payment_method.interest_product_id[0];
             const order = this.currentOrder;
-            const surchargeLine = order.get_orderlines().find(
+            const surchargeLine = order.getOrderlines().find(
                 (ol) => ol.product.id === productId && ol.price === (line.amount * (line.payment_method.interest_margin_pct / 100.0))
             );
             
             // To be safer, we can just remove all lines with this specific product
-            const linesToRemove = order.get_orderlines().filter((ol) => ol.product.id === productId);
+            const linesToRemove = order.getOrderlines().filter((ol) => ol.product.id === productId);
             for (const ol of linesToRemove) {
                 order.remove_orderline(ol);
             }

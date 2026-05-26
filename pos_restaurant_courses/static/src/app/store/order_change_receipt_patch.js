@@ -8,7 +8,7 @@ patch(PosOrder.prototype, {
     updateLastOrderChange() {
         super.updateLastOrderChange(...arguments);
         const changes = this.last_order_preparation_change?.lines || {};
-        for (const line of this.get_orderlines()) {
+        for (const line of this.getOrderlines()) {
             if (changes[line.preparationKey] && line.course_id) {
                 changes[line.preparationKey].course = {
                     id: line.course_id.uuid || line.course_id.id,
@@ -25,7 +25,7 @@ patch(PosStore.prototype, {
         const oldChanges = order.last_order_preparation_change?.lines || {};
         
         const enrichedLines = lines.map(line => {
-            const orderline = order.get_orderlines().find(l => l.uuid === line.uuid);
+            const orderline = order.getOrderlines().find(l => l.uuid === line.uuid);
             
             let course = { id: 0, name: "", sequence: 999 };
             if (orderline && orderline.course_id) {
