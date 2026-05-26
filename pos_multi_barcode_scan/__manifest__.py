@@ -1,14 +1,21 @@
-# -*- coding: utf-8 -*-
 {
     'name': 'POS Multi Barcode Scan',
-    'version': '18.0.1.0.0',
+    'version': '18.0.1.1.0',
     'category': 'Point of Sale',
     'summary': 'Scan a single QR code containing multiple barcodes (e.g. client and coupon)',
-    'description': 'Allows the POS barcode scanner to process a single string with multiple barcodes separated by a pipe (|).',
+    'description': (
+        'Allows the POS barcode scanner to process a single QR code containing multiple '
+        'barcodes separated by a configurable character (default: |). '
+        'The separator is configured directly on the Barcode Nomenclature.'
+    ),
     'author': 'AlparData',
     'depends': ['point_of_sale'],
+    'data': [
+        'views/barcode_nomenclature_views.xml',
+    ],
     'assets': {
         'point_of_sale._assets_pos': [
+            'pos_multi_barcode_scan/static/src/app/barcode_parser_patch.js',
             'pos_multi_barcode_scan/static/src/app/barcode_reader_patch.js',
         ],
     },
