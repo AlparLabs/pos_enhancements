@@ -3,7 +3,7 @@
 import { patch } from "@web/core/utils/patch";
 import { ProductScreen } from "@point_of_sale/app/screens/product_screen/product_screen";
 import { ComboQuickPopup } from "../combo_quick_popup/ComboQuickPopup";
-import { makeAwaitable } from "@point_of_sale/app/store/make_awaitable_dialog";
+import { makeAwaitable } from "@point_of_sale/app/utils/make_awaitable_dialog";
 import { computeComboItems } from "@point_of_sale/app/models/utils/compute_combo_items";
 
 /**

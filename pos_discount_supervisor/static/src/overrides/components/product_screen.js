@@ -5,8 +5,8 @@
 import { patch } from "@web/core/utils/patch";
 import { useService } from "@web/core/utils/hooks";
 import { ProductScreen } from "@point_of_sale/app/screens/product_screen/product_screen";
-import { NumberPopup } from "@point_of_sale/app/utils/input_popups/number_popup";
-import { makeAwaitable } from "@point_of_sale/app/store/make_awaitable_dialog";
+import { NumberPopup } from "@point_of_sale/app/components/popups/number_popup/number_popup";
+import { makeAwaitable } from "@point_of_sale/app/utils/make_awaitable_dialog";
 import { _t } from "@web/core/l10n/translation";
 
 // Same helper as control_buttons.js — checks `_role` (underscore prefix), not `role`

@@ -3,8 +3,8 @@
 /* global Sha1 */
 
 import { BarTicketReceipt } from "@pos_bar_single_ticket/app/receipt/bar_ticket_receipt";
-import { NumberPopup } from "@point_of_sale/app/utils/input_popups/number_popup";
-import { makeAwaitable } from "@point_of_sale/app/store/make_awaitable_dialog";
+import { NumberPopup } from "@point_of_sale/app/components/popups/number_popup/number_popup";
+import { makeAwaitable } from "@point_of_sale/app/utils/make_awaitable_dialog";
 import { _t } from "@web/core/l10n/translation";
 
 /**

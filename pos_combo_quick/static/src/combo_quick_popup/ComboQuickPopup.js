@@ -1,7 +1,7 @@
 /** @odoo-module **/
 
 import { Component, useState } from "@odoo/owl";
-import { usePos } from "@point_of_sale/app/store/pos_hook";
+import { usePos } from "@point_of_sale/app/hooks/pos_hook";
 import { Dialog } from "@web/core/dialog/dialog";
 
 /**

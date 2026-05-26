@@ -4,7 +4,7 @@ import { PaymentScreen } from "@point_of_sale/app/screens/payment_screen/payment
 import { patch } from "@web/core/utils/patch";
 import { useService } from "@web/core/utils/hooks";
 import { printBarTicketsForOrder } from "@pos_bar_single_ticket/app/utils/bar_ticket_utils";
-import { usePos } from "@point_of_sale/app/store/pos_hook";
+import { usePos } from "@point_of_sale/app/hooks/pos_hook";
 
 patch(PaymentScreen.prototype, {
     setup() {
