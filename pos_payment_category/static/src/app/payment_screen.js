@@ -7,11 +7,8 @@ import { useState } from "@odoo/owl";
 patch(PaymentScreen.prototype, {
     setup() {
         super.setup(...arguments);
-        // Track the actively clicked payment category inside the component's state
-        this.state = useState({
-            ...this.state,
-            activePaymentCategory: null,
-        });
+        // Track the actively selected payment category
+        this.state = useState({ activePaymentCategory: null });
     },
 
     /**

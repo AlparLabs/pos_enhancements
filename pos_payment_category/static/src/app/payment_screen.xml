@@ -17,9 +17,10 @@
             <attribute name="t-foreach">filteredPaymentMethods</attribute>
         </xpath>
 
-        <!-- Hide the native payment method button for category items -->
+        <!-- Hide the native payment method button for category items,
+             preserving the original cashier-role check for pay_later methods -->
         <xpath expr="//div[hasclass('paymentmethod')]" position="attributes">
-            <attribute name="t-if">!paymentMethod.is_category</attribute>
+            <attribute name="t-if">!paymentMethod.is_category and !(this.pos.cashier._role === 'minimal' and paymentMethod.type === 'pay_later')</attribute>
         </xpath>
 
         <!-- Render a folder button before the native div for category items -->
