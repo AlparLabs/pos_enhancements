@@ -5,6 +5,8 @@
         el loop de líneas planas por un agrupamiento por Categoría del POS.
         La secuencia se controla con el campo 'kitchen_sequence' de pos.category.
         Los productos Padre de Combo se ignoran; los subproductos se anotan con [Nombre Combo].
+        Las variantes de producto se muestran en negrita.
+        El mozo asignado se muestra en el encabezado.
     -->
     <t t-name="pos_kitchen_receipt_grouping.OrderChangeReceipt"
        t-inherit="point_of_sale.OrderChangeReceipt"
@@ -14,16 +16,23 @@
                 <t t-foreach="changedlines.changedByCategory" t-as="group" t-key="group.name">
                     <!-- Encabezado de categoría -->
                     <div class="pos-receipt-title text-center mb-1"
-                         style="font-size: 110%; border-bottom: 2px solid black; font-weight: bold; padding: 2px 0; letter-spacing: 0.05rem;">
+                         style="font-size: 130%; border-bottom: 2px solid black; font-weight: bold; padding: 2px 0; letter-spacing: 0.05rem;">
                         &#9658; <t t-esc="group.name"/>
                     </div>
                     <!-- Líneas de esta categoría -->
-                    <div t-foreach="group.lines" t-as="line" t-key="line_index" style="font-size: 120%;">
+                    <div t-foreach="group.lines" t-as="line" t-key="line_index" style="font-size: 140%;">
                         <div class="orderline mx-1">
                             <div class="d-flex medium">
                                 <span class="me-3" t-esc="line.quantity"/>
                                 <span class="product-name" t-esc="line.name"/>
                             </div>
+                            <t t-if="line.attribute_value_ids and line.attribute_value_ids.length">
+                                <div class="ms-3">
+                                    <t t-foreach="line.attribute_value_ids" t-as="attr" t-key="attr.id or attr_index">
+                                        <strong>- <t t-esc="attr.name"/></strong><br/>
+                                    </t>
+                                </div>
+                            </t>
                             <t t-if="line.note">
                                 <div class="pos-receipt-note ms-3">
                                     <t t-esc="line.note"/>
@@ -40,12 +49,19 @@
             </t>
             <!-- Fallback: lista plana si changedByCategory no está disponible -->
             <t t-else="">
-                <div t-foreach="changedlines" t-as="line" t-key="line_index" style="font-size: 120%;">
+                <div t-foreach="changedlines" t-as="line" t-key="line_index" style="font-size: 140%;">
                     <div class="orderline mx-1">
                         <div class="d-flex medium">
                             <span class="me-3" t-esc="line.quantity"/>
                             <span class="product-name" t-esc="line.name"/>
                         </div>
+                        <t t-if="line.attribute_value_ids and line.attribute_value_ids.length">
+                            <div class="ms-3">
+                                <t t-foreach="line.attribute_value_ids" t-as="attr" t-key="attr.id or attr_index">
+                                    <strong>- <t t-esc="attr.name"/></strong><br/>
+                                </t>
+                            </div>
+                        </t>
                         <t t-if="line.note">
                             <div class="pos-receipt-note ms-3">
                                 <t t-esc="line.note"/>
@@ -76,10 +92,13 @@
             <div class="o-employee-name" style="font-size: 78%;">
                 <span><t t-esc="changes.config_name"/> : <t t-esc="changes.time"/></span><br/>
                 <span>Por: <t t-esc="changes.employee_name"/></span>
+                <t t-if="changes.waiter_name">
+                    <br/><span>Mozo: <strong><t t-esc="changes.waiter_name"/></strong></span>
+                </t>
             </div>
         </xpath>
         <xpath expr="//span[@class='my-4']" position="replace">
-            <span class="my-4" style="font-size: 120%;">
+            <span class="my-4" style="font-size: 140%;">
                 <t t-if="changes.table_name">Mesa <strong><t t-esc="changes.table_name"/></strong></t>
                 <t t-if="changes.tracking_number" class="fw-light my-3"> # <strong><t t-esc="changes.tracking_number"/></strong></t>
             </span>
