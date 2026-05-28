@@ -16,5 +16,15 @@ class PosConfig(models.Model):
     )
 
     @api.model
-    def _load_pos_data_fields(self, config_id: int) -> list[str]:
-        return super()._load_pos_data_fields(config_id) + ['restrict_payment_to_manager']
+    def _load_pos_data_read(self, records, config) -> list[dict]:
+        """Include restrict_payment_to_manager in the POS session data.
+
+        pos.config fields are NOT loaded via _load_pos_data_fields (the base mixin returns []
+        and Odoo core adds extra fields directly in its own _load_pos_data_read override).
+        We follow the same pattern to avoid restricting the DB read and breaking other fields
+        like currency_id.
+        """
+        read_records = super()._load_pos_data_read(records, config)
+        if read_records:
+            read_records[0]['restrict_payment_to_manager'] = config.restrict_payment_to_manager
+        return read_records
