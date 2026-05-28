@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="pos_config_view_form_inherit_centralized_payment" model="ir.ui.view">
+        <field name="name">pos.config.view.form.inherit.centralized.payment</field>
+        <field name="model">pos.config</field>
+        <field name="inherit_id" ref="point_of_sale.pos_config_view_form"/>
+        <field name="arch" type="xml">
+            <!-- Add after the "Log in with Employees" setting, only visible when pos_hr is enabled -->
+            <xpath expr="//setting[field[@name='module_pos_hr']]" position="after">
+                <setting
+                    string="Centralized Payment"
+                    title="Restrict the Pay button to Manager-role cashiers. Use this for multi-terminal setups where only one station handles payments."
+                    invisible="not module_pos_hr">
+                    <field name="restrict_payment_to_manager"/>
+                </setting>
+            </xpath>
+        </field>
+    </record>
+</odoo>
