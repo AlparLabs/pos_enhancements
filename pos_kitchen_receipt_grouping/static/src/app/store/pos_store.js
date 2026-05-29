@@ -83,11 +83,17 @@ patch(PosStore.prototype, {
                 
                 const key = `${change.product_id}_${displayName}_${change.note || ''}_${change.customer_note || ''}`;
                 const existing = categoryMap[categName].lines.find(l => l.key === key);
-                
+
+                // Strip the "(Variant)" suffix from the display name — variants are shown
+                // separately in bold via attribute_value_ids to avoid duplication.
+                const baseName = (change.attribute_value_ids && change.attribute_value_ids.length)
+                    ? displayName.replace(/\s*\(.*\)$/, '').trim()
+                    : displayName;
+
                 if (existing) {
                     existing.quantity += change.quantity;
                 } else {
-                    categoryMap[categName].lines.push({ ...change, name: displayName, key: key });
+                    categoryMap[categName].lines.push({ ...change, name: baseName, key: key });
                 }
             }
 
@@ -95,6 +101,11 @@ patch(PosStore.prototype, {
         };
 
         if (lines) {
+            for (const line of lines) {
+                if (line.attribute_value_ids && line.attribute_value_ids.length) {
+                    line.baseName = line.name.replace(/\s*\(.*\)$/, '').trim();
+                }
+            }
             lines.changedByCategory = groupChangesByCategory(lines);
         }
 

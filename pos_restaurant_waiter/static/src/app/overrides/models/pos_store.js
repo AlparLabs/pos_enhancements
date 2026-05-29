@@ -7,6 +7,12 @@ import { makeAwaitable } from "@point_of_sale/app/store/make_awaitable_dialog";
 import { _t } from "@web/core/l10n/translation";
 
 patch(PosStore.prototype, {
+    getPrintingChanges(order, diningModeUpdate) {
+        const changes = super.getPrintingChanges(order, diningModeUpdate);
+        changes.waiter_name = order.waiter_id?.name || "";
+        return changes;
+    },
+
     /**
      * @override
      * After setTableFromUi completes (which includes the guest count popup from
