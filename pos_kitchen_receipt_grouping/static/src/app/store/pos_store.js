@@ -101,6 +101,11 @@ patch(PosStore.prototype, {
         };
 
         if (lines) {
+            for (const line of lines) {
+                if (line.attribute_value_ids && line.attribute_value_ids.length) {
+                    line.baseName = line.name.replace(/\s*\(.*\)$/, '').trim();
+                }
+            }
             lines.changedByCategory = groupChangesByCategory(lines);
         }
 
