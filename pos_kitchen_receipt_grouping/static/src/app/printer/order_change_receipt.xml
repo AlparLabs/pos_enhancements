@@ -54,7 +54,7 @@
                         <div class="d-flex medium">
                             <span class="me-3" t-esc="line.quantity"/>
                             <span class="product-name">
-                                <t t-esc="line.name"/>
+                                <t t-esc="(line.attribute_value_ids &amp;&amp; line.attribute_value_ids.length) ? line.name.replace(/\s*\(.*\)$/, '').trim() : line.name"/>
                                 <t t-if="line.attribute_value_ids and line.attribute_value_ids.length">
                                     <t t-foreach="line.attribute_value_ids" t-as="attr" t-key="attr.id or attr_index">
                                         <strong> (<t t-esc="attr.name"/>)</strong>
