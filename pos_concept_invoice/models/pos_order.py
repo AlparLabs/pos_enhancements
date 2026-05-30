@@ -86,7 +86,10 @@ class PosOrder(models.Model):
         to replace the original POS order lines with the single concept line.
         Returns a list of dicts matching the shape of PosOrderline.getDisplayData().
         """
-        move = self.env['account.move'].sudo().browse(invoice_id)
+        order = self.search([('account_move', '=', invoice_id)], limit=1)
+        if not order:
+            return []
+        move = order.account_move
         if not move.exists():
             return []
         lines = []

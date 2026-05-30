@@ -82,7 +82,7 @@ patch(ReceiptScreen.prototype, {
                 const fmt = this.env.utils.formatCurrency;
                 conceptLines = rawLines.map((l) => ({
                     ...l,
-                    qty: String(l.qty % 1 === 0 ? l.qty.toFixed(2) : l.qty),
+                    qty: l.qty % 1 === 0 ? String(l.qty) : l.qty.toFixed(2),
                     unitPrice: fmt(l.unitPrice),
                     price: fmt(l.price),
                     price_without_discount: fmt(l.price_without_discount),
