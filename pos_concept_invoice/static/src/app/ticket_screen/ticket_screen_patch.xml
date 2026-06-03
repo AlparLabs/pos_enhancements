@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates id="template" xml:space="preserve">
+
+    <!--
+        Adds a "Factura Concepto" button to the TicketScreen right-panel actions,
+        next to Details / Invoice / Print Receipt.
+        Only visible for finalized orders without an existing invoice.
+
+        In v18 this button lived on ReceiptScreen (removed in v19).
+        In v19 the TicketScreen is the correct location for post-payment actions
+        on synced orders — consistent with pos_bar_single_ticket's reprint button.
+    -->
+    <t t-name="pos_concept_invoice.TicketScreen"
+       t-inherit="point_of_sale.TicketScreen"
+       t-inherit-mode="extension">
+        <xpath expr="//div[hasclass('control-buttons')]" position="inside">
+            <button
+                t-if="this.isConceptInvoiceAvailable(_selectedSyncedOrder)"
+                class="control-button btn btn-info btn-lg lh-lg flex-grow-1 flex-shrink-1"
+                t-on-click="() => this.clickConceptInvoice(_selectedSyncedOrder)">
+                <i class="fa fa-file-text-o me-1" role="img"
+                   aria-label="Factura Concepto"
+                   title="Factura Concepto"/>
+                Factura Concepto
+            </button>
+        </xpath>
+    </t>
+
+</templates>

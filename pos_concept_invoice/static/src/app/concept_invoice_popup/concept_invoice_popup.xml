@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+
+    <t t-name="pos_concept_invoice.ConceptInvoicePopup" owl="1">
+        <Dialog title="'Factura por Concepto'">
+
+            <div class="pos-concept-invoice-popup">
+
+                <!-- ── Concept description ─────────────────────────────── -->
+                <div class="ci-field-group">
+                    <label class="ci-label" for="ci-concept">
+                        Concepto <span class="ci-required">*</span>
+                    </label>
+                    <textarea
+                        id="ci-concept"
+                        class="ci-textarea"
+                        placeholder="Ej: Servicios gastronómicos - Mesa 5"
+                        rows="3"
+                        t-model="state.concept"
+                    />
+                    <div t-if="!state.concept.trim()" class="ci-hint">
+                        Este texto aparecerá como descripción en la factura.
+                    </div>
+                </div>
+
+                <!-- ── Partner search ──────────────────────────────────── -->
+                <div class="ci-field-group">
+                    <label class="ci-label" for="ci-partner">
+                        Cliente <span class="ci-required">*</span>
+                    </label>
+
+                    <div class="ci-partner-wrap">
+                        <t t-if="state.partnerId">
+                            <div class="ci-partner-selected">
+                                <i class="fa fa-user-circle me-2"/>
+                                <span t-esc="state.partnerName"/>
+                                <button class="ci-clear-btn" t-on-click="clearPartner" title="Cambiar cliente">
+                                    <i class="fa fa-times"/>
+                                </button>
+                            </div>
+                        </t>
+
+                        <t t-else="">
+                            <div class="ci-search-box">
+                                <i class="fa fa-search ci-search-icon"/>
+                                <input
+                                    id="ci-partner"
+                                    type="text"
+                                    class="ci-input"
+                                    placeholder="Buscar cliente…"
+                                    t-att-value="state.partnerQuery"
+                                    t-on-input="onPartnerInput"
+                                    autocomplete="off"
+                                />
+                                <span t-if="state.searching" class="ci-spinner">
+                                    <i class="fa fa-spinner fa-spin"/>
+                                </span>
+                            </div>
+
+                            <t t-if="state.showResults">
+                                <div class="ci-results" t-if="state.searchResults.length">
+                                    <t t-foreach="state.searchResults" t-as="partner" t-key="partner.id">
+                                        <div class="ci-result-item"
+                                             t-on-click="() => this.selectPartner(partner)">
+                                            <i class="fa fa-user me-2"/>
+                                            <t t-esc="partner.name"/>
+                                        </div>
+                                    </t>
+                                </div>
+                                <div t-elif="!state.searching and state.partnerQuery.length >= 2"
+                                     class="ci-no-results">
+                                    No se encontró ningún cliente.
+                                </div>
+                            </t>
+                        </t>
+                    </div>
+                </div>
+
+            </div><!-- /.pos-concept-invoice-popup -->
+
+            <t t-set-slot="footer">
+                <button class="btn btn-secondary" t-on-click="props.close">
+                    Cancelar
+                </button>
+                <button
+                    class="btn btn-primary ms-2"
+                    t-att-disabled="!canConfirm"
+                    t-on-click="confirm"
+                >
+                    <i class="fa fa-file-text-o me-2"/>
+                    Generar Factura
+                </button>
+            </t>
+
+        </Dialog>
+    </t>
+
+</templates>
