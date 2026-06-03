@@ -29,6 +29,7 @@ export class ConceptInvoicePopup extends Component {
 
     setup() {
         this.orm = useService("orm");
+        this._searchTimeout = null;
 
         // Pre-fill partner from the POS order when available
         const orderPartner = this.props.order?.partner_id;
@@ -40,16 +41,19 @@ export class ConceptInvoicePopup extends Component {
             searchResults: [],
             searching: false,
             showResults: false,
+            loading: false,
         });
     }
 
     // ── Partner search ────────────────────────────────────────────────────────
 
-    async onPartnerInput(ev) {
+    onPartnerInput(ev) {
         const query = ev.target.value;
         this.state.partnerQuery = query;
         this.state.partnerId = false;       // clear selection while typing
         this.state.partnerName = "";
+
+        clearTimeout(this._searchTimeout);
 
         if (!query || query.trim().length < 2) {
             this.state.searchResults = [];
@@ -59,23 +63,26 @@ export class ConceptInvoicePopup extends Component {
 
         this.state.searching = true;
         this.state.showResults = true;
-        try {
-            this.state.searchResults = await this.orm.searchRead(
-                "res.partner",
-                [
-                    ["name", "ilike", query.trim()],
-                    "|",
-                    ["customer_rank", ">", 0],
-                    ["is_company", "=", true],
-                ],
-                ["id", "name"],
-                { limit: 8 }
-            );
-        } catch {
-            this.state.searchResults = [];
-        } finally {
-            this.state.searching = false;
-        }
+        this._searchTimeout = setTimeout(async () => {
+            const trimmed = query.trim();
+            try {
+                this.state.searchResults = await this.orm.searchRead(
+                    "res.partner",
+                    [
+                        ["name", "ilike", trimmed],
+                        "|",
+                        ["customer_rank", ">", 0],
+                        ["is_company", "=", true],
+                    ],
+                    ["id", "name"],
+                    { limit: 8 }
+                );
+            } catch {
+                this.state.searchResults = [];
+            } finally {
+                this.state.searching = false;
+            }
+        }, 300);
     }
 
     selectPartner(partner) {
@@ -97,17 +104,22 @@ export class ConceptInvoicePopup extends Component {
     // ── Validation ────────────────────────────────────────────────────────────
 
     get canConfirm() {
-        return this.state.concept.trim().length > 0 && this.state.partnerId;
+        return this.state.concept.trim().length > 0 && this.state.partnerId && !this.state.loading;
     }
 
     // ── Confirm ───────────────────────────────────────────────────────────────
 
-    confirm() {
+    async confirm() {
         if (!this.canConfirm) return;
-        this.props.onConfirm({
-            concept: this.state.concept.trim(),
-            partnerId: this.state.partnerId,
-        });
+        this.state.loading = true;
+        try {
+            await this.props.onConfirm({
+                concept: this.state.concept.trim(),
+                partnerId: this.state.partnerId,
+            });
+        } finally {
+            this.state.loading = false;
+        }
         this.props.close();
     }
 }
