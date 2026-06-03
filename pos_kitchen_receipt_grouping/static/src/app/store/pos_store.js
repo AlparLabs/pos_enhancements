@@ -54,12 +54,12 @@ patch(PosStore.prototype, {
                 // Skip combo parents — they are just containers
                 if (isComboParent(product)) continue;
 
-                // Detect if this line is a combo child and append parent label
+                // Detect if this line is a combo child and append parent label.
+                // Use the line's own uuid to find the exact orderline, not just any line
+                // with the same product_id — the same product can appear in different combos.
                 let displayName = change.name;
-                const matchingLine = orderlines.find(
-                    (ol) => ol.get_product().id === change.product_id && ol.combo_parent_id
-                );
-                if (matchingLine) {
+                const matchingLine = lineByUuid[change.uuid];
+                if (matchingLine && matchingLine.combo_parent_id) {
                     const parentLine = lineByUuid[
                         matchingLine.combo_parent_id?.uuid || matchingLine.combo_parent_id
                     ];
