@@ -1,0 +1,113 @@
+.pos-concept-invoice-popup {
+    padding: 0.5rem 0;
+
+    .ci-field-group {
+        margin-bottom: 1.2rem;
+    }
+
+    .ci-label {
+        display: block;
+        font-weight: 600;
+        margin-bottom: 0.4rem;
+    }
+
+    .ci-required {
+        color: var(--danger);
+        margin-left: 2px;
+    }
+
+    .ci-textarea,
+    .ci-input {
+        width: 100%;
+        border: 1px solid var(--gray-300);
+        border-radius: 4px;
+        padding: 0.5rem 0.75rem;
+        font-size: 0.95rem;
+        &:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 2px rgba(var(--primary-rgb), 0.15);
+        }
+    }
+
+    .ci-hint {
+        font-size: 0.82rem;
+        color: var(--gray-500);
+        margin-top: 0.25rem;
+    }
+
+    .ci-partner-wrap {
+        position: relative;
+    }
+
+    .ci-search-box {
+        position: relative;
+        .ci-search-icon {
+            position: absolute;
+            left: 0.75rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--gray-400);
+        }
+        .ci-input {
+            padding-left: 2.2rem;
+        }
+        .ci-spinner {
+            position: absolute;
+            right: 0.75rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--gray-400);
+        }
+    }
+
+    .ci-results {
+        border: 1px solid var(--gray-300);
+        border-radius: 4px;
+        margin-top: 2px;
+        max-height: 180px;
+        overflow-y: auto;
+        background: white;
+        z-index: 10;
+        position: relative;
+    }
+
+    .ci-result-item {
+        padding: 0.5rem 0.75rem;
+        cursor: pointer;
+        &:hover {
+            background: var(--gray-100);
+        }
+    }
+
+    .ci-no-results {
+        padding: 0.5rem 0.75rem;
+        color: var(--gray-500);
+        font-size: 0.9rem;
+    }
+
+    .ci-partner-selected {
+        display: flex;
+        align-items: center;
+        background: var(--gray-100);
+        border-radius: 4px;
+        padding: 0.5rem 0.75rem;
+        gap: 0.5rem;
+
+        span {
+            flex: 1;
+            font-weight: 500;
+        }
+
+        .ci-clear-btn {
+            background: none;
+            border: none;
+            cursor: pointer;
+            color: var(--gray-500);
+            padding: 0 0.25rem;
+            &:hover {
+                color: var(--danger);
+            }
+        }
+    }
+}
