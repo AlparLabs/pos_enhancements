@@ -1,0 +1,161 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+    <template id="report_session_control">
+        <t t-call="web.html_container">
+            <t t-foreach="docs" t-as="session">
+                <t t-call="web.external_layout">
+                    <t t-set="o" t-value="session"/>
+                    <div class="page">
+
+                        <!-- ── Title ─────────────────────────────────────── -->
+                        <div class="row mb-4">
+                            <div class="col-12 text-center">
+                                <h2>Control de Sesión</h2>
+                                <h4 t-esc="session_name or session.name"/>
+                                <t t-if="date_start">
+                                    <p class="text-muted mb-0">
+                                        Inicio: <t t-esc="date_start"/>
+                                    </p>
+                                </t>
+                                <t t-if="date_stop">
+                                    <p class="text-muted mb-0">
+                                        Cierre: <t t-esc="date_stop"/>
+                                    </p>
+                                </t>
+                            </div>
+                        </div>
+
+                        <!-- ── Pagos ─────────────────────────────────────── -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <h5 class="border-bottom pb-1">Pagos</h5>
+                                <table class="table table-sm">
+                                    <thead>
+                                        <tr>
+                                            <th>Método</th>
+                                            <th class="text-end">Total</th>
+                                            <th class="text-end">Esperado</th>
+                                            <th class="text-end">Contado</th>
+                                            <th class="text-end">Diferencia</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <t t-foreach="payments" t-as="payment">
+                                            <tr t-att-class="payment.get('money_difference') and payment.get('money_difference') != 0 and 'table-warning' or ''">
+                                                <td><t t-esc="payment['name']"/></td>
+                                                <td class="text-end">
+                                                    <t t-esc="formatLang(payment['total'], currency_obj=currency_id)"/>
+                                                </td>
+                                                <td class="text-end">
+                                                    <t t-if="payment.get('count')">
+                                                        <t t-esc="formatLang(payment.get('final_count', 0), currency_obj=currency_id)"/>
+                                                    </t>
+                                                    <t t-else="">—</t>
+                                                </td>
+                                                <td class="text-end">
+                                                    <t t-if="payment.get('count')">
+                                                        <t t-esc="formatLang(payment.get('money_counted', 0), currency_obj=currency_id)"/>
+                                                    </t>
+                                                    <t t-else="">—</t>
+                                                </td>
+                                                <td class="text-end"
+                                                    t-att-style="payment.get('money_difference') and payment.get('money_difference') != 0 and 'color: red; font-weight: bold;' or ''">
+                                                    <t t-if="payment.get('count')">
+                                                        <t t-esc="formatLang(payment.get('money_difference', 0), currency_obj=currency_id)"/>
+                                                    </t>
+                                                    <t t-else="">—</t>
+                                                </td>
+                                            </tr>
+                                        </t>
+                                    </tbody>
+                                    <tfoot>
+                                        <tr class="fw-bold">
+                                            <td>TOTAL</td>
+                                            <td class="text-end">
+                                                <t t-esc="formatLang(total_paid, currency_obj=currency_id)"/>
+                                            </td>
+                                            <td colspan="3"/>
+                                        </tr>
+                                    </tfoot>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- ── Descuentos ─────────────────────────────────── -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <h5 class="border-bottom pb-1">Descuentos</h5>
+                                <table class="table table-sm">
+                                    <tbody>
+                                        <tr>
+                                            <td>Órdenes con descuento</td>
+                                            <td class="text-end">
+                                                <t t-esc="discount_number"/>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td>Monto total de descuentos</td>
+                                            <td class="text-end">
+                                                <t t-esc="formatLang(discount_amount, currency_obj=currency_id)"/>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- ── Movimientos de efectivo ────────────────────── -->
+                        <t t-foreach="payments" t-as="payment">
+                            <t t-if="payment.get('count') and payment.get('cash_moves')">
+                                <div class="row mb-3">
+                                    <div class="col-12">
+                                        <h5 class="border-bottom pb-1">
+                                            Movimientos: <t t-esc="payment['name']"/>
+                                        </h5>
+                                        <table class="table table-sm">
+                                            <tbody>
+                                                <t t-foreach="payment['cash_moves']" t-as="move">
+                                                    <tr>
+                                                        <td><t t-esc="move['name']"/></td>
+                                                        <td class="text-end">
+                                                            <t t-esc="formatLang(move['amount'], currency_obj=currency_id)"/>
+                                                        </td>
+                                                    </tr>
+                                                </t>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </t>
+                        </t>
+
+                        <!-- ── Notas ─────────────────────────────────────── -->
+                        <t t-if="opening_note or closing_note">
+                            <div class="row mb-4">
+                                <div class="col-12">
+                                    <h5 class="border-bottom pb-1">Notas</h5>
+                                    <t t-if="opening_note">
+                                        <p><strong>Apertura:</strong> <t t-esc="opening_note"/></p>
+                                    </t>
+                                    <t t-if="closing_note">
+                                        <p><strong>Cierre:</strong> <t t-esc="closing_note"/></p>
+                                    </t>
+                                </div>
+                            </div>
+                        </t>
+
+                        <!-- ── Resumen ────────────────────────────────────── -->
+                        <div class="row">
+                            <div class="col-12 text-muted text-end">
+                                <small>
+                                    <t t-esc="nbr_orders"/> órdenes procesadas
+                                </small>
+                            </div>
+                        </div>
+
+                    </div><!-- /.page -->
+                </t><!-- /web.external_layout -->
+            </t>
+        </t>
+    </template>
+</odoo>
