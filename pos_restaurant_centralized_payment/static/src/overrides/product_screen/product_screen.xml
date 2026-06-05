@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates id="template" xml:space="preserve">
+
+    <t t-name="pos_restaurant_centralized_payment.ProductScreen"
+       t-inherit="point_of_sale.ProductScreen"
+       t-inherit-mode="extension">
+
+        <!-- Desktop: gate ActionpadWidget Pay button on canPay -->
+        <xpath expr="//ActionpadWidget" position="attributes">
+            <attribute name="showActionButton">canPay and !currentOrder?.is_empty()</attribute>
+        </xpath>
+
+        <!-- Desktop: show "Enviar a Caja" for non-managers when order has lines -->
+        <xpath expr="//ActionpadWidget" position="after">
+            <div t-if="!canPay and !currentOrder?.is_empty()"
+                 class="mw-100 container validation p-0">
+                <div class="d-flex gap-2">
+                    <button class="btn btn-warning btn-lg py-3 d-flex align-items-center justify-content-center flex-fill"
+                            t-on-click="() => this.clickSendToRegister()">
+                        <i class="fa fa-paper-plane me-2"/>
+                        Enviar a Caja
+                    </button>
+                </div>
+            </div>
+        </xpath>
+
+        <!-- Mobile (switchpane): hide Pay button for non-managers -->
+        <xpath expr="//button[hasclass('pay-button')]" position="attributes">
+            <attribute name="t-if">!pos.scanning and canPay</attribute>
+        </xpath>
+
+        <!-- Mobile (switchpane): show "Enviar a Caja" for non-managers -->
+        <xpath expr="//button[hasclass('pay-button')]" position="after">
+            <button t-if="!pos.scanning and !canPay and !currentOrder.is_empty()"
+                    class="btn-switchpane btn btn-warning btn-lg flex-grow-1"
+                    t-on-click="() => this.clickSendToRegister()">
+                <span class="d-block">Enviar a Caja</span>
+                <span t-esc="total"/>
+            </button>
+        </xpath>
+
+    </t>
+
+</templates>
