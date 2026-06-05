@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates id="template" xml:space="preserve">
+
+    <t t-name="pos_restrict_cancel_order.ControlButtons"
+       t-inherit="point_of_sale.ControlButtons"
+       t-inherit-mode="extension">
+
+        <xpath expr="//button[contains(@t-on-click, 'onDeleteOrder')]" position="replace">
+            <button t-if="canCancelOrder"
+                    class="btn btn-secondary btn-lg py-5"
+                    t-on-click="() => this.clickCancelOrder()">
+                <i class="fa fa-trash me-1" role="img" /> Cancel Order
+            </button>
+        </xpath>
+
+    </t>
+
+</templates>
