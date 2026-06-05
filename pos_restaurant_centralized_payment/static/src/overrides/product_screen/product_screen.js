@@ -15,6 +15,9 @@ patch(ProductScreen.prototype, {
         if (!this.pos.config.restrict_payment_to_manager) {
             return true;
         }
+        if (!this.pos.config.module_pos_hr) {
+            return true;
+        }
         return this.pos.get_cashier()?._role === "manager";
     },
 

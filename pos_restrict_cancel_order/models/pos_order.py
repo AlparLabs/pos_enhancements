@@ -7,6 +7,7 @@ class PosOrder(models.Model):
     @api.model
     def log_cancel_supervisor(self, order_ids, employee_id):
         """Post a chatter note on each cancelled order identifying the manager."""
+        self.check_access_rights('write')
         employee = self.env['hr.employee'].browse(employee_id)
         if not employee:
             return False

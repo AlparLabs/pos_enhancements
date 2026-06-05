@@ -11,7 +11,7 @@ order chatter in the Odoo backend. Requires pos_hr enabled in POS config.
     'author': 'AlparData',
     'website': 'https://www.alpardata.com.ar',
     'license': 'LGPL-3',
-    'depends': ['point_of_sale', 'pos_hr'],
+    'depends': ['point_of_sale', 'pos_hr', 'mail'],
     'data': [],
     'assets': {
         'point_of_sale._assets_pos': [
