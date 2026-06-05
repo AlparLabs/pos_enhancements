@@ -31,7 +31,7 @@
 
         <!-- Mobile (switchpane): show "Enviar a Caja" for non-managers -->
         <xpath expr="//button[hasclass('pay-button')]" position="after">
-            <button t-if="!pos.scanning and !canPay and !currentOrder.is_empty()"
+            <button t-if="!pos.scanning and !canPay and !currentOrder?.is_empty()"
                     class="btn-switchpane btn btn-warning btn-lg flex-grow-1"
                     t-on-click="() => this.clickSendToRegister()">
                 <span class="d-block">Enviar a Caja</span>
