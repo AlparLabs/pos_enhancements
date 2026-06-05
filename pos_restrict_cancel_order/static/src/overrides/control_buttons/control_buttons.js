@@ -31,6 +31,8 @@ patch(ControlButtons.prototype, {
         const orderId = typeof order.id === "number" ? order.id : null;
         const employeeId = this.pos.get_cashier()?.id ?? null;
 
+        // onDeleteOrder returns truthy when deletion completed (falsy/undefined
+        // when user cancels the confirmation dialog). RPC is best-effort only.
         const deleted = await this.pos.onDeleteOrder(order);
 
         // Fire-and-forget audit log. Only runs for orders already synced to the
