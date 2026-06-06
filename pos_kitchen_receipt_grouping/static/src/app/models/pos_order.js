@@ -9,21 +9,22 @@ patch(PosOrder.prototype, {
         
         const appendComboParentName = (changeList) => {
             const orderlines = this.get_orderlines();
-            
+            // Index by uuid for O(1) lookup — avoids matching wrong parent when the
+            // same product appears as a child in multiple different combos.
+            const lineByUuid = {};
+            for (const ol of orderlines) {
+                lineByUuid[ol.uuid] = ol;
+            }
+
             for (let change of changeList) {
-                // Si es subproducto, agregar nota del padre
-                const matchingLines = orderlines.filter(l => l.get_product().id === change.product_id && l.combo_parent_id);
-                if (matchingLines.length > 0) {
-                    const parentLine = orderlines.find(l => {
-                        const pid = matchingLines[0].combo_parent_id;
-                        return l.uuid === (pid.uuid || pid) || l.id === pid;
-                    });
-                    if (parentLine) {
-                        const parentName = parentLine.get_product().display_name;
-                        // Avoid duplicating the tag
-                        if (!change.name.includes(`[${parentName}]`)) {
-                            change.name = `${change.name} [${parentName}]`;
-                        }
+                const matchingLine = lineByUuid[change.uuid];
+                if (!matchingLine || !matchingLine.combo_parent_id) continue;
+                const pid = matchingLine.combo_parent_id;
+                const parentLine = lineByUuid[pid?.uuid || pid] || orderlines.find(l => l.id === pid);
+                if (parentLine) {
+                    const parentName = parentLine.get_product().display_name;
+                    if (!change.name.includes(`[${parentName}]`)) {
+                        change.name = `${change.name} [${parentName}]`;
                     }
                 }
             }

@@ -43,16 +43,30 @@ patch(PosStore.prototype, {
             lineByUuid[ol.uuid] = ol;
         }
 
-        // Group lines by category (skip combo parents, tag combo children)
+        // Group lines by category (skip combo parents only when their children also appear, tag combo children)
         const groupChangesByCategory = (changeLines) => {
             const categoryMap = {};
+
+            // Pre-compute which combo parent UUIDs have at least one child in this receipt.
+            // When children are present they already carry [parent name], so the parent line
+            // is redundant and should be skipped. When no children appear in this printer's
+            // receipt (e.g. all children go to a different printer), the parent line itself
+            // must be shown so the station gets the information.
+            const parentUuidsWithChildren = new Set();
+            for (const change of changeLines) {
+                const childLine = lineByUuid[change.uuid];
+                if (childLine && childLine.combo_parent_id) {
+                    const parentRef = childLine.combo_parent_id?.uuid || childLine.combo_parent_id;
+                    parentUuidsWithChildren.add(parentRef);
+                }
+            }
 
             for (const change of changeLines) {
                 const product = this.models["product.product"]?.get(change.product_id);
                 if (!product) continue;
 
-                // Skip combo parents — they are just containers
-                if (isComboParent(product)) continue;
+                // Skip the combo parent only when its children are also in this receipt
+                if (isComboParent(product) && parentUuidsWithChildren.has(change.uuid)) continue;
 
                 // Detect if this line is a combo child and append parent label.
                 // Use the line's own uuid to find the exact orderline, not just any line
