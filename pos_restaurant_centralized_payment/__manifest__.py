@@ -21,6 +21,7 @@ When "Pago Centralizado" is enabled in POS settings:
         'point_of_sale._assets_pos': [
             'pos_restaurant_centralized_payment/static/src/overrides/product_screen/product_screen.js',
             'pos_restaurant_centralized_payment/static/src/overrides/product_screen/product_screen.xml',
+            'pos_restaurant_centralized_payment/static/src/overrides/product_screen/actionpad_widget.xml',
         ],
     },
     'installable': True,

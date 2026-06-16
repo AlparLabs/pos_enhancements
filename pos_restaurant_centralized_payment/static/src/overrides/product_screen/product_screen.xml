@@ -24,18 +24,26 @@
             </div>
         </xpath>
 
-        <!-- Mobile (switchpane): hide Pay button for non-managers -->
-        <xpath expr="//button[hasclass('pay-button')]" position="attributes">
-            <attribute name="t-if">!pos.scanning and canPay</attribute>
+        <!--
+            Mobile (switchpane): hide only the real Pay button (the one calling
+            pos.pay()). In restaurant mode `pos_restaurant` replaces the base
+            pay-button with an "Order"/"Pay" swap where the "Order" button ALSO
+            carries the `pay-button` class, so we must NOT target by class alone
+            (that would break "Order" for waiters). Match the pay() handler.
+        -->
+        <xpath expr="//button[hasclass('pay-button')][contains(@t-on-click, 'pay(')]"
+               position="attributes">
+            <attribute name="t-if">canPay</attribute>
         </xpath>
 
         <!-- Mobile (switchpane): show "Enviar a Caja" for non-managers -->
-        <xpath expr="//button[hasclass('pay-button')]" position="after">
-            <button t-if="!pos.scanning and !canPay and !currentOrder?.is_empty()"
-                    class="btn-switchpane btn btn-warning btn-lg flex-grow-1"
+        <xpath expr="//button[hasclass('pay-button')][contains(@t-on-click, 'pay(')]"
+               position="after">
+            <button t-if="!canPay and !currentOrder?.is_empty()"
+                    class="btn-switchpane btn btn-warning btn-lg w-50 lh-sm"
                     t-on-click="() => this.clickSendToRegister()">
                 <span class="d-block">Enviar a Caja</span>
-                <span t-esc="total"/>
+                <small t-esc="total"/>
             </button>
         </xpath>
 

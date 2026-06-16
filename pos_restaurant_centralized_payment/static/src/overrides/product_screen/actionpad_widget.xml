@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates id="template" xml:space="preserve">
+
+    <!--
+        In restaurant mode `pos_restaurant` sets `swapButton` permanently true on
+        the product screen and renders its own "Order" + "Payment" pair inside the
+        ActionpadWidget validation div. That Payment button is gated only by
+        `!currentOrder.is_empty()`, so it ignores the `showActionButton` prop we set
+        from ProductScreen (= `canPay and !is_empty()`). We re-gate it here so that
+        non-manager cashiers keep the "Order" (send to kitchen) button but lose the
+        "Payment" button — leaving "Enviar a Caja" (added in product_screen.xml) as
+        their only checkout path.
+    -->
+    <t t-name="pos_restaurant_centralized_payment.ActionpadWidget"
+       t-inherit="pos_restaurant.ActionpadWidget"
+       t-inherit-mode="extension">
+
+        <xpath expr="//div[@t-if='this.swapButton']//button[hasclass('pay-order-button')]"
+               position="attributes">
+            <attribute name="t-if">!currentOrder.is_empty() and props.showActionButton</attribute>
+        </xpath>
+
+    </t>
+
+</templates>

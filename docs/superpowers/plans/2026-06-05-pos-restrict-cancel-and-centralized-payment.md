@@ -424,6 +424,7 @@ When "Pago Centralizado" is enabled in POS settings:
         'point_of_sale._assets_pos': [
             'pos_restaurant_centralized_payment/static/src/overrides/product_screen/product_screen.js',
             'pos_restaurant_centralized_payment/static/src/overrides/product_screen/product_screen.xml',
+            'pos_restaurant_centralized_payment/static/src/overrides/product_screen/actionpad_widget.xml',
         ],
     },
     'installable': True,
@@ -496,12 +497,25 @@ git commit -m "feat(pos_restaurant_centralized_payment): add module scaffold and
 **Files:**
 - Create: `pos_restaurant_centralized_payment/static/src/overrides/product_screen/product_screen.js`
 - Create: `pos_restaurant_centralized_payment/static/src/overrides/product_screen/product_screen.xml`
+- Create: `pos_restaurant_centralized_payment/static/src/overrides/product_screen/actionpad_widget.xml`
 
 **Context:**
 
 In Odoo 18 `product_screen.xml`:
 - Desktop Pay: `<ActionpadWidget showActionButton="!currentOrder?.is_empty()" .../>` — we override `showActionButton` to gate on `canPay`.
 - Mobile Pay: `<button t-if="!pos.scanning" class="btn-switchpane pay-button ..." .../>` — we add `and canPay` to `t-if`.
+
+> **⚠️ Restaurant gotcha (fixed after first round of testing):** when `pos_restaurant`
+> is installed, `swapButton` is permanently `true` on the product screen, and
+> `pos_restaurant` **replaces** the ActionpadWidget validation area with its own
+> "Order" + "Payment" pair. That "Payment" button (`pay-order-button` inside the
+> `t-if="this.swapButton"` div) is gated only by `!currentOrder.is_empty()` and
+> **ignores `showActionButton`**, so overriding `showActionButton` alone leaves
+> "Pago" visible to waiters. Fix: a separate template inheriting
+> `pos_restaurant.ActionpadWidget` (`actionpad_widget.xml`) re-gates that button on
+> `props.showActionButton`. Likewise on mobile, `pos_restaurant` gives the "Order"
+> button the `pay-button` class too, so the mobile xpath must match the pay handler
+> (`contains(@t-on-click, 'pay(')`) — NOT the class alone — or it breaks "Order".
 
 `PreCuentaReceipt` and the printing logic are imported from `pos_restaurant_pre_cuenta`.
 After printing, `this.pos.showScreen('FloorScreen')` returns to the floor plan.
