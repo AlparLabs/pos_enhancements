@@ -23,7 +23,7 @@
 | `pos_restrict_cancel_order/static/src/overrides/control_buttons/control_buttons.js` | Patch: `canCancelOrder` getter + `clickCancelOrder()` with audit RPC |
 | `pos_restrict_cancel_order/static/src/overrides/control_buttons/control_buttons.xml` | Replace Cancel Order button with conditional `t-if="canCancelOrder"` |
 | `pos_restrict_cancel_order/static/src/overrides/ticket_screen/ticket_screen.js` | Patch `shouldHideDeleteButton` to block non-managers |
-| `pos_restrict_cancel_order/static/src/overrides/product_screen/product_screen.js` | Patch line removal/quantity-decrease so non-managers can't delete or reduce orderlines |
+| `pos_restrict_cancel_order/static/src/overrides/order_summary/order_summary.js` | Patch `updateSelectedOrderline` so non-managers can't remove/reduce orderlines; audit-log manager removals |
 
 ### Module 2: `pos_restaurant_centralized_payment`
 
@@ -70,7 +70,7 @@ order chatter in the Odoo backend. Requires pos_hr enabled in POS config.
             'pos_restrict_cancel_order/static/src/overrides/control_buttons/control_buttons.js',
             'pos_restrict_cancel_order/static/src/overrides/control_buttons/control_buttons.xml',
             'pos_restrict_cancel_order/static/src/overrides/ticket_screen/ticket_screen.js',
-            'pos_restrict_cancel_order/static/src/overrides/product_screen/product_screen.js',
+            'pos_restrict_cancel_order/static/src/overrides/order_summary/order_summary.js',
         ],
     },
     'installable': True,
@@ -79,7 +79,7 @@ order chatter in the Odoo backend. Requires pos_hr enabled in POS config.
 }
 ```
 
-> **Note (Task 3b):** the `product_screen.js` asset below is added by Task 3b. Include it in the manifest only when implementing that task.
+> **Note (Task 3b):** the `order_summary.js` asset above is added by Task 3b. Include it in the manifest only when implementing that task.
 
 - [ ] **Step 2: Create `__init__.py`**
 
@@ -312,92 +312,81 @@ the theft/fraud vector the client wants to close. This task blocks per-line remo
 decreases for non-manager cashiers, while still letting them add products and set quantities when first
 taking the order.
 
+**UX decision (confirmed with client):** **hard block** — non-managers get a warning notification and
+the action is silently rejected (no supervisor-PIN override). Plus **audit logging**: when a manager
+removes or reduces a line on a synced order, a note is posted to the order chatter.
+
 **Files:**
-- Create: `pos_restrict_cancel_order/static/src/overrides/product_screen/product_screen.js`
-- Update: `pos_restrict_cancel_order/__manifest__.py` (add the asset — see Task 1 note)
+- Create: `pos_restrict_cancel_order/static/src/overrides/order_summary/order_summary.js`
+- Update: `pos_restrict_cancel_order/models/pos_order.py` (add `log_orderline_removal`)
+- Update: `pos_restrict_cancel_order/__manifest__.py` (add the asset)
 
-**Context:** In Odoo 18 `point_of_sale/static/src/app/screens/product_screen/product_screen.js`, line
-edits funnel through `_setValue(val)` / the numpad. A line is **removed** when, in `quantity` mode, the
-buffer is emptied with `Backspace` (`val === ""`), and the quantity is **reduced** when the new numeric
-value is lower than the current `qty`. Reuse the same `isManagerCashier(pos)` helper already defined in
-`control_buttons.js` (degraded mode: if `module_pos_hr` is off, allow everything).
+**Verified hook (Odoo 18):** line edits do **not** live on `ProductScreen` — they live on the
+`OrderSummary` component (`point_of_sale/.../product_screen/order_summary/order_summary.js`). The numpad
+buffer is wired via `triggerAtInput: (...args) => this.updateSelectedOrderline(...args)`, so
+`updateSelectedOrderline({ buffer, key })` is the single entry point for every quantity change:
 
-> **Implementer note:** confirm the exact method name and the "remove line" condition against the
-> Odoo 18 source actually installed (`_setValue` vs `updateSelectedOrderline`). The gate logic below is
-> the design intent; adjust the hook to match the installed core. Verify by reading the core file before
-> writing the patch — do not guess.
+- **Removal** is signalled by `buffer === null` (core: `const val = buffer === null ? "remove" : buffer`),
+  which routes to `_setValue("remove")` → `order.removeOrderline(line)`.
+- **Reduction** is a numeric `buffer` lower than the line's current quantity. In a restaurant, once the
+  order is sent to the kitchen `disallowLineQuantityChange()` is `true` and a *decrease popup* path opens
+  — but that popup is **also** reached from inside `updateSelectedOrderline`, so blocking at the top of
+  that method covers both paths. Increases and adding products never hit the block.
 
-- [ ] **Step 1: Decide UX — hard block vs. supervisor PIN**
+Reuse the `isManagerCashier(pos)` helper pattern (degraded mode: `module_pos_hr` off ⇒ allow everything).
 
-This module's established style is a **hard block** (hide the Cancel Order button, hide the ticket
-delete icon) rather than the PIN prompt used by `pos_discount_supervisor`. For consistency, default to a
-**hard block + warning notification** ("Solo un administrador puede eliminar ítems"). If the client
-prefers an override-at-the-terminal flow instead, copy the `requestSupervisorPin` helper from
-`pos_discount_supervisor/static/src/overrides/components/product_screen.js` and gate on that instead.
+- [x] **Step 1: Add `log_orderline_removal` to `models/pos_order.py`**
 
-- [ ] **Step 2: Create `product_screen.js`** (hard-block variant)
-
-```js
-/** @odoo-module **/
-
-import { patch } from "@web/core/utils/patch";
-import { useService } from "@web/core/utils/hooks";
-import { _t } from "@web/core/l10n/translation";
-import { ProductScreen } from "@point_of_sale/app/screens/product_screen/product_screen";
-
-function isManagerCashier(pos) {
-    if (!pos.config.module_pos_hr) {
-        return true;
-    }
-    return pos.get_cashier()?._role === "manager";
-}
-
-patch(ProductScreen.prototype, {
-    setup() {
-        super.setup(...arguments);
-        this.notification = useService("notification");
-    },
-
-    _setValue(val) {
-        const line = this.currentOrder?.get_selected_orderline?.();
-        if (line && !isManagerCashier(this.pos) && this.pos.numpadMode === "quantity") {
-            // Block removing the line (empty buffer) or lowering its quantity.
-            const newQty = parseFloat(val);
-            const isRemove = val === "" || val === "remove";
-            const isDecrease = !isNaN(newQty) && newQty < line.get_quantity();
-            if (isRemove || isDecrease) {
-                this.notification.add(
-                    _t("Solo un administrador puede eliminar o reducir ítems del pedido."),
-                    { type: "warning", title: _t("Acción no permitida") }
-                );
-                return;
-            }
-        }
-        return super._setValue(val);
-    },
-});
-```
-
-- [ ] **Step 3: Add the asset to `__manifest__.py`**
-
-Add to the `point_of_sale._assets_pos` list:
 ```python
-'pos_restrict_cancel_order/static/src/overrides/product_screen/product_screen.js',
+@api.model
+def log_orderline_removal(self, order_id, employee_id, description):
+    """Post a chatter note when a manager removes or reduces an orderline."""
+    self.check_access_rights('write')
+    order = self.browse(order_id)
+    if not order.exists():
+        return False
+    employee = self.env['hr.employee'].browse(employee_id)
+    who = employee.name if employee.exists() else _("Desconocido")
+    order.sudo().message_post(
+        body=_("Ítem eliminado/reducido por %(name)s: %(desc)s",
+               name=who, desc=description),
+        message_type='comment',
+        subtype_xmlid='mail.mt_note',
+    )
+    return True
 ```
 
-- [ ] **Step 4: Verify JS parses**
+- [x] **Step 2: Create `static/src/overrides/order_summary/order_summary.js`**
+
+Patch `OrderSummary.updateSelectedOrderline`: snapshot the selected line before the operation, hard-block
+non-managers on removal/reduction, then (for managers, on synced orders) diff before/after and fire a
+best-effort audit RPC. See the committed file for the full implementation.
+
+- [x] **Step 3: Add the asset to `__manifest__.py`**
+
+```python
+'pos_restrict_cancel_order/static/src/overrides/order_summary/order_summary.js',
+```
+
+- [x] **Step 4: Verify JS parses**
 
 ```bash
-node --input-type=module < pos_restrict_cancel_order/static/src/overrides/product_screen/product_screen.js 2>&1 | head -5
+node --check pos_restrict_cancel_order/static/src/overrides/order_summary/order_summary.js
 ```
-Expected: no output (or only an unresolved-import error, which is fine in Node).
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
-git add pos_restrict_cancel_order/static/src/overrides/product_screen/product_screen.js pos_restrict_cancel_order/__manifest__.py
-git commit -m "feat(pos_restrict_cancel_order): block non-managers from deleting/reducing orderlines"
+git add pos_restrict_cancel_order/static/src/overrides/order_summary/order_summary.js \
+        pos_restrict_cancel_order/models/pos_order.py pos_restrict_cancel_order/__manifest__.py
+git commit -m "feat(pos_restrict_cancel_order): block non-managers from deleting/reducing orderlines + audit log"
 ```
+
+**Known limitation (documented):** the audit diff is computed by comparing the line's quantity before vs.
+after the core call. For already-sent items, core's "decrease" can create a separate negative/refund line
+rather than lowering the original line in place; in that specific case the before/after diff on the
+original line may not fire a log. The hard block still prevents non-managers from triggering it. Confirm
+behaviour in the Task 7 smoke test and extend logging if the client needs those captured too.
 
 ---
 
