@@ -1,38 +1,45 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <templates id="template" xml:space="preserve">
-    <t t-name="pos_l10n_ar_receipt.OrderReceipt" t-inherit="point_of_sale.OrderReceipt" t-inherit-mode="extension">
-        
-        <!-- Add Argentine Invoice Header -->
+
+    <!--
+        Argentine invoice header (document type, number, CUIT, responsibility).
+        In Odoo 19 the `pos-receipt-contact` block lives in the ReceiptHeader
+        sub-component, not in OrderReceipt, so we must inherit it here.
+    -->
+    <t t-name="pos_l10n_ar_receipt.ReceiptHeader" t-inherit="point_of_sale.ReceiptHeader" t-inherit-mode="extension">
         <xpath expr="//div[hasclass('pos-receipt-contact')]" position="after">
-            <div t-if="props.data.l10n_latam_document_type_name" class="pos-receipt-center-align" style="font-weight: bold; margin-top: 5px;">
-                <t t-esc="props.data.l10n_latam_document_type_name"/> - ORIGINAL - COD (<t t-esc="props.data.l10n_latam_document_type_code"/>)
+            <div t-if="order.l10n_ar_document_type_name" class="pos-receipt-center-align" style="font-weight: bold; margin-top: 5px;">
+                <t t-esc="order.l10n_ar_document_type_name"/> - ORIGINAL - COD (<t t-esc="order.l10n_ar_document_type_code"/>)
             </div>
-            <div t-if="props.data.l10n_latam_document_number" class="pos-receipt-center-align" style="font-weight: bold;">
-                Nº DE FACTURA: <t t-esc="props.data.l10n_latam_document_number"/>
+            <div t-if="order.l10n_latam_document_number" class="pos-receipt-center-align" style="font-weight: bold;">
+                Nº DE FACTURA: <t t-esc="order.l10n_latam_document_number"/>
             </div>
-            <div t-if="props.data.l10n_ar_company_cuit" class="pos-receipt-center-align" style="font-size: 0.9em;">
-                CUIT: <t t-esc="props.data.l10n_ar_company_cuit"/>
+            <div t-if="order.l10n_ar_company_cuit" class="pos-receipt-center-align" style="font-size: 0.9em;">
+                CUIT: <t t-esc="order.l10n_ar_company_cuit"/>
             </div>
-            <div t-if="props.data.l10n_ar_company_responsibility" class="pos-receipt-center-align" style="font-size: 0.9em; margin-bottom: 5px;">
-                <t t-esc="props.data.l10n_ar_company_responsibility"/>
+            <div t-if="order.l10n_ar_company_responsibility" class="pos-receipt-center-align" style="font-size: 0.9em; margin-bottom: 5px;">
+                <t t-esc="order.l10n_ar_company_responsibility"/>
             </div>
         </xpath>
+    </t>
 
-        <!-- AFIP QR Code and CAE Details -->
-        <xpath expr="//div[hasclass('pos-receipt-order-data')]" position="before">
+    <t t-name="pos_l10n_ar_receipt.OrderReceipt" t-inherit="point_of_sale.OrderReceipt" t-inherit-mode="extension">
+
+        <!-- ARCA (AFIP) QR Code and CAE details -->
+        <xpath expr="//div[hasclass('before-footer')]" position="after">
             <div class="pos-l10n-ar-receipt" style="font-size: 0.8em; margin-top: 10px; border-top: 1px dashed black; padding-top: 10px;">
-                
+
                 <!-- QR Code -->
-                <div t-if="props.data.l10n_ar_afip_qr_code" class="pos-receipt-center-align" style="margin-bottom: 5px;">
-                    <img t-att-src="'/report/barcode/QR/' + props.data.l10n_ar_afip_qr_code" style="width: 100px; height: 100px;" alt="QR Code AFIP"/>
+                <div t-if="order.l10n_ar_afip_qr_code" class="pos-receipt-center-align" style="margin-bottom: 5px;">
+                    <img t-att-src="'/report/barcode/QR/' + order.l10n_ar_afip_qr_code" style="width: 100px; height: 100px;" alt="QR Code ARCA"/>
                 </div>
 
                 <!-- CAE Details -->
-                <div t-if="props.data.l10n_ar_afip_auth_code" class="pos-receipt-center-align" style="font-weight: bold;">
-                    CAE: <t t-esc="props.data.l10n_ar_afip_auth_code"/>
+                <div t-if="order.l10n_ar_afip_auth_code" class="pos-receipt-center-align" style="font-weight: bold;">
+                    CAE: <t t-esc="order.l10n_ar_afip_auth_code"/>
                 </div>
-                <div t-if="props.data.l10n_ar_afip_auth_code_due" class="pos-receipt-center-align">
-                    Vencimiento CAE: <t t-esc="props.data.l10n_ar_afip_auth_code_due"/>
+                <div t-if="order.l10n_ar_afip_auth_code_due" class="pos-receipt-center-align">
+                    Vencimiento CAE: <t t-esc="order.l10n_ar_afip_auth_code_due"/>
                 </div>
 
             </div>
@@ -40,15 +47,16 @@
 
         <!-- Optional: Breakdown of taxes if it's Factura A -->
         <xpath expr="//div[hasclass('pos-receipt-amount')]" position="after">
-            <div t-if="props.data.l10n_ar_letter === 'A' and props.data.l10n_ar_tax_details" class="pos-receipt-taxes" style="font-size: 0.8em; margin-top: 5px;">
-                <t t-foreach="props.data.l10n_ar_tax_details" t-as="tax" t-key="tax_index">
+            <div t-if="order.l10n_ar_letter === 'A' and order.l10n_ar_tax_details and order.l10n_ar_tax_details.length" class="pos-receipt-taxes" style="font-size: 0.8em; margin-top: 5px;">
+                <t t-foreach="order.l10n_ar_tax_details" t-as="tax" t-key="tax_index">
                     <div class="d-flex justify-content-between">
                         <span><t t-esc="tax.name"/></span>
-                        <span><t t-esc="props.formatCurrency(tax.amount)"/></span>
+                        <span><t t-esc="formatCurrency(tax.amount)"/></span>
                     </div>
                 </t>
             </div>
         </xpath>
 
     </t>
+
 </templates>
