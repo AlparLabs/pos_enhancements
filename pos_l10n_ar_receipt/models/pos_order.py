@@ -1,5 +1,4 @@
 # -*- coding: utf-8 -*-
-from typing import Any
 from odoo import models, fields, api
 
 
@@ -8,8 +7,11 @@ class PosOrder(models.Model):
 
     # Argentine invoice data, pulled from the related account.move so it can be
     # rendered on the POS receipt. In Odoo 19 the receipt reads these fields
-    # directly from the front-end order model (loaded via _load_pos_data_fields),
-    # so the old _export_for_ui override is no longer used.
+    # directly from the front-end order model. pos.order is loaded into the POS
+    # with ALL of its fields (its _load_pos_data_fields returns [] == "everything"),
+    # so these custom fields are exposed automatically. We must NOT override
+    # _load_pos_data_fields here: returning a non-empty list would switch the
+    # order to "only these fields" mode and drop core relations such as `lines`.
     l10n_ar_afip_auth_code = fields.Char(
         string="ARCA Authorization Code (CAE)",
         related='account_move.l10n_ar_afip_auth_code',
@@ -64,20 +66,3 @@ class PosOrder(models.Model):
                         'amount': line.price_subtotal,
                     })
             order.l10n_ar_tax_details = details
-
-    @api.model
-    def _load_pos_data_fields(self, config_id: Any) -> list[str]:
-        fields = super()._load_pos_data_fields(config_id)
-        fields += [
-            'l10n_ar_afip_auth_code',
-            'l10n_ar_afip_auth_code_due',
-            'l10n_ar_afip_qr_code',
-            'l10n_latam_document_number',
-            'l10n_ar_document_type_name',
-            'l10n_ar_document_type_code',
-            'l10n_ar_letter',
-            'l10n_ar_company_cuit',
-            'l10n_ar_company_responsibility',
-            'l10n_ar_tax_details',
-        ]
-        return fields
