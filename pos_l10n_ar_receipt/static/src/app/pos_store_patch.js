@@ -14,6 +14,8 @@ patch(PosStore.prototype, {
     async printReceipt(opts = {}) {
         const result = await super.printReceipt(opts);
 
+        // `printBillActionTriggered` is a core printReceipt() opt: it is true when
+        // the print comes from the "print bill" / pre-cuenta action, which we skip.
         const { basic = false, order = this.getOrder(), printBillActionTriggered = false } = opts;
 
         const shouldPrintDuplicate =
@@ -32,7 +34,9 @@ patch(PosStore.prototype, {
                     this.printOptions
                 );
             } finally {
-                order.uiState.l10nArReceiptCopy = "ORIGINAL";
+                // Clear back to the neutral state; the template falls back to
+                // 'ORIGINAL' when this is unset.
+                delete order.uiState.l10nArReceiptCopy;
             }
         }
 
