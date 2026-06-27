@@ -16,6 +16,7 @@ including CAE, CAE Expiration, Invoice Number, and AFIP QR Code.
     ],
     'assets': {
         'point_of_sale._assets_pos': [
+            'pos_l10n_ar_receipt/static/src/app/**/*.js',
             'pos_l10n_ar_receipt/static/src/app/**/*.xml',
             'pos_l10n_ar_receipt/static/src/app/**/*.scss',
         ],
