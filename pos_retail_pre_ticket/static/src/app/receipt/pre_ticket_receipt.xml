@@ -14,10 +14,6 @@
             </div>
 
             <br/>
-            <div t-if="order.partner_id" class="pos-receipt-contact">
-                Cliente: <t t-esc="order.partner_id.name"/><br/>
-            </div>
-            <br/>
 
             <!-- Orderlines -->
             <div class="orderlines">
@@ -54,10 +50,8 @@
             </div>
             <br/>
 
-            <!-- Order barcode -->
+            <!-- Order reference -->
             <div t-if="order.name" class="pos-receipt-center-align">
-                <br/>
-                <img t-att-src="'/report/barcode/Code128/' + order.name" style="width:250px; height:50px;" alt="Barcode"/>
                 <br/>
                 <t t-esc="order.name"/>
             </div>
