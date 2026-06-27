@@ -1,0 +1,17 @@
+// Pre-ticket specific styling. Scoped to `.pre-ticket-receipt` so the regular
+// POS receipt header is left untouched.
+.pre-ticket-receipt {
+    // Ticket number ("Ticket <ref>") and order date live inside a wrapper with
+    // font-size: 75%, so use a larger em multiplier to make them clearly bigger.
+    .pos-receipt-vat,
+    #order-date {
+        font-size: 1.6em;
+        font-weight: bold;
+    }
+
+    // "Served by" (atendido por) already renders at the base font size.
+    .cashier {
+        font-size: 1.2em;
+        font-weight: bold;
+    }
+}
