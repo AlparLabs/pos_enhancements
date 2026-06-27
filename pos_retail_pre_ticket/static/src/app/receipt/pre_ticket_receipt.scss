@@ -14,4 +14,10 @@
         font-size: 1.2em;
         font-weight: bold;
     }
+
+    // Customer name (rendered by the standard ReceiptHeader, below "Served by").
+    .pos-receipt-customer {
+        font-size: 1.2em;
+        font-weight: bold;
+    }
 }
