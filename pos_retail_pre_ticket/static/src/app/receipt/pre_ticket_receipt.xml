@@ -50,12 +50,6 @@
             </div>
             <br/>
 
-            <!-- Order reference -->
-            <div t-if="order.name" class="pos-receipt-center-align">
-                <br/>
-                <t t-esc="order.name"/>
-            </div>
-
         </div>
     </t>
 </templates>
