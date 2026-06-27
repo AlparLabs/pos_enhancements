@@ -2,7 +2,7 @@
 <templates id="template" xml:space="preserve">
     <t t-name="pos_retail_pre_ticket.PreTicketReceipt" owl="1">
         <t t-set="order" t-value="props.order"/>
-        <div class="pos-receipt">
+        <div class="pos-receipt pre-ticket-receipt">
 
             <ReceiptHeader order="order"/>
 
