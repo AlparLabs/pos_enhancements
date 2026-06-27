@@ -21,6 +21,22 @@
                 <t t-esc="order.l10n_ar_company_responsibility"/>
             </div>
         </xpath>
+
+        <!--
+            Emphasize ticket number, date/time and cashier (bold + larger),
+            matching the pre-ticket style. These sit inside a 75% font-size
+            container, so the em sizes below render clearly bigger than the
+            surrounding header text.
+        -->
+        <xpath expr="//span[hasclass('pos-receipt-vat')]" position="attributes">
+            <attribute name="style">font-weight: bold; font-size: 1.6em;</attribute>
+        </xpath>
+        <xpath expr="//div[@id='order-date']" position="attributes">
+            <attribute name="style">font-weight: bold; font-size: 1.4em;</attribute>
+        </xpath>
+        <xpath expr="//div[hasclass('cashier')]" position="attributes">
+            <attribute name="style">font-weight: bold; font-size: 1.4em;</attribute>
+        </xpath>
     </t>
 
     <t t-name="pos_l10n_ar_receipt.OrderReceipt" t-inherit="point_of_sale.OrderReceipt" t-inherit-mode="extension">
