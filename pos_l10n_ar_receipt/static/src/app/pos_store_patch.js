@@ -1,45 +1,55 @@
 import { patch } from "@web/core/utils/patch";
+import { _t } from "@web/core/l10n/translation";
 import { PosStore } from "@point_of_sale/app/services/pos_store";
-import { OrderReceipt } from "@point_of_sale/app/screens/receipt_screen/receipt/order_receipt";
+import { ArDuplicatedReceipt } from "./ar_duplicated_receipt";
 
 patch(PosStore.prototype, {
     /**
-     * After printing the ORIGINAL receipt, print a DUPLICADO copy when:
-     *  - the POS config has the option enabled,
-     *  - the order is an invoice (has an AR document type),
-     *  - it is not a basic receipt and not the "print bill" / pre-cuenta action.
-     * The copy is printed directly via the printer (it must NOT increment
-     * nb_print: it is a control copy, not a reprint).
+     * For invoiced sales, when the POS is configured to print a duplicate,
+     * print ORIGINAL + DUPLICADO as a SINGLE print job.
+     *
+     * We must NOT print twice via two printer.print() calls: the POS renderer is
+     * a shared single slot and web printing (printWeb) fires window.print()
+     * detached and blocking, so a second re-entrant print deadlocks the renderer
+     * (symptom: the POS hangs on "Cargando" after validating and the duplicate
+     * never prints). Rendering both copies in one component avoids that entirely.
      */
     async printReceipt(opts = {}) {
-        const result = await super.printReceipt(opts);
-
-        // `printBillActionTriggered` is a core printReceipt() opt: it is true when
-        // the print comes from the "print bill" / pre-cuenta action, which we skip.
         const { basic = false, order = this.getOrder(), printBillActionTriggered = false } = opts;
 
         const shouldPrintDuplicate =
-            result &&
             this.config.l10n_ar_receipt_print_duplicate &&
             !basic &&
             !printBillActionTriggered &&
             Boolean(order?.l10n_ar_document_type_name);
 
-        if (shouldPrintDuplicate) {
-            order.uiState.l10nArReceiptCopy = "DUPLICADO";
-            try {
-                await this.printer.print(
-                    OrderReceipt,
-                    { order, basic_receipt: basic },
-                    this.printOptions
-                );
-            } finally {
-                // Clear back to the neutral state; the template falls back to
-                // 'ORIGINAL' when this is unset.
-                delete order.uiState.l10nArReceiptCopy;
-            }
+        if (!shouldPrintDuplicate) {
+            return super.printReceipt(opts);
         }
 
+        const result = await this.printer.print(
+            ArDuplicatedReceipt,
+            { order, basic_receipt: basic },
+            this.printOptions
+        );
+
+        // Mirror core printReceipt() bookkeeping. The duplicate is part of the
+        // same job, so this counts as a single print.
+        if (result) {
+            const count = order.nb_print ? order.nb_print + 1 : 1;
+            if (order.isSynced) {
+                const wasDirty = order.isDirty();
+                await this.data.write("pos.order", [order.id], { nb_print: count });
+                if (!wasDirty) {
+                    order._dirty = false;
+                }
+            } else {
+                order.nb_print = count;
+            }
+        }
+        if (result?.warningCode) {
+            this.displayPrinterWarning(result, _t("Receipt Printer"));
+        }
         return result;
     },
 });

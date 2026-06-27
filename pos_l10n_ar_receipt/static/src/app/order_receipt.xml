@@ -9,7 +9,7 @@
     <t t-name="pos_l10n_ar_receipt.ReceiptHeader" t-inherit="point_of_sale.ReceiptHeader" t-inherit-mode="extension">
         <xpath expr="//div[hasclass('pos-receipt-contact')]" position="after">
             <div t-if="order.l10n_ar_document_type_name" class="pos-receipt-center-align" style="font-weight: bold; margin-top: 5px;">
-                <t t-esc="order.l10n_ar_document_type_name"/> - <t t-esc="order.uiState.l10nArReceiptCopy or 'ORIGINAL'"/> - COD (<t t-esc="order.l10n_ar_document_type_code"/>)
+                <t t-esc="order.l10n_ar_document_type_name"/> - <t t-esc="props.l10nArCopyLabel or 'ORIGINAL'"/> - COD (<t t-esc="order.l10n_ar_document_type_code"/>)
             </div>
             <div t-if="order.l10n_latam_document_number" class="pos-receipt-center-align" style="font-weight: bold;">
                 Nº DE FACTURA: <t t-esc="order.l10n_latam_document_number"/>
@@ -24,6 +24,11 @@
     </t>
 
     <t t-name="pos_l10n_ar_receipt.OrderReceipt" t-inherit="point_of_sale.OrderReceipt" t-inherit-mode="extension">
+
+        <!-- Forward the copy label (ORIGINAL/DUPLICADO) down to the header. -->
+        <xpath expr="//ReceiptHeader" position="attributes">
+            <attribute name="l10nArCopyLabel">props.l10nArCopyLabel</attribute>
+        </xpath>
 
         <!-- ARCA (AFIP) QR Code and CAE details -->
         <xpath expr="//div[hasclass('before-footer')]" position="after">

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates id="template" xml:space="preserve">
+    <t t-name="pos_l10n_ar_receipt.ArDuplicatedReceipt">
+        <div class="pos-l10n-ar-duplicated-receipt">
+            <OrderReceipt order="props.order" basic_receipt="props.basic_receipt" l10nArCopyLabel="'ORIGINAL'"/>
+            <div style="page-break-before: always;"/>
+            <OrderReceipt order="props.order" basic_receipt="props.basic_receipt" l10nArCopyLabel="'DUPLICADO'"/>
+        </div>
+    </t>
+</templates>
