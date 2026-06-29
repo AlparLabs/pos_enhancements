@@ -29,6 +29,14 @@ patch(PaymentScreen.prototype, {
      * @returns {Array<Object>}
      */
     get filteredPaymentMethods() {
+        // During POS teardown (e.g. closing the session) the order is deleted
+        // and this.currentOrder becomes undefined while the screen briefly
+        // re-renders. Returning [] keeps the native t-foreach from calling
+        // getPaymentMethodFmtAmount(pm, undefined), which would crash.
+        if (!this.currentOrder) {
+            return [];
+        }
+
         const allMethods = this.configPaymentMethods || [];
         const availableCategories = this.paymentCategories;
 
