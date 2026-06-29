@@ -8,14 +8,6 @@ patch(PaymentScreen.prototype, {
     setup() {
         super.setup(...arguments);
         this.categoryState = useState({ activePaymentCategory: null });
-        // Replace the static array assigned by super.setup() with a reactive getter.
-        // This way the native template's "this.payment_methods_from_config" resolves
-        // to our filtered list without any fragile t-foreach xpath patching.
-        delete this.payment_methods_from_config;
-        Object.defineProperty(this, 'payment_methods_from_config', {
-            get: () => this.filteredPaymentMethods,
-            configurable: true,
-        });
     },
 
     /**
@@ -26,13 +18,15 @@ patch(PaymentScreen.prototype, {
     },
 
     /**
+     * The list the template iterates over (via xpath on the methods loop).
+     * Returns either the category folders + uncategorized methods (top level),
+     * or the methods of the open category.
      * @returns {Array<Object>}
      */
     get filteredPaymentMethods() {
-        // During POS teardown (e.g. closing the session) the order is deleted
-        // and this.currentOrder becomes undefined while the screen briefly
-        // re-renders. Returning [] keeps the native t-foreach from calling
-        // getPaymentMethodFmtAmount(pm, undefined), which would crash.
+        // During POS teardown the active order is deleted and this.currentOrder
+        // becomes undefined while the screen briefly re-renders. Returning []
+        // avoids the native template dereferencing a missing order.
         if (!this.currentOrder) {
             return [];
         }
@@ -40,41 +34,31 @@ patch(PaymentScreen.prototype, {
         const allMethods = this.configPaymentMethods || [];
         const availableCategories = this.paymentCategories;
 
-        // If no categories are configured for this POS, show all methods normally
-        // so the module degrades gracefully when not fully configured.
+        // No categories configured for this POS → behave like the module is off.
         if (!availableCategories.length) {
             return allMethods;
         }
 
-        if (this.categoryState.activePaymentCategory) {
+        const active = this.categoryState.activePaymentCategory;
+        if (active) {
             return allMethods.filter(
-                (m) => m.category_id && m.category_id.id === this.categoryState.activePaymentCategory.original_id
+                (m) => m.category_id && m.category_id.id === active.original_id
             );
         }
 
-        // Top-level: virtual category folder objects + uncategorized methods
-        const cats = availableCategories.map((cat) => ({
+        // Top level: virtual folder objects for each category + loose methods.
+        const folders = availableCategories.map((cat) => ({
             id: `category_${cat.id}`,
             original_id: cat.id,
             name: cat.name,
             is_category: true,
         }));
         const loose = allMethods.filter((m) => !m.category_id);
-        return [...cats, ...loose];
+        return [...folders, ...loose];
     },
 
     /**
-     * Hide virtual category objects from the native paymentmethod div.
-     * @param {Object} paymentMethod
-     * @returns {boolean}
-     */
-    showPaymentMethod(paymentMethod) {
-        if (paymentMethod.is_category) return false;
-        return super.showPaymentMethod(paymentMethod);
-    },
-
-    /**
-     * @param {Object} category
+     * @param {Object} category - a virtual folder object (is_category: true)
      */
     clickPaymentCategory(category) {
         if (this.categoryState.activePaymentCategory?.id === category.id) {
@@ -85,6 +69,7 @@ patch(PaymentScreen.prototype, {
     },
 
     /**
+     * Guard: never try to add a payment line for a category folder object.
      * @param {Object} paymentMethod
      * @returns {Promise<any>}
      */
