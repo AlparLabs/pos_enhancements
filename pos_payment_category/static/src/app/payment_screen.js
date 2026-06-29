@@ -7,9 +7,7 @@ import { useState } from "@odoo/owl";
 patch(PaymentScreen.prototype, {
     setup() {
         super.setup(...arguments);
-        // Use a dedicated state object — Odoo 19's PaymentScreen does not expose
-        // a this.state, so we cannot add to it. A separate reactive object avoids
-        // any collision with the parent's internal state management.
+        // Dedicated reactive state — Odoo 19 PaymentScreen has no this.state.
         this.categoryState = useState({ activePaymentCategory: null });
     },
 
@@ -27,13 +25,12 @@ patch(PaymentScreen.prototype, {
         const allMethods = this.payment_methods_from_config;
 
         if (this.categoryState.activePaymentCategory) {
-            // Only show methods belonging to the selected category
             return allMethods.filter(
                 (m) => m.category_id && m.category_id.id === this.categoryState.activePaymentCategory.original_id
             );
         }
 
-        // Top-level view: categories as folder objects + uncategorized methods
+        // Top-level: virtual category folder objects + uncategorized methods
         const cats = this.paymentCategories.map((cat) => ({
             id: `category_${cat.id}`,
             original_id: cat.id,
@@ -45,10 +42,21 @@ patch(PaymentScreen.prototype, {
     },
 
     /**
+     * Hide virtual category objects from the native paymentmethod div.
+     * Odoo 19 added showPaymentMethod() — we extend it here so the XML
+     * t-if can stay as-is (calling this.showPaymentMethod).
+     * @param {Object} paymentMethod
+     * @returns {boolean}
+     */
+    showPaymentMethod(paymentMethod) {
+        if (paymentMethod.is_category) return false;
+        return super.showPaymentMethod(paymentMethod);
+    },
+
+    /**
      * @param {Object} category
      */
     clickPaymentCategory(category) {
-        // Toggle the category selection on and off
         if (this.categoryState.activePaymentCategory?.id === category.id) {
             this.categoryState.activePaymentCategory = null;
         } else {
@@ -57,7 +65,6 @@ patch(PaymentScreen.prototype, {
     },
 
     /**
-     * Guard addNewPaymentLine against being called with a category object or undefined
      * @param {Object} paymentMethod
      * @returns {Promise<any>}
      */
