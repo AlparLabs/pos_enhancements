@@ -2,13 +2,15 @@
 
 import { PaymentScreen } from "@point_of_sale/app/screens/payment_screen/payment_screen";
 import { patch } from "@web/core/utils/patch";
+import { useState } from "@odoo/owl";
 
 patch(PaymentScreen.prototype, {
     setup() {
         super.setup(...arguments);
-        // Add to the existing reactive state instead of replacing it — replacing
-        // would drop all state properties set by the parent PaymentScreen setup.
-        this.state.activePaymentCategory = null;
+        // Use a dedicated state object — Odoo 19's PaymentScreen does not expose
+        // a this.state, so we cannot add to it. A separate reactive object avoids
+        // any collision with the parent's internal state management.
+        this.categoryState = useState({ activePaymentCategory: null });
     },
 
     /**
@@ -24,10 +26,10 @@ patch(PaymentScreen.prototype, {
     get filteredPaymentMethods() {
         const allMethods = this.payment_methods_from_config;
 
-        if (this.state.activePaymentCategory) {
+        if (this.categoryState.activePaymentCategory) {
             // Only show methods belonging to the selected category
             return allMethods.filter(
-                (m) => m.category_id && m.category_id.id === this.state.activePaymentCategory.original_id
+                (m) => m.category_id && m.category_id.id === this.categoryState.activePaymentCategory.original_id
             );
         }
 
@@ -47,10 +49,10 @@ patch(PaymentScreen.prototype, {
      */
     clickPaymentCategory(category) {
         // Toggle the category selection on and off
-        if (this.state.activePaymentCategory?.id === category.id) {
-            this.state.activePaymentCategory = null;
+        if (this.categoryState.activePaymentCategory?.id === category.id) {
+            this.categoryState.activePaymentCategory = null;
         } else {
-            this.state.activePaymentCategory = category;
+            this.categoryState.activePaymentCategory = category;
         }
     },
 
