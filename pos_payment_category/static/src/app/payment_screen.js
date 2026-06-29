@@ -30,6 +30,13 @@ patch(PaymentScreen.prototype, {
      */
     get filteredPaymentMethods() {
         const allMethods = this.configPaymentMethods || [];
+        const availableCategories = this.paymentCategories;
+
+        // If no categories are configured for this POS, show all methods normally
+        // so the module degrades gracefully when not fully configured.
+        if (!availableCategories.length) {
+            return allMethods;
+        }
 
         if (this.categoryState.activePaymentCategory) {
             return allMethods.filter(
@@ -38,7 +45,7 @@ patch(PaymentScreen.prototype, {
         }
 
         // Top-level: virtual category folder objects + uncategorized methods
-        const cats = this.paymentCategories.map((cat) => ({
+        const cats = availableCategories.map((cat) => ({
             id: `category_${cat.id}`,
             original_id: cat.id,
             name: cat.name,
