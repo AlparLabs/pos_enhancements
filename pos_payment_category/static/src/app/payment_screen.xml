@@ -2,23 +2,19 @@
 <templates id="template" xml:space="preserve">
     <t t-name="pos_payment_category.PaymentScreenMethods" t-inherit="point_of_sale.PaymentScreenMethods" t-inherit-mode="extension">
 
-        <!-- Back button breadcrumb when a category is open -->
+        <!-- Back button when a category is open.
+             payment_methods_from_config is already overridden in JS via Object.defineProperty,
+             so no t-foreach xpath patch is needed here. -->
         <xpath expr="//div[hasclass('paymentmethods')]" position="before">
-            <div t-if="categoryState.activePaymentCategory" class="d-flex align-items-center mb-4 text-primary" style="cursor: pointer;" t-on-click="() => this.clickPaymentCategory(categoryState.activePaymentCategory)">
+            <div t-if="this.categoryState.activePaymentCategory" class="d-flex align-items-center mb-4" style="cursor: pointer;" t-on-click="() => this.clickPaymentCategory(this.categoryState.activePaymentCategory)">
                 <i class="fa fa-arrow-left me-2 fs-5 text-dark"/>
                 <span class="fs-5 me-2 text-dark">Regresar</span>
-                <span class="fs-5 fw-bold text-dark"><t t-esc="categoryState.activePaymentCategory.name"/></span>
+                <span class="fs-5 fw-bold text-dark"><t t-esc="this.categoryState.activePaymentCategory.name"/></span>
             </div>
         </xpath>
 
-        <!-- Replace the foreach to use our filtered list.
-             Odoo 19 uses "this.payment_methods_from_config" (with "this.") — must match exactly. -->
-        <xpath expr="//t[@t-foreach='this.payment_methods_from_config']" position="attributes">
-            <attribute name="t-foreach">this.filteredPaymentMethods</attribute>
-        </xpath>
-
-        <!-- Render a folder button for category items.
-             The native paymentmethod div is hidden for categories via showPaymentMethod() override in JS. -->
+        <!-- Category folder button rendered before each native paymentmethod div.
+             showPaymentMethod() returns false for category objects, hiding the native div. -->
         <xpath expr="//div[hasclass('paymentmethod')]" position="before">
             <t t-if="paymentMethod.is_category">
                 <button
