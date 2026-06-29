@@ -1,10 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <templates id="template" xml:space="preserve">
-    <!-- Inherit Payment Screen Methods to inject category buttons before payment methods -->
     <t t-name="pos_payment_category.PaymentScreenMethods" t-inherit="point_of_sale.PaymentScreenMethods" t-inherit-mode="extension">
 
+        <!-- Back button breadcrumb when a category is open -->
         <xpath expr="//div[hasclass('paymentmethods')]" position="before">
-            <!-- Breadcrumbs / Back button when a Category is open -->
             <div t-if="categoryState.activePaymentCategory" class="d-flex align-items-center mb-4 text-primary" style="cursor: pointer;" t-on-click="() => this.clickPaymentCategory(categoryState.activePaymentCategory)">
                 <i class="fa fa-arrow-left me-2 fs-5 text-dark"/>
                 <span class="fs-5 me-2 text-dark">Regresar</span>
@@ -12,21 +11,16 @@
             </div>
         </xpath>
 
-        <!-- Replace the loop array to use our filtered getter -->
-        <xpath expr="//t[@t-foreach='payment_methods_from_config']" position="attributes">
-            <attribute name="t-foreach">filteredPaymentMethods</attribute>
+        <!-- Replace the foreach to use our filtered list.
+             Odoo 19 uses "this.payment_methods_from_config" (with "this.") — must match exactly. -->
+        <xpath expr="//t[@t-foreach='this.payment_methods_from_config']" position="attributes">
+            <attribute name="t-foreach">this.filteredPaymentMethods</attribute>
         </xpath>
 
-        <!-- Hide the native payment method button for category items,
-             preserving the original cashier-role check for pay_later methods -->
-        <xpath expr="//div[hasclass('paymentmethod')]" position="attributes">
-            <attribute name="t-if">!paymentMethod.is_category and !(this.pos.cashier._role === 'minimal' and paymentMethod.type === 'pay_later')</attribute>
-        </xpath>
-
-        <!-- Render a folder button before the native div for category items -->
+        <!-- Render a folder button for category items.
+             The native paymentmethod div is hidden for categories via showPaymentMethod() override in JS. -->
         <xpath expr="//div[hasclass('paymentmethod')]" position="before">
             <t t-if="paymentMethod.is_category">
-                <!-- Category Folder Button — same base classes as the native button to preserve scroll layout -->
                 <button
                     class="button paymentmethod btn btn-light btn-lg lh-lg flex-fill d-flex align-items-center gap-2"
                     t-on-click="() => this.clickPaymentCategory(paymentMethod)">
