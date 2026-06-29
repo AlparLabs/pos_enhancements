@@ -2,13 +2,13 @@
 
 import { PaymentScreen } from "@point_of_sale/app/screens/payment_screen/payment_screen";
 import { patch } from "@web/core/utils/patch";
-import { useState } from "@odoo/owl";
 
 patch(PaymentScreen.prototype, {
     setup() {
         super.setup(...arguments);
-        // Track the actively selected payment category
-        this.state = useState({ activePaymentCategory: null });
+        // Add to the existing reactive state instead of replacing it — replacing
+        // would drop all state properties set by the parent PaymentScreen setup.
+        this.state.activePaymentCategory = null;
     },
 
     /**
