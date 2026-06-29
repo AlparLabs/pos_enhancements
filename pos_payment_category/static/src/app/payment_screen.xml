@@ -5,10 +5,10 @@
 
         <xpath expr="//div[hasclass('paymentmethods')]" position="before">
             <!-- Breadcrumbs / Back button when a Category is open -->
-            <div t-if="state.activePaymentCategory" class="d-flex align-items-center mb-4 text-primary" style="cursor: pointer;" t-on-click="() => this.clickPaymentCategory(state.activePaymentCategory)">
+            <div t-if="categoryState.activePaymentCategory" class="d-flex align-items-center mb-4 text-primary" style="cursor: pointer;" t-on-click="() => this.clickPaymentCategory(categoryState.activePaymentCategory)">
                 <i class="fa fa-arrow-left me-2 fs-5 text-dark"/>
                 <span class="fs-5 me-2 text-dark">Regresar</span>
-                <span class="fs-5 fw-bold text-dark"><t t-esc="state.activePaymentCategory.name"/></span>
+                <span class="fs-5 fw-bold text-dark"><t t-esc="categoryState.activePaymentCategory.name"/></span>
             </div>
         </xpath>
 
