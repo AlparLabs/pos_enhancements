@@ -7,8 +7,15 @@ import { useState } from "@odoo/owl";
 patch(PaymentScreen.prototype, {
     setup() {
         super.setup(...arguments);
-        // Dedicated reactive state — Odoo 19 PaymentScreen has no this.state.
         this.categoryState = useState({ activePaymentCategory: null });
+        // Replace the static array assigned by super.setup() with a reactive getter.
+        // This way the native template's "this.payment_methods_from_config" resolves
+        // to our filtered list without any fragile t-foreach xpath patching.
+        delete this.payment_methods_from_config;
+        Object.defineProperty(this, 'payment_methods_from_config', {
+            get: () => this.filteredPaymentMethods,
+            configurable: true,
+        });
     },
 
     /**
@@ -22,7 +29,7 @@ patch(PaymentScreen.prototype, {
      * @returns {Array<Object>}
      */
     get filteredPaymentMethods() {
-        const allMethods = this.payment_methods_from_config;
+        const allMethods = this.configPaymentMethods || [];
 
         if (this.categoryState.activePaymentCategory) {
             return allMethods.filter(
@@ -43,8 +50,6 @@ patch(PaymentScreen.prototype, {
 
     /**
      * Hide virtual category objects from the native paymentmethod div.
-     * Odoo 19 added showPaymentMethod() — we extend it here so the XML
-     * t-if can stay as-is (calling this.showPaymentMethod).
      * @param {Object} paymentMethod
      * @returns {boolean}
      */
