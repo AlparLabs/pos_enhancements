@@ -17,6 +17,21 @@ patch(PaymentScreen.prototype, {
     },
 
     /**
+     * Resolve a payment method's category id, tolerating both representations
+     * the POS frontend may use for the many2one: a linked record object
+     * (with `.id`) or a bare numeric id.
+     * @param {Object} method
+     * @returns {number|false}
+     */
+    _pcCategoryId(method) {
+        const cat = method.category_id;
+        if (!cat) {
+            return false;
+        }
+        return typeof cat === 'object' ? cat.id : cat;
+    },
+
+    /**
      * @returns {Array<Object>}
      */
     get paymentCategories() {
@@ -57,9 +72,16 @@ patch(PaymentScreen.prototype, {
         const active = this.categoryState.activePaymentCategory;
         if (active) {
             const filtered = allMethods.filter(
-                (m) => m.category_id && m.category_id.id === active.original_id
+                (m) => this._pcCategoryId(m) === active.original_id
             );
-            console.log(PCLOG, "→ inside category", active.name, "returning", filtered.length);
+            console.log(PCLOG, "→ inside category", active.name,
+                "active.original_id =", active.original_id,
+                "methods:", allMethods.map((m) => ({
+                    name: m.name,
+                    raw_category_id: m.category_id,
+                    resolved: this._pcCategoryId(m),
+                })),
+                "→ filtered:", filtered.length);
             return filtered;
         }
 
@@ -70,7 +92,7 @@ patch(PaymentScreen.prototype, {
             name: cat.name,
             is_category: true,
         }));
-        const loose = allMethods.filter((m) => !m.category_id);
+        const loose = allMethods.filter((m) => !this._pcCategoryId(m));
         console.log(PCLOG, "→ top level:", folders.length, "folders +", loose.length, "loose methods");
         return [...folders, ...loose];
     },
