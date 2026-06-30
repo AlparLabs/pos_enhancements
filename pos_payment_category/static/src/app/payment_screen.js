@@ -4,17 +4,25 @@ import { PaymentScreen } from "@point_of_sale/app/screens/payment_screen/payment
 import { patch } from "@web/core/utils/patch";
 import { useState } from "@odoo/owl";
 
+const PCLOG = "[pos_payment_category]";
+
 patch(PaymentScreen.prototype, {
     setup() {
         super.setup(...arguments);
         this.categoryState = useState({ activePaymentCategory: null });
+        console.log(PCLOG, "setup() ran — patch is loaded", {
+            payment_methods_from_config_len: this.payment_methods_from_config?.length,
+            configPaymentMethods_len: this.configPaymentMethods?.length,
+        });
     },
 
     /**
      * @returns {Array<Object>}
      */
     get paymentCategories() {
-        return this.pos.models['pos.payment.category']?.getAll() ?? [];
+        const cats = this.pos.models['pos.payment.category']?.getAll() ?? [];
+        console.log(PCLOG, "paymentCategories getter →", cats.length, cats);
+        return cats;
     },
 
     /**
@@ -24,26 +32,35 @@ patch(PaymentScreen.prototype, {
      * @returns {Array<Object>}
      */
     get filteredPaymentMethods() {
+        console.log(PCLOG, "filteredPaymentMethods getter CALLED", {
+            hasCurrentOrder: !!this.currentOrder,
+        });
+
         // During POS teardown the active order is deleted and this.currentOrder
         // becomes undefined while the screen briefly re-renders. Returning []
         // avoids the native template dereferencing a missing order.
         if (!this.currentOrder) {
+            console.log(PCLOG, "→ no currentOrder, returning []");
             return [];
         }
 
         const allMethods = this.configPaymentMethods || [];
         const availableCategories = this.paymentCategories;
+        console.log(PCLOG, "allMethods:", allMethods.length, "categories:", availableCategories.length);
 
         // No categories configured for this POS → behave like the module is off.
         if (!availableCategories.length) {
+            console.log(PCLOG, "→ no categories, returning all", allMethods.length, "methods", allMethods);
             return allMethods;
         }
 
         const active = this.categoryState.activePaymentCategory;
         if (active) {
-            return allMethods.filter(
+            const filtered = allMethods.filter(
                 (m) => m.category_id && m.category_id.id === active.original_id
             );
+            console.log(PCLOG, "→ inside category", active.name, "returning", filtered.length);
+            return filtered;
         }
 
         // Top level: virtual folder objects for each category + loose methods.
@@ -54,6 +71,7 @@ patch(PaymentScreen.prototype, {
             is_category: true,
         }));
         const loose = allMethods.filter((m) => !m.category_id);
+        console.log(PCLOG, "→ top level:", folders.length, "folders +", loose.length, "loose methods");
         return [...folders, ...loose];
     },
 
