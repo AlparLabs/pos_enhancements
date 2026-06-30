@@ -1,26 +1,10 @@
-/* pos_payment_category – make the payment-methods panel scrollable */
-
-.payment-screen {
-    /* The left panel that holds the payment method list */
-    .paymentmethods-container,
-    .payment-methods-container {
-        display: flex;
-        flex-direction: column;
-        overflow: hidden;
-        flex: 1 1 auto;
-        min-height: 0; /* critical: allows flex children to shrink below content size */
-
-        .paymentmethods {
-            overflow-y: auto;
-            flex: 1 1 0;
-            min-height: 0;
-        }
-    }
-
-    /* Fallback: directly target paymentmethods if it is itself a flex child of the screen */
-    .paymentmethods {
-        overflow-y: auto;
-        flex: 1 1 0;
-        min-height: 0;
-    }
-}
+/*
+ * pos_payment_category
+ *
+ * No custom layout rules: the native POS payment screen already lays out and
+ * scrolls the payment-methods panel correctly in both desktop and tablet
+ * (isSmall) modes. The previous `flex: 1 1 0; min-height: 0` rules collapsed
+ * the panel to zero height in desktop mode (its flex container has no bounded
+ * height there), so the methods loaded but were invisible above ~990px wide.
+ * Rely on the native styles instead.
+ */
