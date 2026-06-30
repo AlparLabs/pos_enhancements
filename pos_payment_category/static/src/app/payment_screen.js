@@ -4,25 +4,31 @@ import { PaymentScreen } from "@point_of_sale/app/screens/payment_screen/payment
 import { patch } from "@web/core/utils/patch";
 import { useState } from "@odoo/owl";
 
-const PCLOG = "[pos_payment_category]";
-
 patch(PaymentScreen.prototype, {
     setup() {
         super.setup(...arguments);
         this.categoryState = useState({ activePaymentCategory: null });
-        console.log(PCLOG, "setup() ran — patch is loaded", {
-            payment_methods_from_config_len: this.payment_methods_from_config?.length,
-            configPaymentMethods_len: this.configPaymentMethods?.length,
-        });
     },
 
     /**
-     * Resolve a payment method's category id.
-     *
-     * Source of truth is the record's raw many2one value (the stored category
-     * id), which is always present regardless of whether the relation getter
-     * resolves to a record. Falls back to the resolved relation record.
-     * Tolerates id / [id, name] / record-object representations.
+     * The full list of payment methods for this POS. Odoo 19.0 stores it in
+     * this.payment_methods_from_config (populated by the native setup from
+     * pos.config.payment_method_ids); there is NO configPaymentMethods getter
+     * in 19.0. Fall back to the raw config list just in case.
+     * @returns {Array<Object>}
+     */
+    get _pcAllMethods() {
+        const native = this.payment_methods_from_config;
+        if (native && native.length) {
+            return native;
+        }
+        return this.pos.config.payment_method_ids ?? [];
+    },
+
+    /**
+     * Resolve a payment method's category id from the record's raw many2one
+     * value (the stored id, always present), tolerating id / [id, name] /
+     * record-object representations. Falls back to the resolved relation.
      * @param {Object} method
      * @returns {number|false}
      */
@@ -48,9 +54,7 @@ patch(PaymentScreen.prototype, {
      * @returns {Array<Object>}
      */
     get paymentCategories() {
-        const cats = this.pos.models['pos.payment.category']?.getAll() ?? [];
-        console.log(PCLOG, "paymentCategories getter →", cats.length, cats);
-        return cats;
+        return this.pos.models['pos.payment.category']?.getAll() ?? [];
     },
 
     /**
@@ -60,43 +64,25 @@ patch(PaymentScreen.prototype, {
      * @returns {Array<Object>}
      */
     get filteredPaymentMethods() {
-        console.log(PCLOG, "filteredPaymentMethods getter CALLED", {
-            hasCurrentOrder: !!this.currentOrder,
-        });
-
         // During POS teardown the active order is deleted and this.currentOrder
-        // becomes undefined while the screen briefly re-renders. Returning []
-        // avoids the native template dereferencing a missing order.
+        // becomes undefined while the screen briefly re-renders.
         if (!this.currentOrder) {
-            console.log(PCLOG, "→ no currentOrder, returning []");
             return [];
         }
 
-        const allMethods = this.configPaymentMethods || [];
+        const allMethods = this._pcAllMethods;
         const availableCategories = this.paymentCategories;
-        console.log(PCLOG, "allMethods:", allMethods.length, "categories:", availableCategories.length);
 
         // No categories configured for this POS → behave like the module is off.
         if (!availableCategories.length) {
-            console.log(PCLOG, "→ no categories, returning all", allMethods.length, "methods", allMethods);
             return allMethods;
         }
 
         const active = this.categoryState.activePaymentCategory;
         if (active) {
-            const filtered = allMethods.filter(
+            return allMethods.filter(
                 (m) => this._pcCategoryId(m) === active.original_id
             );
-            console.log(PCLOG, "→ inside category", active.name,
-                "active.original_id =", active.original_id,
-                "methods:", allMethods.map((m) => ({
-                    name: m.name,
-                    raw_category_id: m.raw?.category_id,
-                    getter_category_id: m.category_id,
-                    resolved: this._pcCategoryId(m),
-                })),
-                "→ filtered:", filtered.length);
-            return filtered;
         }
 
         // Top level: virtual folder objects for each category + loose methods.
@@ -107,7 +93,6 @@ patch(PaymentScreen.prototype, {
             is_category: true,
         }));
         const loose = allMethods.filter((m) => !this._pcCategoryId(m));
-        console.log(PCLOG, "→ top level:", folders.length, "folders +", loose.length, "loose methods");
         return [...folders, ...loose];
     },
 
