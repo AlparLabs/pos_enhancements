@@ -12,11 +12,11 @@
         </xpath>
 
         <!-- Point the methods loop at our filtered list.
-             Matched structurally (the <t> child carrying a t-foreach inside the
-             paymentmethods div) so it is robust to the exact attribute value,
-             which differs between Odoo 19.0 ("payment_methods_from_config") and
-             later builds ("this.payment_methods_from_config"). -->
-        <xpath expr="//div[hasclass('paymentmethods')]/t[@t-foreach]" position="attributes">
+             Match by the exact t-foreach value used by Odoo 19.0
+             ("payment_methods_from_config", without "this."). A structural
+             predicate like /t[@t-foreach] is NOT located by QWeb's inheritance
+             engine and breaks the whole template, so we match by value. -->
+        <xpath expr="//t[@t-foreach='payment_methods_from_config']" position="attributes">
             <attribute name="t-foreach">filteredPaymentMethods</attribute>
         </xpath>
 
