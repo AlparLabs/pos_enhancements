@@ -79,8 +79,16 @@ patch(PaymentScreen.prototype, {
         // Odoo 19.0 has no configPaymentMethods getter; the native setup stores
         // the sorted methods in this.payment_methods_from_config. Read from there
         // (fall back to the raw config list) — NOT from a getter that may not exist.
-        const allMethods =
-            this._pcNativeMethods ?? this.pos.config.payment_method_ids ?? [];
+        console.log(PCLOG, "SOURCES", {
+            _pcNativeMethods_len: this._pcNativeMethods?.length,
+            payment_methods_from_config_len: this.payment_methods_from_config?.length,
+            config_payment_method_ids_len: this.pos.config.payment_method_ids?.length,
+            config_payment_method_ids: this.pos.config.payment_method_ids,
+        });
+        let allMethods = this.payment_methods_from_config;
+        if (!allMethods || !allMethods.length) {
+            allMethods = this.pos.config.payment_method_ids ?? [];
+        }
         const availableCategories = this.paymentCategories;
         console.log(PCLOG, "allMethods:", allMethods.length, "categories:", availableCategories.length);
 
