@@ -17,13 +17,26 @@ patch(PaymentScreen.prototype, {
     },
 
     /**
-     * Resolve a payment method's category id, tolerating both representations
-     * the POS frontend may use for the many2one: a linked record object
-     * (with `.id`) or a bare numeric id.
+     * Resolve a payment method's category id.
+     *
+     * Source of truth is the record's raw many2one value (the stored category
+     * id), which is always present regardless of whether the relation getter
+     * resolves to a record. Falls back to the resolved relation record.
+     * Tolerates id / [id, name] / record-object representations.
      * @param {Object} method
      * @returns {number|false}
      */
     _pcCategoryId(method) {
+        let raw = method.raw?.category_id;
+        if (Array.isArray(raw)) {
+            raw = raw[0];
+        }
+        if (raw && typeof raw === 'object') {
+            raw = raw.id;
+        }
+        if (raw) {
+            return raw;
+        }
         const cat = method.category_id;
         if (!cat) {
             return false;
@@ -78,7 +91,8 @@ patch(PaymentScreen.prototype, {
                 "active.original_id =", active.original_id,
                 "methods:", allMethods.map((m) => ({
                     name: m.name,
-                    raw_category_id: m.category_id,
+                    raw_category_id: m.raw?.category_id,
+                    getter_category_id: m.category_id,
                     resolved: this._pcCategoryId(m),
                 })),
                 "→ filtered:", filtered.length);
