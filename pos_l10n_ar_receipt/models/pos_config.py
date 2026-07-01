@@ -13,6 +13,14 @@ class PosConfig(models.Model):
             "ORIGINAL and one labelled DUPLICADO, for internal control."
         ),
     )
+    l10n_ar_show_product_reference = fields.Boolean(
+        string='Show Internal Reference on Receipt',
+        default=False,
+        help=(
+            "When enabled, the product's internal reference (default code) is "
+            "printed in bold before its name on the invoiced receipt."
+        ),
+    )
 
     @api.model
     def _load_pos_data_read(self, records, config):
@@ -23,4 +31,5 @@ class PosConfig(models.Model):
         read_records = super()._load_pos_data_read(records, config)
         if read_records:
             read_records[0]['l10n_ar_receipt_print_duplicate'] = config.l10n_ar_receipt_print_duplicate
+            read_records[0]['l10n_ar_show_product_reference'] = config.l10n_ar_show_product_reference
         return read_records
