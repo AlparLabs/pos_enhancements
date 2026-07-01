@@ -82,10 +82,12 @@
 
     <!--
         Prepend the product's internal reference (default_code) in bold before
-        its name, but only when this Orderline instance is being rendered for
-        the receipt (mode="receipt", set explicitly by OrderReceipt) and the
-        per-POS toggle is enabled. The on-screen cart (mode="display") is
-        untouched.
+        its name, but only when this Orderline instance is being rendered in
+        receipt mode (mode="receipt", set explicitly by OrderReceipt) and the
+        per-POS toggle is enabled. OrderReceipt renders both the on-screen
+        receipt preview (ReceiptScreen) and the actual printed/emailed
+        receipt — both are "the receipt" for this feature's purposes. The
+        live product-screen cart (mode="display") is untouched.
     -->
     <t t-name="pos_l10n_ar_receipt.Orderline" t-inherit="point_of_sale.Orderline" t-inherit-mode="extension">
         <xpath expr="//span[hasclass('text-wrap')]/t[@t-esc='vals.name']" position="before">
