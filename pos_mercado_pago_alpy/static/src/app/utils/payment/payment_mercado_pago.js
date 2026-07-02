@@ -35,7 +35,7 @@ export class PaymentMercadoPago extends PaymentInterface {
         if (cid) {
             return order.payment_ids.find((pl) => pl.uuid === cid);
         }
-        return order.get_selected_paymentline();
+        return order.getSelectedPaymentline();
     }
 
     // ── RPC helpers (Terminal Smart) ─────────────────────────────────────────
@@ -128,8 +128,8 @@ export class PaymentMercadoPago extends PaymentInterface {
             "0";
 
         const items = order.getOrderlines().map((ol) => {
-            const unitPrice = Math.round(ol.get_unit_price() * 100) / 100;
-            const qty = ol.get_quantity ? ol.get_quantity() : (ol.quantity || 1);
+            const unitPrice = Math.round((ol.price_unit || 0) * 100) / 100;
+            const qty = ol.getQuantity ? ol.getQuantity() : (ol.qty || 1);
             const total = Math.round(unitPrice * qty * 100) / 100;
             return {
                 sku_number: String(ol.product_id.id),
@@ -241,7 +241,7 @@ export class PaymentMercadoPago extends PaymentInterface {
         this.pending_cid = cid;
         const line = this._findPaymentLine(cid);
         try {
-            line.set_payment_status("waitingCapture");
+            line.setPaymentStatus("waitingCapture");
             if (this._isQr) {
                 return await this._sendQrPaymentRequest(cid, line);
             } else {
@@ -261,7 +261,7 @@ export class PaymentMercadoPago extends PaymentInterface {
         }
         this.mp_order = mp_response;
         this.mp_qr_order_id = mp_response?.id || null;
-        line.set_payment_status("waitingCard");
+        line.setPaymentStatus("waitingCard");
 
         const qrData = mp_response?.config?.qr?.qr_data || mp_response?.type_response?.qr_data || mp_response?.qr_data;
         if (this._showQrOnScreen) {
@@ -326,7 +326,7 @@ export class PaymentMercadoPago extends PaymentInterface {
             return false;
         }
         this.mp_order = mp_response;
-        line.set_payment_status("waitingCard");
+        line.setPaymentStatus("waitingCard");
         return await new Promise((resolve) => {
             this.webhook_resolver = resolve;
             let pollCount = 0;
@@ -433,7 +433,7 @@ export class PaymentMercadoPago extends PaymentInterface {
 
         this._closeQrPopup();
         if (this._isOrderApproved(statusResp)) {
-            line.set_payment_status("done");
+            line.setPaymentStatus("done");
             this.webhook_resolver?.(true);
             this.webhook_resolver = null;
         } else {
@@ -453,7 +453,7 @@ export class PaymentMercadoPago extends PaymentInterface {
             if (!resolverValue) {
                 this._showMsg(messageKey, status);
             }
-            line.set_payment_status("done");
+            line.setPaymentStatus("done");
             this.webhook_resolver?.(resolverValue);
             this.webhook_resolver = null;
             return resolverValue;
