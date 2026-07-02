@@ -1,6 +1,6 @@
 {
     'name': 'POS Restaurant KPI',
-    'version': '19.0.1.0.0',
+    'version': '19.0.1.0.1',
     'category': 'Point of Sale',
     'summary': 'Add KPIs to the POS Restaurant Floor Screen (Total Customers and Avg. Consumption)',
     'depends': ['pos_restaurant'],

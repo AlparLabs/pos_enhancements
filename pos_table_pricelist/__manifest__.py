@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 {
     'name': 'POS Table Pricelist',
-    'version': '19.0.1.0.0',
+    'version': '19.0.1.0.1',
     'category': 'Sales/Point of Sale',
     'summary': 'Assign a specific pricelist to individual restaurant tables in Odoo POS.',
     'description': """

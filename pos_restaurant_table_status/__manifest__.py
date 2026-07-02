@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 {
     'name': 'POS Restaurant Table Status',
-    'version': '19.0.1.0.0',
+    'version': '19.0.1.0.1',
     'category': 'Sales/Point of Sale',
     'summary': 'Adds table-level status indicators to the restaurant floor screen.',
     'description': """
