@@ -15,6 +15,6 @@ ReceiptHeader.props = { ...ReceiptHeader.props, ...copyLabelProp };
 // built here and exposed as a component method for the template to call.
 patch(OrderReceipt.prototype, {
     l10nArQrCodeSrc(qrCode) {
-        return `/report/barcode/?type=QR&width=100&height=100&value=${encodeURIComponent(qrCode)}`;
+        return `/report/barcode/?barcode_type=QR&width=100&height=100&value=${encodeURIComponent(qrCode)}`;
     },
 });
