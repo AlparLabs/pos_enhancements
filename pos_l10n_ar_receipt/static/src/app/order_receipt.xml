@@ -26,10 +26,11 @@
             Emphasize ticket number, date/time and cashier (bold + larger),
             matching the pre-ticket style. These sit inside a 75% font-size
             container, so the em sizes below render clearly bigger than the
-            surrounding header text.
+            surrounding header text. The ticket number stays smaller than
+            "Nº DE FACTURA" above so cashiers don't confuse the two.
         -->
         <xpath expr="//span[hasclass('pos-receipt-vat')]" position="attributes">
-            <attribute name="style">font-weight: bold; font-size: 1.6em;</attribute>
+            <attribute name="style">font-weight: bold; font-size: 1.1em;</attribute>
         </xpath>
         <xpath expr="//div[@id='order-date']" position="attributes">
             <attribute name="style">font-weight: bold; font-size: 1.4em;</attribute>
@@ -50,9 +51,16 @@
         <xpath expr="//div[hasclass('before-footer')]" position="after">
             <div class="pos-l10n-ar-receipt" style="font-size: 0.8em; margin-top: 10px; border-top: 1px dashed black; padding-top: 10px;">
 
-                <!-- QR Code -->
+                <!-- QR Code
+                     order.l10n_ar_afip_qr_code is a full ARCA URL (e.g.
+                     "https://www.afip.gob.ar/fe/qr/?p=<base64>"). It must be
+                     passed as the `value` query param (URL-encoded), not
+                     concatenated into the path: an unencoded "?" would be
+                     read as the start of this request's own query string,
+                     stripping the "p=" payload and leaving the QR pointing
+                     at ARCA's landing page with no invoice data encoded. -->
                 <div t-if="order.l10n_ar_afip_qr_code" class="pos-receipt-center-align" style="margin-bottom: 5px;">
-                    <img t-att-src="'/report/barcode/QR/' + order.l10n_ar_afip_qr_code" style="width: 100px; height: 100px;" alt="QR Code ARCA"/>
+                    <img t-att-src="'/report/barcode/?type=QR&amp;width=100&amp;height=100&amp;value=' + encodeURIComponent(order.l10n_ar_afip_qr_code)" style="width: 100px; height: 100px;" alt="QR Code ARCA"/>
                 </div>
 
                 <!-- CAE Details -->
