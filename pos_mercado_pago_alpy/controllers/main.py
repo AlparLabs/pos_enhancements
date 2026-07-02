@@ -11,6 +11,13 @@ from odoo.addons.pos_mercado_pago_alpy.models.mercado_pago_post_request import M
 
 _logger = logging.getLogger(__name__)
 
+MP_TERMINAL_TYPES = (
+    'mercado_pago_alpy',
+    'mercado_pago_qr_local',
+    'mercado_pago_qr_screen',
+    'mercado_pago_qr_hybrid',
+)
+
 
 class PosMercadoPagoWebhook(http.Controller):
     @http.route('/pos_mercado_pago_alpy/notification', methods=['POST'], type="http", auth="none", csrf=False)
@@ -65,7 +72,7 @@ class PosMercadoPagoWebhook(http.Controller):
             # For Odoo 18, we don't have matched_method easily yet, let's try to extract from all available methods
             if resource_id:
                 # We need to iterate over all pos.payment.method that use mercado_pago_alpy
-                payment_methods = request.env['pos.payment.method'].sudo().search([('use_payment_terminal', '=', 'mercado_pago_alpy')])
+                payment_methods = request.env['pos.payment.method'].sudo().search([('use_payment_terminal', 'in', list(MP_TERMINAL_TYPES))])
                 for pm in payment_methods:
                     if pm.mp_bearer_token:
                         mercado_pago = MercadoPagoPosRequest(pm.mp_bearer_token)
@@ -103,7 +110,7 @@ class PosMercadoPagoWebhook(http.Controller):
         if not pos_session_sudo or pos_session_sudo.state != 'opened':
             # session is invalid or closed. If we have payment method, fallback
             payment_method_sudo = request.env['pos.payment.method'].sudo().browse(int(payment_method_id_str))
-            if payment_method_sudo.exists() and payment_method_sudo.use_payment_terminal == 'mercado_pago_alpy':
+            if payment_method_sudo.exists() and payment_method_sudo.use_payment_terminal in MP_TERMINAL_TYPES:
                 configs = request.env['pos.config'].sudo().search([('payment_method_ids', 'in', payment_method_sudo.ids)])
                 for config in configs:
                     config._notify('MERCADO_PAGO_LATEST_MESSAGE', {'config_id': config.id})
@@ -111,13 +118,18 @@ class PosMercadoPagoWebhook(http.Controller):
             return http.Response('OK', status=200)
 
         payment_method_sudo = pos_session_sudo.config_id.payment_method_ids.filtered(lambda p: p.id == int(payment_method_id_str))
-        if not payment_method_sudo or payment_method_sudo.use_payment_terminal != 'mercado_pago_alpy':
+        if not payment_method_sudo or payment_method_sudo.use_payment_terminal not in MP_TERMINAL_TYPES:
             _logger.error("Invalid payment method id: %s", payment_method_id_str)
             # This error is not related with Mercado Pago, simply acknowledge Mercado Pago message
             return http.Response('OK', status=200)
 
         # We have to check if this comes from Mercado Pago with the secret key
         secret_key = payment_method_sudo.mp_webhook_secret_key
+        if not secret_key:
+            _logger.error(
+                "Webhook received for payment method %s but no webhook secret key is configured; "
+                "cannot authenticate the notification.", payment_method_sudo.id)
+            return http.Response(status=401)
 
         # The ID used for signature can be in data['id'] (new format) or data['id'] (legacy root level)
         # In the new format, the root ID is the notification ID, but the resource ID is inside data
@@ -131,6 +143,10 @@ class PosMercadoPagoWebhook(http.Controller):
         # Standard Mercado Pago webhook signature usually uses the data.id
         
         webhook_id = request.params.get('data.id') or request.params.get('id') or data.get('data', {}).get('id') or data.get('id')
+        # Per Mercado Pago docs, an alphanumeric data.id must be lowercased in
+        # the signature manifest (Orders API ids are alphanumeric; payment ids
+        # are numeric, for which lower() is a no-op).
+        webhook_id = str(webhook_id).lower()
         signed_template = f"id:{webhook_id};request-id:{x_request_id};ts:{ts};"
         cyphed_signature = hmac.new(secret_key.encode(), signed_template.encode(), hashlib.sha256).hexdigest()
         

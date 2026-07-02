@@ -32,7 +32,14 @@ class MercadoPagoPosRequest:
         if idempotency_key:
             header['X-Idempotency-Key'] = idempotency_key
         try:
-            response = requests.request(method, endpoint, headers=header, json=payload, timeout=REQUEST_TIMEOUT)
+            if method.lower() == 'get':
+                # GET filters (e.g. /merchant_orders/search) must go in the query
+                # string — Mercado Pago ignores a JSON body on GET requests.
+                response = requests.request(
+                    method, endpoint, headers=header, params=payload or None, timeout=REQUEST_TIMEOUT)
+            else:
+                response = requests.request(
+                    method, endpoint, headers=header, json=payload, timeout=REQUEST_TIMEOUT)
             return response.json()
         except requests.exceptions.RequestException as error:
             _logger.warning("Cannot connect with Mercado Pago POS. Error: %s", error)
