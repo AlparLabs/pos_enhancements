@@ -12,6 +12,12 @@
                     help="Print invoiced sales twice: one ORIGINAL and one DUPLICADO copy for internal control.">
                     <field name="pos_l10n_ar_receipt_print_duplicate" widget="boolean_toggle"/>
                 </setting>
+                <setting
+                    id="l10n_ar_show_product_reference"
+                    string="Product Reference (AR)"
+                    help="Print the product's internal reference (default code) before its name on the invoiced receipt.">
+                    <field name="pos_l10n_ar_show_product_reference" widget="boolean_toggle"/>
+                </setting>
             </setting>
         </field>
     </record>

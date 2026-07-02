@@ -10,3 +10,8 @@ class ResConfigSettings(models.TransientModel):
         related='pos_config_id.l10n_ar_receipt_print_duplicate',
         readonly=False,
     )
+    pos_l10n_ar_show_product_reference = fields.Boolean(
+        string='Show Internal Reference on Receipt',
+        related='pos_config_id.l10n_ar_show_product_reference',
+        readonly=False,
+    )
