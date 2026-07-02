@@ -1,6 +1,6 @@
 {
     'name': 'POS Kitchen Receipt Grouping',
-    'version': '19.0.1.0.0',
+    'version': '19.0.2.0.0',
     'category': 'Sales/Point of Sale',
     'summary': 'Group POS kitchen receipts by POS Category sequence and decompose Combos',
     'description': """
@@ -17,8 +17,7 @@
     ],
     'assets': {
         'point_of_sale._assets_pos': [
-            'pos_kitchen_receipt_grouping/static/src/app/models/pos_order.js',
-            'pos_kitchen_receipt_grouping/static/src/app/store/pos_store.js',
+            'pos_kitchen_receipt_grouping/static/src/app/services/pos_store.js',
             'pos_kitchen_receipt_grouping/static/src/app/printer/order_change_receipt.xml',
         ],
     },
