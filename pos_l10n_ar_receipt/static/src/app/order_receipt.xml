@@ -58,9 +58,12 @@
                      concatenated into the path: an unencoded "?" would be
                      read as the start of this request's own query string,
                      stripping the "p=" payload and leaving the QR pointing
-                     at ARCA's landing page with no invoice data encoded. -->
+                     at ARCA's landing page with no invoice data encoded.
+                     encodeURIComponent is a JS global, not callable from an
+                     OWL template, so the src is built by the component
+                     method l10nArQrCodeSrc (receipt_components_patch.js). -->
                 <div t-if="order.l10n_ar_afip_qr_code" class="pos-receipt-center-align" style="margin-bottom: 5px;">
-                    <img t-att-src="'/report/barcode/?type=QR&amp;width=100&amp;height=100&amp;value=' + encodeURIComponent(order.l10n_ar_afip_qr_code)" style="width: 100px; height: 100px;" alt="QR Code ARCA"/>
+                    <img t-att-src="l10nArQrCodeSrc(order.l10n_ar_afip_qr_code)" style="width: 100px; height: 100px;" alt="QR Code ARCA"/>
                 </div>
 
                 <!-- CAE Details -->
