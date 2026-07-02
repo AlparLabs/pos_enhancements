@@ -27,7 +27,7 @@
             <div class="pos-receipt-center-align" style="margin: 8px 0;">
                 <t t-if="order.table_id">
                     <div style="font-size: 1.15em; font-weight: bold;">
-                        Mesa: <t t-esc="order.table_id.name"/>
+                        Mesa: <t t-esc="order.table_id.getName()"/>
                     </div>
                 </t>
                 <t t-if="order.customer_count">
