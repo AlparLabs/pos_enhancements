@@ -27,7 +27,7 @@ patch(TicketScreen.prototype, {
      * @returns {boolean}
      */
     hasBarTicketLines(order) {
-        if (!order || !order.get_orderlines) {
+        if (!order || !order.getOrderlines) {
             return false;
         }
         return order.getOrderlines().some((line) => shouldSplitLine(line, this._barTicketPos));
@@ -52,12 +52,7 @@ patch(TicketScreen.prototype, {
             return;
         }
 
-        await reprintBarTicketsForOrder(
-            order,
-            this._barTicketPos,
-            this._barTicketPrinter,
-            this.env
-        );
+        await reprintBarTicketsForOrder(order, this._barTicketPos, this._barTicketPrinter);
 
         this._barTicketNotification.add(_t("Tickets Barra reimpresos."), {
             type: "success",

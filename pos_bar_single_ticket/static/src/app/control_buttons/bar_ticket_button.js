@@ -55,12 +55,7 @@ export class BarReprintButton extends Component {
             return;
         }
 
-        await reprintBarTicketsForOrder(
-            this.currentOrder,
-            this.pos,
-            this.printer,
-            this.env
-        );
+        await reprintBarTicketsForOrder(this.currentOrder, this.pos, this.printer);
 
         this.notification.add(_t("Tickets Barra reimpresos."), {
             type: "success",
