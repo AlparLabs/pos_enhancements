@@ -21,6 +21,13 @@ class PosSession(models.Model):
         Payments without a lot number are grouped under a single "Sin Lote" entry
         so no money is lost.
 
+        Known limitations
+        -----------------
+        - Multi-currency sessions: amount_converted is taken equal to amount.
+        - Closing differences (``bank_payment_method_diffs``) entered for a
+          terminal-detail method are not applied to the per-lot payments;
+          record them as a separate adjustment if needed.
+
         Implementation note
         -------------------
         We pre-remove terminal-detail methods from ``combine_receivables_bank``

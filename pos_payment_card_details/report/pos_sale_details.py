@@ -6,9 +6,10 @@ class ReportSaleDetails(models.AbstractModel):
     _inherit = 'report.point_of_sale.report_saledetails'
 
     @api.model
-    def get_sale_details(self, date_start: Any = False, date_stop: Any = False, config_ids: Any = False, session_ids: Any = False) -> dict[str, Any]:
-        # Call super to get the original report data
-        data = super().get_sale_details(date_start, date_stop, config_ids, session_ids)
+    def get_sale_details(self, date_start: Any = False, date_stop: Any = False, config_ids: Any = False, session_ids: Any = False, **kwargs: Any) -> dict[str, Any]:
+        # Call super to get the original report data.
+        # v19 added **kwargs to the core signature — pass them through.
+        data = super().get_sale_details(date_start, date_stop, config_ids, session_ids, **kwargs)
         
         # Determine the domain for payments based on sessions or config dates
         domain = [('is_change', '=', False)]

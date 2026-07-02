@@ -8,15 +8,9 @@ from odoo import http
 from odoo.http import request
 
 from odoo.addons.pos_mercado_pago_alpy.models.mercado_pago_post_request import MercadoPagoPosRequest
+from odoo.addons.pos_mercado_pago_alpy.models.pos_payment_method import MP_TERMINAL_TYPES
 
 _logger = logging.getLogger(__name__)
-
-MP_TERMINAL_TYPES = (
-    'mercado_pago_alpy',
-    'mercado_pago_qr_local',
-    'mercado_pago_qr_screen',
-    'mercado_pago_qr_hybrid',
-)
 
 
 class PosMercadoPagoWebhook(http.Controller):

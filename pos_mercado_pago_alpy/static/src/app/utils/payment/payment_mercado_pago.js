@@ -50,10 +50,14 @@ export class PaymentMercadoPago extends PaymentInterface {
             this.pos.config?.current_session_id?.id ||
             this.pos.config?.current_session_id ||
             "0";
+        const extRef = `${sessionId}_${line.payment_method_id.id}_${order.uuid}_${Date.now()}`;
+        // Persisted on the pos.payment so the backend can look the payment up
+        // on Mercado Pago at session close (bank reconciliation).
+        line.update({ mp_external_reference: extRef });
         const infos = {
             amount: parseInt(line.amount * 100, 10),
             additional_info: {
-                external_reference: `${sessionId}_${line.payment_method_id.id}_${order.uuid}_${Date.now()}`,
+                external_reference: extRef,
                 print_on_terminal: true,
             },
         };
@@ -145,6 +149,9 @@ export class PaymentMercadoPago extends PaymentInterface {
 
         const extRef = `${sessionId}_${line.payment_method_id.id}_${order.uuid}_${Date.now()}`;
         this.mp_qr_ext_ref = extRef;
+        // Persisted on the pos.payment so the backend can look the payment up
+        // on Mercado Pago at session close (bank reconciliation).
+        line.update({ mp_external_reference: extRef });
         const infos = {
             amount: parseInt(line.amount * 100, 10),
             external_reference: extRef,
@@ -210,6 +217,23 @@ export class PaymentMercadoPago extends PaymentInterface {
 
     _isOrderResponseValid(resp) {
         return resp && typeof resp.status === "string";
+    }
+
+    /**
+     * Extracts the Mercado Pago payment id from an Orders API order
+     * (resp.transactions.payments) or a merchant_order (resp.payments).
+     * Prefers the approved payment; falls back to the last one.
+     * @returns {string}
+     */
+    _extractApprovedPaymentId(resp) {
+        const payments = resp?.transactions?.payments || resp?.payments || [];
+        const approved = payments.find(
+            (p) =>
+                ["approved", "accredited", "processed"].includes(p.status) ||
+                ["approved", "accredited"].includes(p.status_detail)
+        );
+        const payment = approved || payments[payments.length - 1];
+        return payment?.id != null ? String(payment.id) : "";
     }
 
     _isOrderApproved(resp) {
@@ -433,6 +457,10 @@ export class PaymentMercadoPago extends PaymentInterface {
 
         this._closeQrPopup();
         if (this._isOrderApproved(statusResp)) {
+            const mpPaymentId = this._extractApprovedPaymentId(statusResp);
+            if (mpPaymentId) {
+                line.update({ mp_payment_id: mpPaymentId });
+            }
             line.setPaymentStatus("done");
             this.webhook_resolver?.(true);
             this.webhook_resolver = null;
@@ -473,6 +501,9 @@ export class PaymentMercadoPago extends PaymentInterface {
                         ["approved", "accredited", "processed"].includes(innerStatus) ||
                         ["approved", "accredited"].includes(innerDetail)
                     ) {
+                        if (lastPayment.id != null) {
+                            line.update({ mp_payment_id: String(lastPayment.id) });
+                        }
                         return showMessageAndResolve(_t("Payment has been processed"), "info", true);
                     }
                 }
