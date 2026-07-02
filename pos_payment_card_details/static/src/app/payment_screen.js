@@ -20,9 +20,10 @@ patch(PaymentScreen.prototype, {
         // After super, show the popup if this payment method requires terminal details
         if (paymentMethod.use_terminal_details) {
 
-            // CORRECCIÓN: Obtener la línea de forma segura en Odoo 18
             const order = this.currentOrder;
-            const line = order.get_selected_paymentline?.() || order.payment_ids[order.payment_ids.length - 1];
+            const line =
+                order.getSelectedPaymentline?.() ||
+                order.payment_ids[order.payment_ids.length - 1];
 
             const terminalDetails = await makeAwaitable(this.dialog, TerminalDetailsPopup, {
                 title: "Detalles de Terminal",
@@ -36,16 +37,20 @@ patch(PaymentScreen.prototype, {
             if (!terminalDetails) {
                 // User cancelled — remove the payment line we just added
                 if (line) {
-                    order.remove_paymentline(line);
+                    order.removePaymentline(line);
                 }
                 return;
             }
 
-            // Set the captured details directly on the object.
+            // Update through the related-models API so the change is tracked
+            // and serialized to the backend (pos.payment loads all fields in
+            // v19, including these custom ones).
             if (line) {
-                line.lot_number = terminalDetails.lot_number;
-                line.coupon_number = terminalDetails.coupon_number;
-                line.installments = terminalDetails.installments;
+                line.update({
+                    lot_number: terminalDetails.lot_number,
+                    coupon_number: terminalDetails.coupon_number,
+                    installments: terminalDetails.installments,
+                });
             }
         }
 
