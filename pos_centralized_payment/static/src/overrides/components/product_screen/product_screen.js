@@ -45,6 +45,11 @@ patch(ProductScreen.prototype, {
      * Print a pre-ticket and park the order in the saved-orders queue.
      * Called by non-manager cashiers instead of the Pay button.
      *
+     * Records the employee currently logged in at this terminal as the
+     * order's counter_salesperson_id before parking it, so that information
+     * survives a different (manager/cashier) employee later reopening and
+     * paying the order — see pos_centralized_payment/models/pos_order.py.
+     *
      * @returns {Promise<void>}
      */
     async clickQueueOrder() {
@@ -52,6 +57,7 @@ patch(ProductScreen.prototype, {
         if (!order || order.getOrderlines().length === 0) {
             return;
         }
+        order.counter_salesperson_id = this.pos.getCashier();
         await this.printer.print(PreTicketReceipt, { order }, { webPrintFallback: true });
         this.pos.clickSaveOrder();
     },
