@@ -421,8 +421,23 @@ export class PaymentMercadoPago extends PaymentInterface {
                 } catch (e) {
                     /* ignore */
                 }
-                if (pollCount > 18) {
+                if (pollCount > 36) {
+                    // 3 minutes without a final status: cancel the order on the
+                    // terminal so it cannot be paid after the POS gave up, warn
+                    // the cashier, and release the payment line.
                     clearInterval(pollInterval);
+                    this.webhook_resolver = null;
+                    try {
+                        await this._cancelOrder();
+                    } catch (e) {
+                        console.warn("MercadoPago: could not cancel order on timeout", e);
+                    }
+                    this._showMsg(
+                        _t(
+                            "Tiempo de espera agotado. Verifique el estado del pago en la terminal antes de reintentar."
+                        ),
+                        "info"
+                    );
                     resolve(false);
                 }
             }, 5000);
