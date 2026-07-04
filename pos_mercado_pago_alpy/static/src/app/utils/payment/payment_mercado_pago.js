@@ -153,7 +153,6 @@ export class PaymentMercadoPago extends PaymentInterface {
             external_reference: extRef,
             title: `Orden POS #${order.sequence_number || order.uid}`,
             items: items,
-            notification_url: `${window.location.origin}/pos_mercado_pago_alpy/notification`,
         };
         return await this.env.services.orm.silent.call(
             "pos.payment.method",
@@ -175,15 +174,6 @@ export class PaymentMercadoPago extends PaymentInterface {
     // ── QR Popup management ──────────────────────────────────────────────────
 
     _openQrPopup(line, dynamicQrString = null) {
-        // DEBUG — remove after fixing
-        console.log("MercadoPago QR [DEBUG] payment_method_id:", JSON.stringify({
-            id: this.payment_method_id?.id,
-            name: this.payment_method_id?.name,
-            use_payment_terminal: this.payment_method_id?.use_payment_terminal,
-            mp_qr_string: this.payment_method_id?.mp_qr_string,
-            mp_external_pos_id: this.payment_method_id?.mp_external_pos_id,
-        }));
-        console.log("MercadoPago QR [DEBUG] dynamicQrString:", dynamicQrString);
         const qrString = dynamicQrString || this.payment_method_id.mp_qr_string;
         if (!qrString) {
             console.error("MercadoPago QR: Error abriendo popup, falta el string QR");
@@ -431,8 +421,24 @@ export class PaymentMercadoPago extends PaymentInterface {
                 } catch (e) {
                     /* ignore */
                 }
-                if (pollCount > 18) {
+                if (pollCount > 36) {
+                    // 3 minutes without a final status: cancel the order on the
+                    // terminal so it cannot be paid after the POS gave up, warn
+                    // the cashier, and release the payment line.
                     clearInterval(pollInterval);
+                    this.webhook_resolver = null;
+                    try {
+                        await this._cancelOrder();
+                    } catch (e) {
+                        console.warn("MercadoPago: could not cancel order on timeout", e);
+                    }
+                    this._showMsg(
+                        _t(
+                            "Tiempo de espera agotado. Verifique el estado del pago en la terminal antes de reintentar."
+                        ),
+                        "info"
+                    );
+                    resolve(false);
                 }
             }, 5000);
         });
@@ -586,7 +592,7 @@ export class PaymentMercadoPago extends PaymentInterface {
         }
 
         let last_status_order = await this._getOrderStatus();
-        if (this.mp_order.id != last_status_order.id) {
+        if (this.mp_order.id !== last_status_order.id) {
             return;
         }
 
