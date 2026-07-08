@@ -24,9 +24,12 @@ serie el botón "Daily Sale"):
   Puede haber datos superpuestos entre ambos módulos (p. ej. movimientos de
   efectivo aparecen en los dos); no es un problema, cada cliente instala lo
   que necesita.
-- **Disparo único: popup de cierre de caja**. No se agrega acción en el
-  backend por ahora. Mismo patrón que `pos_session_control_report`
-  (`closing_popup_patch.js` + `.xml`, `this.report.doAction(...)`).
+- **Disparo desde el popup de cierre de caja** (botones nuevos, mismo patrón
+  que `pos_session_control_report`: `closing_popup_patch.js` + `.xml`,
+  `this.report.doAction(...)`) **y también desde el backend**, vía el menú
+  "Imprimir" del formulario de `pos.session` — igual que ya hace "Control
+  Sesión", agregando `binding_model_id` a las acciones de reporte. No se
+  agrega ninguna vista ni botón adicional en el backend, el binding alcanza.
 - **Sin campo de responsable en los movimientos de caja**: los cash in/out de
   Odoo estándar solo graban el usuario de Odoo (`create_uid`), no el
   empleado de `pos_hr` logueado en ese momento en la terminal, ya que varios
@@ -80,6 +83,11 @@ pos_retail_cash_closure_reports/
 (`AbstractModel`, mismo patrón que
 `report.pos_session_control_report.report_session_control`).
 
+La acción de reporte (`report/report_cash_closure.xml`) lleva
+`binding_model_id` apuntando a `point_of_sale.model_pos_session`, para que
+aparezca en el menú "Imprimir" del formulario de Sesión de POS en el
+backend, además de poder invocarse desde el popup de cierre.
+
 **Obtención de datos:**
 
 - Resumen de saldo por método de pago cash: reutiliza
@@ -118,6 +126,11 @@ pos_retail_cash_closure_reports/
 ### PDF 2 — Ventas x Vendedor
 
 **Modelo:** `report.pos_retail_cash_closure_reports.report_sales_by_salesperson`.
+
+Igual que el reporte anterior, su acción
+(`report/report_sales_by_salesperson.xml`) lleva `binding_model_id` a
+`point_of_sale.model_pos_session` para aparecer en el menú "Imprimir" del
+backend.
 
 **Obtención de datos:**
 
@@ -199,7 +212,8 @@ para no depender de que `pos_session_control_report` esté presente):
 ## Fuera de alcance
 
 - Capturar el empleado real (pos_hr) que hizo cada retiro/ingreso de caja.
-- Acción de reporte desde el backend (`pos.session` form view).
+- Cualquier vista o botón de backend más allá del binding en el menú
+  "Imprimir" de `pos.session`.
 - Detalle orden por orden en "Ventas x Vendedor".
 - Modificar `pos_session_control_report` o el botón nativo "Daily Sale".
 
