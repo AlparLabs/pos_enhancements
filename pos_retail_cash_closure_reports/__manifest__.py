@@ -25,7 +25,9 @@
     'depends': ['point_of_sale', 'pos_centralized_payment'],
     'data': [
         'report/report_cash_closure.xml',
+        'report/report_sales_by_salesperson.xml',
         'views/report_cash_closure_template.xml',
+        'views/report_sales_by_salesperson_template.xml',
     ],
     'installable': True,
     'application': False,
