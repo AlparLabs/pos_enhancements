@@ -29,6 +29,12 @@
         'views/report_cash_closure_template.xml',
         'views/report_sales_by_salesperson_template.xml',
     ],
+    'assets': {
+        'point_of_sale._assets_pos': [
+            'pos_retail_cash_closure_reports/static/src/app/closing_popup/closing_popup_patch.js',
+            'pos_retail_cash_closure_reports/static/src/app/closing_popup/closing_popup_patch.xml',
+        ],
+    },
     'installable': True,
     'application': False,
     'auto_install': False,
