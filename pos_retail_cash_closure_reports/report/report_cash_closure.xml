@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+    <record id="action_report_cash_closure" model="ir.actions.report">
+        <field name="name">Rendición de Caja</field>
+        <field name="model">pos.session</field>
+        <field name="report_type">qweb-pdf</field>
+        <field name="report_name">pos_retail_cash_closure_reports.report_cash_closure</field>
+        <field name="report_file">pos_retail_cash_closure_reports.report_cash_closure</field>
+        <field name="binding_model_id" ref="point_of_sale.model_pos_session"/>
+    </record>
+</odoo>

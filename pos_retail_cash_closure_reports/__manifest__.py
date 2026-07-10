@@ -23,7 +23,10 @@
     'website': 'https://www.alpardata.com.ar',
     'license': 'LGPL-3',
     'depends': ['point_of_sale', 'pos_centralized_payment'],
-    'data': [],
+    'data': [
+        'report/report_cash_closure.xml',
+        'views/report_cash_closure_template.xml',
+    ],
     'installable': True,
     'application': False,
     'auto_install': False,
