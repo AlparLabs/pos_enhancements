@@ -1,3 +1,5 @@
+from collections import defaultdict
+
 from odoo import models
 from odoo.tools.misc import format_datetime as _format_datetime
 from odoo.tools.misc import formatLang as _format_lang
@@ -22,9 +24,23 @@ class ReportCashClosure(models.AbstractModel):
             if payment.get('count')
         ]
 
-        moves = env['account.bank.statement.line'].search([
+        moves_by_session = defaultdict(list)
+        for move in env['account.bank.statement.line'].search([
             ('pos_session_id', 'in', sessions.ids),
-        ], order='date asc, id asc')
+        ], order='date asc, id asc'):
+            moves_by_session[move.pos_session_id.id].append(move)
+
+        filtered_moves = []
+        for session in sessions:
+            session_moves = moves_by_session.get(session.id, [])
+            if session.cash_register_difference and session_moves:
+                # The last chronological move is the automatic closing-difference
+                # adjustment Odoo posts when the counted amount doesn't match the
+                # expected amount — not a manual cash in/out. Odoo's own
+                # get_sale_details() excludes this same line; mirror that here so
+                # it isn't double-counted as a phantom movement.
+                session_moves = session_moves[:-1]
+            filtered_moves.extend(session_moves)
 
         cash_moves = [
             {
@@ -33,10 +49,10 @@ class ReportCashClosure(models.AbstractModel):
                 'reason': move.payment_ref,
                 'amount': abs(move.amount),
             }
-            for move in moves
+            for move in filtered_moves
         ]
-        total_cash_in = sum(move.amount for move in moves if move.amount > 0)
-        total_cash_out = sum(-move.amount for move in moves if move.amount < 0)
+        total_cash_in = sum(move.amount for move in filtered_moves if move.amount > 0)
+        total_cash_out = sum(-move.amount for move in filtered_moves if move.amount < 0)
 
         return {
             'docs': sessions,
