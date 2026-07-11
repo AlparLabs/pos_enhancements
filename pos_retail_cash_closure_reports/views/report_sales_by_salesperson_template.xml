@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+    <!--
+        Body-only partial: the per-salesperson groups and grand total, with
+        no page wrapper/title of its own. t-call'd from
+        report_cash_closure_full_template.xml, which supplies the page
+        wrapper and the enclosing t-foreach="docs" t-as="session" scope that
+        this partial's groups/grand_total/... references rely on being in
+        context.
+    -->
+    <template id="sales_by_salesperson_body">
+
+        <!-- ── Grupos por vendedor ──────────────────────────── -->
+        <t t-if="not groups">
+            <div class="row mb-4">
+                <div class="col-12">
+                    <p>Sin ventas registradas.</p>
+                </div>
+            </div>
+        </t>
+
+        <t t-foreach="groups" t-as="group">
+            <div class="row mb-4">
+                <div class="col-12">
+                    <h5 class="border-bottom pb-1">
+                        <t t-esc="group['salesperson_name']"/>
+                    </h5>
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>Comprobante</th>
+                                <th>Medio de pago</th>
+                                <th class="text-end">Monto</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <t t-foreach="group['orders']" t-as="order_line">
+                                <tr>
+                                    <td><t t-esc="order_line['reference']"/></td>
+                                    <td><t t-esc="order_line['payment_methods']"/></td>
+                                    <td class="text-end">
+                                        <t t-esc="formatLang(order_line['amount'], currency_obj=currency_id)"/>
+                                    </td>
+                                </tr>
+                            </t>
+                        </tbody>
+                    </table>
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>Medio de pago</th>
+                                <th class="text-end">Total</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <t t-foreach="group['payment_totals']" t-as="payment_total">
+                                <tr>
+                                    <td><t t-esc="payment_total['name']"/></td>
+                                    <td class="text-end">
+                                        <t t-esc="formatLang(payment_total['amount'], currency_obj=currency_id)"/>
+                                    </td>
+                                </tr>
+                            </t>
+                        </tbody>
+                        <tfoot>
+                            <tr class="fw-bold">
+                                <td>Subtotal</td>
+                                <td class="text-end">
+                                    <t t-esc="formatLang(group['total'], currency_obj=currency_id)"/>
+                                </td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+        </t>
+
+        <!-- ── Total general ────────────────────────────────── -->
+        <div class="row">
+            <div class="col-12 text-end">
+                <h5>
+                    Total General:
+                    <t t-esc="formatLang(grand_total, currency_obj=currency_id)"/>
+                </h5>
+            </div>
+        </div>
+
+    </template>
+</odoo>

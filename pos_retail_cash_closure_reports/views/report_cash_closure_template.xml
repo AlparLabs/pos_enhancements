@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+    <!--
+        Body-only partial: the "Resumen de Caja" and "Detalle de Movimientos"
+        sections, with no page wrapper/title of its own. t-call'd from
+        report_cash_closure_full_template.xml, which supplies the page
+        wrapper and the enclosing t-foreach="docs" t-as="session" scope that
+        this partial's session/cash_payments/cash_moves/... references rely
+        on being in context.
+    -->
+    <template id="cash_closure_body">
+
+        <!-- ── Resumen de caja ─────────────────────────────── -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <h5 class="border-bottom pb-1">Resumen de Caja</h5>
+                <table class="table table-sm">
+                    <thead>
+                        <tr>
+                            <th>Método</th>
+                            <th class="text-end">Saldo inicial</th>
+                            <th class="text-end">Esperado</th>
+                            <th class="text-end">Contado</th>
+                            <th class="text-end">Diferencia</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <t t-if="not cash_payments">
+                            <tr>
+                                <td colspan="5">Sin métodos de pago con control de efectivo</td>
+                            </tr>
+                        </t>
+                        <t t-foreach="cash_payments" t-as="payment">
+                            <tr t-att-class="payment.get('money_difference') and payment.get('money_difference') != 0 and 'table-warning' or ''">
+                                <td><t t-esc="payment['name']"/></td>
+                                <td class="text-end">
+                                    <t t-esc="formatLang(session.cash_register_balance_start, currency_obj=currency_id)"/>
+                                </td>
+                                <td class="text-end">
+                                    <t t-esc="formatLang(payment.get('final_count', 0), currency_obj=currency_id)"/>
+                                </td>
+                                <td class="text-end">
+                                    <t t-esc="formatLang(payment.get('money_counted', 0), currency_obj=currency_id)"/>
+                                </td>
+                                <td class="text-end"
+                                    t-att-style="payment.get('money_difference') and payment.get('money_difference') != 0 and 'color: red; font-weight: bold;' or ''">
+                                    <t t-esc="formatLang(payment.get('money_difference', 0), currency_obj=currency_id)"/>
+                                </td>
+                            </tr>
+                        </t>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- ── Detalle de movimientos ──────────────────────── -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <h5 class="border-bottom pb-1">Detalle de Movimientos</h5>
+                <table class="table table-sm">
+                    <thead>
+                        <tr>
+                            <th>Fecha/Hora</th>
+                            <th>Tipo</th>
+                            <th>Motivo</th>
+                            <th class="text-end">Monto</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <t t-if="not cash_moves">
+                            <tr>
+                                <td colspan="4">Sin movimientos registrados</td>
+                            </tr>
+                        </t>
+                        <t t-foreach="cash_moves" t-as="move">
+                            <tr>
+                                <td><t t-esc="move['date']"/></td>
+                                <td><t t-esc="move['type']"/></td>
+                                <td><t t-esc="move['reason']"/></td>
+                                <td class="text-end">
+                                    <t t-esc="formatLang(move['amount'], currency_obj=currency_id)"/>
+                                </td>
+                            </tr>
+                        </t>
+                    </tbody>
+                    <tfoot>
+                        <tr class="fw-bold">
+                            <td colspan="3">Total Ingresos</td>
+                            <td class="text-end">
+                                <t t-esc="formatLang(total_cash_in, currency_obj=currency_id)"/>
+                            </td>
+                        </tr>
+                        <tr class="fw-bold">
+                            <td colspan="3">Total Retiros</td>
+                            <td class="text-end">
+                                <t t-esc="formatLang(total_cash_out, currency_obj=currency_id)"/>
+                            </td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+
+    </template>
+</odoo>
