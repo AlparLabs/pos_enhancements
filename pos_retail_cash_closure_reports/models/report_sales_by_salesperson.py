@@ -3,7 +3,9 @@ from odoo.tools.misc import formatLang as _format_lang
 
 
 class ReportSalesBySalesperson(models.AbstractModel):
-    _name = 'report.pos_retail_cash_closure_reports.report_sales_by_salesperson'
+    # Short suffix (no "report_" prefix): the derived Postgres table name
+    # must stay within the 63-character identifier limit.
+    _name = 'report.pos_retail_cash_closure_reports.sales_by_salesperson'
     _description = 'POS Retail Sales by Salesperson Report'
 
     def _get_report_values(self, docids: list, data: dict | None = None) -> dict:
