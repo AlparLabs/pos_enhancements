@@ -56,9 +56,13 @@ serie el botón "Daily Sale"):
 - **"Ventas x Vendedor" muestra, por vendedor, los comprobantes de cada venta
   y los totales por medio de pago.** Cada venta se lista con su referencia —
   el número de factura (`account_move.name`) si la orden se facturó, o el
-  número de orden (`pos_reference`/`name`) si no — y su monto total.
+  número de orden (`pos_reference`/`name`) si no —, el/los medios de pago
+  usados en esa venta (varios si fue pago mixto, unidos con ", "), y su
+  monto total. La tabla de "Medio de pago" que ya existía por vendedor queda
+  como resumen agregado de todas sus ventas, sin cambios.
   (Originalmente solo llevaba totales por medio de pago; el cliente pidió
-  agregar el detalle de comprobantes el 2026-07-11.)
+  agregar el detalle de comprobantes el 2026-07-11, y el medio de pago por
+  comprobante el mismo día.)
 - **Fallback de vendedor**: si `counter_salesperson_id` está vacío (la orden
   no pasó por la cola de "enviar a caja"), se usa `employee_id` y si tampoco
   hay, `user_id` (el cajero que la cobró). Solo si ninguno de los tres campos

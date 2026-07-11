@@ -37,6 +37,7 @@ class ReportSalesBySalesperson(models.AbstractModel):
             invoice_name = order.account_move.name if order.account_move else False
             group['orders'].append({
                 'reference': invoice_name or order.pos_reference or order.name,
+                'payment_methods': ', '.join(order.payment_ids.mapped('payment_method_id.name')),
                 'amount': order.amount_total,
             })
             for payment in order.payment_ids:
