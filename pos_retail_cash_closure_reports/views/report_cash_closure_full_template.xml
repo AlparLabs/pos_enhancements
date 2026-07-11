@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+    <template id="cash_closure_full">
+        <t t-call="web.html_container">
+            <t t-foreach="docs" t-as="session">
+                <t t-call="web.external_layout">
+                    <t t-set="o" t-value="session"/>
+                    <div class="page">
+
+                        <!-- ── Title ─────────────────────────────────────── -->
+                        <div class="row mb-4">
+                            <div class="col-12 text-center">
+                                <h2>Cierre de Caja</h2>
+                                <h4 t-esc="session_name or session.name"/>
+                                <t t-if="date_start">
+                                    <p class="text-muted mb-0">
+                                        Inicio: <t t-esc="date_start"/>
+                                    </p>
+                                </t>
+                                <t t-if="date_stop">
+                                    <p class="text-muted mb-0">
+                                        Cierre: <t t-esc="date_stop"/>
+                                    </p>
+                                </t>
+                            </div>
+                        </div>
+
+                        <!-- ── Rendición de Caja ────────────────────────────── -->
+                        <h3 class="mb-3">Rendición de Caja</h3>
+                        <t t-call="pos_retail_cash_closure_reports.cash_closure_body"/>
+
+                        <div style="page-break-before: always;"/>
+
+                        <!-- ── Ventas x Vendedor ────────────────────────────── -->
+                        <h3 class="mb-3">Ventas x Vendedor</h3>
+                        <t t-call="pos_retail_cash_closure_reports.sales_by_salesperson_body"/>
+
+                    </div><!-- /.page -->
+                </t><!-- /web.external_layout -->
+            </t>
+        </t>
+    </template>
+</odoo>

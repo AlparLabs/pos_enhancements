@@ -4,6 +4,16 @@
 **Módulo:** `pos_retail_cash_closure_reports` (nuevo)
 **Versión Odoo:** 19.0
 
+## Actualización 2026-07-11: un solo PDF combinado
+
+El cliente pidió fusionar los dos reportes en un único PDF "Cierre de Caja",
+sin botones ni acciones separadas para cada parte. Este documento se
+actualizó in place para reflejar esa arquitectura; las secciones de "PDF 1" /
+"PDF 2" más abajo describen ahora los dos *modelos de datos* reutilizados
+como partials, no dos reportes independientes con acceso propio. Ver
+"Arquitectura" para el detalle del modelo combinado y el template que los
+une.
+
 ## Problema
 
 Un cliente retail necesita, al cerrar la caja del POS, dos PDFs adicionales a
@@ -24,12 +34,16 @@ serie el botón "Daily Sale"):
   Puede haber datos superpuestos entre ambos módulos (p. ej. movimientos de
   efectivo aparecen en los dos); no es un problema, cada cliente instala lo
   que necesita.
-- **Disparo desde el popup de cierre de caja** (botones nuevos, mismo patrón
-  que `pos_session_control_report`: `closing_popup_patch.js` + `.xml`,
+- **Disparo desde el popup de cierre de caja** (un botón, mismo patrón que
+  `pos_session_control_report`: `closing_popup_patch.js` + `.xml`,
   `this.report.doAction(...)`) **y también desde el backend**, vía el menú
   "Imprimir" del formulario de `pos.session` — igual que ya hace "Control
-  Sesión", agregando `binding_model_id` a las acciones de reporte. No se
-  agrega ninguna vista ni botón adicional en el backend, el binding alcanza.
+  Sesión", agregando `binding_model_id` a la acción de reporte. No se agrega
+  ninguna vista ni botón adicional en el backend, el binding alcanza.
+- **Un solo PDF combinado, sin acceso separado a cada parte** (decisión del
+  2026-07-11): no hay botón ni entrada de menú para descargar solo la
+  Rendición de Caja o solo Ventas x Vendedor por separado — siempre se
+  descargan juntos en un único documento "Cierre de Caja".
 - **Sin campo de responsable en los movimientos de caja**: los cash in/out de
   Odoo estándar solo graban el usuario de Odoo (`create_uid`), no el
   empleado de `pos_hr` logueado en ese momento en la terminal, ya que varios
@@ -49,9 +63,11 @@ serie el botón "Daily Sale"):
   no pasó por la cola de "enviar a caja"), se usa `employee_id` y si tampoco
   hay, `user_id` (el cajero que la cobró). Solo si ninguno de los tres campos
   tiene valor se agrupa bajo "Sin vendedor asignado".
-- **Nombres de botones**: "Rendición de Caja" y "Ventas x Vendedor", para no
-  confundirse con el botón nativo "Daily Sale" ni con "Control Sesión" de
-  `pos_session_control_report`.
+- **Nombre del botón**: "Cierre de Caja", para no confundirse con el botón
+  nativo "Daily Sale" ni con "Control Sesión" de `pos_session_control_report`.
+  El documento resultante lleva internamente el título "Cierre de Caja" con
+  las secciones "Rendición de Caja" y "Ventas x Vendedor" una debajo de la
+  otra (salto de página entre ambas).
 
 ## Arquitectura
 
@@ -65,14 +81,15 @@ pos_retail_cash_closure_reports/
 ├── __manifest__.py
 ├── models/
 │   ├── __init__.py
-│   ├── report_cash_closure.py       # PDF 1: Rendición de Caja
-│   └── report_sales_by_salesperson.py  # PDF 2: Ventas x Vendedor
+│   ├── report_cash_closure.py          # datos: sección Rendición de Caja
+│   ├── report_sales_by_salesperson.py  # datos: sección Ventas x Vendedor
+│   └── report_cash_closure_full.py     # combina los dos dicts de arriba
 ├── report/
-│   ├── report_cash_closure.xml            # ir.actions.report
-│   └── report_sales_by_salesperson.xml    # ir.actions.report
+│   └── report_cash_closure_full.xml    # único ir.actions.report
 ├── views/
-│   ├── report_cash_closure_template.xml
-│   └── report_sales_by_salesperson_template.xml
+│   ├── report_cash_closure_template.xml           # partial: cuerpo Rendición de Caja
+│   ├── report_sales_by_salesperson_template.xml   # partial: cuerpo Ventas x Vendedor
+│   └── report_cash_closure_full_template.xml      # wrapper de página + título + t-call a ambos partials
 └── static/src/app/closing_popup/
     ├── closing_popup_patch.js
     └── closing_popup_patch.xml
@@ -81,16 +98,15 @@ pos_retail_cash_closure_reports/
 `__manifest__.py` depende de `point_of_sale` y `pos_centralized_payment`
 (para que `counter_salesperson_id` exista en `pos.order`).
 
-### PDF 1 — Reporte de Rendición de Caja
+### Sección Rendición de Caja
 
 **Modelo:** `report.pos_retail_cash_closure_reports.report_cash_closure`
 (`AbstractModel`, mismo patrón que
-`report.pos_session_control_report.report_session_control`).
-
-La acción de reporte (`report/report_cash_closure.xml`) lleva
-`binding_model_id` apuntando a `point_of_sale.model_pos_session`, para que
-aparezca en el menú "Imprimir" del formulario de Sesión de POS en el
-backend, además de poder invocarse desde el popup de cierre.
+`report.pos_session_control_report.report_session_control`). Ya no tiene
+acción de reporte propia — su `_get_report_values` se invoca directamente
+desde `report_cash_closure_full.py` (ver más abajo) y su template quedó
+como partial (`cash_closure_body`), llamado por
+`report_cash_closure_full_template.xml`.
 
 **Obtención de datos:**
 
@@ -116,25 +132,22 @@ backend, además de poder invocarse desde el popup de cierre.
 - Totales: suma de montos positivos (ingresos) y suma de valores absolutos
   de montos negativos (retiros) sobre el mismo conjunto de `moves`.
 
-**Layout del template (`report_cash_closure_template.xml`):**
+**Layout del partial (`views/report_cash_closure_template.xml`, template id
+`cash_closure_body`):** sin encabezado ni wrapper de página propios (los
+provee `report_cash_closure_full_template.xml`).
 
-1. Encabezado: nombre de sesión, punto de venta, apertura/cierre (mismo
-   estilo que `report_session_control.xml`).
-2. Resumen de caja: tabla con una fila por método de pago cash — Saldo
+1. Resumen de caja: tabla con una fila por método de pago cash — Saldo
    inicial | Esperado | Contado | Diferencia (resaltada en rojo si ≠ 0,
    mismo criterio visual que el reporte existente).
-3. Detalle de movimientos: tabla Fecha/Hora | Tipo | Motivo | Monto. Si no
+2. Detalle de movimientos: tabla Fecha/Hora | Tipo | Motivo | Monto. Si no
    hay movimientos, mensaje "Sin movimientos registrados".
-4. Totales: Total ingresos, Total retiros.
+3. Totales: Total ingresos, Total retiros.
 
-### PDF 2 — Ventas x Vendedor
+### Sección Ventas x Vendedor
 
 **Modelo:** `report.pos_retail_cash_closure_reports.report_sales_by_salesperson`.
-
-Igual que el reporte anterior, su acción
-(`report/report_sales_by_salesperson.xml`) lleva `binding_model_id` a
-`point_of_sale.model_pos_session` para aparecer en el menú "Imprimir" del
-backend.
+Igual que la sección anterior, ya no tiene acción de reporte propia; su
+template quedó como partial (`sales_by_salesperson_body`).
 
 **Obtención de datos:**
 
@@ -168,41 +181,78 @@ Estructura de salida pasada al template:
 }
 ```
 
-**Layout del template (`report_sales_by_salesperson_template.xml`):**
+**Layout del partial (`views/report_sales_by_salesperson_template.xml`,
+template id `sales_by_salesperson_body`):** sin encabezado ni wrapper de
+página propios.
 
-1. Encabezado: sesión, punto de venta, fecha.
-2. Por cada grupo: título con nombre del vendedor, tabla Comprobante |
+1. Por cada grupo: título con nombre del vendedor, tabla Comprobante |
    Monto (una fila por venta: factura o número de orden), luego tabla
    Medio de pago | Total con fila de subtotal del vendedor.
-3. Total general de la sesión al final del documento.
+2. Total general de la sesión al final del documento.
+
+### El PDF combinado: modelo y template "full"
+
+**Modelo:** `report.pos_retail_cash_closure_reports.cash_closure_full`
+(`AbstractModel`). Su `_get_report_values` simplemente invoca los dos
+métodos de arriba y mergea los dicts (`docs`/`currency_id`/`formatLang` son
+equivalentes en ambos; no hay colisión de claves entre `cash_payments`/
+`cash_moves`/`total_cash_in`/`total_cash_out` y `groups`/`grand_total`):
+
+```python
+def _get_report_values(self, docids, data=None):
+    cash_values = self.env['report.pos_retail_cash_closure_reports.report_cash_closure']._get_report_values(docids, data)
+    sales_values = self.env['report.pos_retail_cash_closure_reports.sales_by_salesperson']._get_report_values(docids, data)
+    return {**cash_values, **sales_values}
+```
+
+**Template:** `report_cash_closure_full_template.xml` (id `cash_closure_full`)
+provee el wrapper (`web.html_container` → `t-foreach="docs"` →
+`web.external_layout`) y el título "Cierre de Caja" con nombre de sesión y
+apertura/cierre, y dentro llama a los dos partials en orden, con salto de
+página entre ambos:
+
+```xml
+<h3>Rendición de Caja</h3>
+<t t-call="pos_retail_cash_closure_reports.cash_closure_body"/>
+<div style="page-break-before: always;"/>
+<h3>Ventas x Vendedor</h3>
+<t t-call="pos_retail_cash_closure_reports.sales_by_salesperson_body"/>
+```
+
+Los `t-call` heredan el contexto de renderizado (sesión, `cash_payments`,
+`cash_moves`, `groups`, `currency_id`, `formatLang`, etc.) del template que
+llama; QWeb no aísla el scope de un `t-call` salvo que se use
+`t-call-context`.
+
+**Acción de reporte:** una sola, `report/report_cash_closure_full.xml`
+(`action_report_cash_closure_full`), con `binding_model_id` apuntando a
+`point_of_sale.model_pos_session` para aparecer en el menú "Imprimir" del
+backend.
+
+**Nombre técnico:** se verificó que
+`report_pos_retail_cash_closure_reports_cash_closure_full` (el nombre de
+tabla que deriva Odoo del `_name`) tiene 56 caracteres, dentro del límite de
+63 de Postgres — ver la lección de `sales_by_salesperson` más abajo.
 
 ### Integración con el popup de cierre
 
 `static/src/app/closing_popup/closing_popup_patch.js` — mismo patrón que
-`pos_session_control_report`, dos métodos nuevos:
+`pos_session_control_report`, un solo método:
 
 ```js
 patch(ClosePosPopup.prototype, {
     async downloadCashClosureReport() {
         return this.report.doAction(
-            "pos_retail_cash_closure_reports.action_report_cash_closure",
-            [this.pos.session.id]
-        );
-    },
-    async downloadSalesBySalespersonReport() {
-        return this.report.doAction(
-            "pos_retail_cash_closure_reports.action_report_sales_by_salesperson",
+            "pos_retail_cash_closure_reports.action_report_cash_closure_full",
             [this.pos.session.id]
         );
     },
 });
 ```
 
-`closing_popup_patch.xml` agrega dos botones nuevos, después del botón
-nativo "Daily Sale" (o encadenados después de "Control Sesión" si ese
-módulo también está instalado — el xpath apunta al botón nativo de Odoo
-para no depender de que `pos_session_control_report` esté presente):
-"Rendición de Caja" y "Ventas x Vendedor".
+`closing_popup_patch.xml` agrega un solo botón, después del botón nativo
+"Daily Sale" (el xpath apunta al botón nativo de Odoo para no depender de
+que `pos_session_control_report` esté presente): "Cierre de Caja".
 
 ## Casos borde
 
@@ -219,19 +269,28 @@ para no depender de que `pos_session_control_report` esté presente):
 - Capturar el empleado real (pos_hr) que hizo cada retiro/ingreso de caja.
 - Cualquier vista o botón de backend más allá del binding en el menú
   "Imprimir" de `pos.session`.
-- Detalle orden por orden en "Ventas x Vendedor".
+- Detalle orden por orden en "Ventas x Vendedor" más allá de la referencia
+  de comprobante ya agregada.
 - Modificar `pos_session_control_report` o el botón nativo "Daily Sale".
+- Mantener acceso independiente a cada sección por separado (decisión
+  2026-07-11: siempre van juntas en el PDF combinado).
 
-## Archivos afectados (todos nuevos)
+## Archivos
 
 - `pos_retail_cash_closure_reports/__init__.py`
 - `pos_retail_cash_closure_reports/__manifest__.py`
 - `pos_retail_cash_closure_reports/models/__init__.py`
 - `pos_retail_cash_closure_reports/models/report_cash_closure.py`
 - `pos_retail_cash_closure_reports/models/report_sales_by_salesperson.py`
-- `pos_retail_cash_closure_reports/report/report_cash_closure.xml`
-- `pos_retail_cash_closure_reports/report/report_sales_by_salesperson.xml`
-- `pos_retail_cash_closure_reports/views/report_cash_closure_template.xml`
-- `pos_retail_cash_closure_reports/views/report_sales_by_salesperson_template.xml`
+- `pos_retail_cash_closure_reports/models/report_cash_closure_full.py`
+- `pos_retail_cash_closure_reports/report/report_cash_closure_full.xml`
+- `pos_retail_cash_closure_reports/views/report_cash_closure_template.xml` (partial)
+- `pos_retail_cash_closure_reports/views/report_sales_by_salesperson_template.xml` (partial)
+- `pos_retail_cash_closure_reports/views/report_cash_closure_full_template.xml`
 - `pos_retail_cash_closure_reports/static/src/app/closing_popup/closing_popup_patch.js`
 - `pos_retail_cash_closure_reports/static/src/app/closing_popup/closing_popup_patch.xml`
+
+Eliminados en la fusión del 2026-07-11 (existían como acciones de reporte
+independientes):
+- `pos_retail_cash_closure_reports/report/report_cash_closure.xml`
+- `pos_retail_cash_closure_reports/report/report_sales_by_salesperson.xml`

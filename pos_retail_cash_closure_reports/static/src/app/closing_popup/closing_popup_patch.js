@@ -5,25 +5,14 @@ import { patch } from "@web/core/utils/patch";
 
 patch(ClosePosPopup.prototype, {
     /**
-     * Download the cash closure PDF (opening/expected/counted balance plus
-     * the cash in/out movement detail for the session).
+     * Download the combined "Cierre de Caja" PDF: cash balance summary plus
+     * cash in/out movement detail, followed by the day's sales grouped by
+     * counter salesperson and totaled per payment method.
      * @returns {Promise<void>}
      */
     async downloadCashClosureReport() {
         return this.report.doAction(
-            "pos_retail_cash_closure_reports.action_report_cash_closure",
-            [this.pos.session.id]
-        );
-    },
-
-    /**
-     * Download the daily sales PDF, grouped by counter salesperson and
-     * totaled per payment method.
-     * @returns {Promise<void>}
-     */
-    async downloadSalesBySalespersonReport() {
-        return this.report.doAction(
-            "pos_retail_cash_closure_reports.action_report_sales_by_salesperson",
+            "pos_retail_cash_closure_reports.action_report_cash_closure_full",
             [this.pos.session.id]
         );
     },
