@@ -1,5 +1,3 @@
-from collections import defaultdict
-
 from odoo import models
 from odoo.tools.misc import format_datetime as _format_datetime
 from odoo.tools.misc import formatLang as _format_lang
@@ -24,23 +22,25 @@ class ReportCashClosure(models.AbstractModel):
             if payment.get('count')
         ]
 
-        moves_by_session = defaultdict(list)
-        for move in env['account.bank.statement.line'].search([
+        # Every account.bank.statement.line tied to the session is shown, with
+        # no exclusion — this matches Odoo core's own get_sale_details(),
+        # which does not filter out the auto-generated closing-difference
+        # line either (it only has a distinctive payment_ref, e.g. "Cash
+        # difference observed during the counting (Loss/Profit) - closing").
+        # A prior version of this file dropped the chronologically-last move
+        # whenever session.cash_register_difference was truthy, believing it
+        # mirrored a core exclusion that does not actually exist.
+        # cash_register_difference is a live-computed field (counted amount
+        # vs. theoretical expected amount) that is virtually always non-zero
+        # while a session is still open, so that logic silently discarded the
+        # most recent real cash movement on every open session. Do not
+        # reintroduce a "drop the last move" heuristic without first
+        # confirming, against the actual Odoo source for the target version,
+        # that core performs an equivalent exclusion and exactly what
+        # condition it checks.
+        moves = env['account.bank.statement.line'].search([
             ('pos_session_id', 'in', sessions.ids),
-        ], order='date asc, id asc'):
-            moves_by_session[move.pos_session_id.id].append(move)
-
-        filtered_moves = []
-        for session in sessions:
-            session_moves = moves_by_session.get(session.id, [])
-            if session.cash_register_difference and session_moves:
-                # The last chronological move is the automatic closing-difference
-                # adjustment Odoo posts when the counted amount doesn't match the
-                # expected amount — not a manual cash in/out. Odoo's own
-                # get_sale_details() excludes this same line; mirror that here so
-                # it isn't double-counted as a phantom movement.
-                session_moves = session_moves[:-1]
-            filtered_moves.extend(session_moves)
+        ], order='date asc, id asc')
 
         cash_moves = [
             {
@@ -49,10 +49,10 @@ class ReportCashClosure(models.AbstractModel):
                 'reason': move.payment_ref,
                 'amount': abs(move.amount),
             }
-            for move in filtered_moves
+            for move in moves
         ]
-        total_cash_in = sum(move.amount for move in filtered_moves if move.amount > 0)
-        total_cash_out = sum(-move.amount for move in filtered_moves if move.amount < 0)
+        total_cash_in = sum(move.amount for move in moves if move.amount > 0)
+        total_cash_out = sum(-move.amount for move in moves if move.amount < 0)
 
         return {
             'docs': sessions,
