@@ -27,8 +27,17 @@ class ReportSalesBySalesperson(models.AbstractModel):
             name = salesperson.name if salesperson else 'Sin vendedor asignado'
             group = groups.setdefault(key, {
                 'salesperson_name': name,
+                'orders': [],
                 'payment_totals': {},
                 'total': 0.0,
+            })
+            # Reference shown per sale: the invoice number when the order was
+            # invoiced (account_move.name can be falsy on a draft move),
+            # otherwise the POS order number.
+            invoice_name = order.account_move.name if order.account_move else False
+            group['orders'].append({
+                'reference': invoice_name or order.pos_reference or order.name,
+                'amount': order.amount_total,
             })
             for payment in order.payment_ids:
                 method_name = payment.payment_method_id.name
@@ -41,6 +50,7 @@ class ReportSalesBySalesperson(models.AbstractModel):
             (
                 {
                     'salesperson_name': group['salesperson_name'],
+                    'orders': group['orders'],
                     'payment_totals': [
                         {'name': name, 'amount': amount}
                         for name, amount in group['payment_totals'].items()

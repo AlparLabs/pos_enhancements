@@ -36,6 +36,24 @@
                                     <table class="table table-sm">
                                         <thead>
                                             <tr>
+                                                <th>Comprobante</th>
+                                                <th class="text-end">Monto</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <t t-foreach="group['orders']" t-as="order_line">
+                                                <tr>
+                                                    <td><t t-esc="order_line['reference']"/></td>
+                                                    <td class="text-end">
+                                                        <t t-esc="formatLang(order_line['amount'], currency_obj=currency_id)"/>
+                                                    </td>
+                                                </tr>
+                                            </t>
+                                        </tbody>
+                                    </table>
+                                    <table class="table table-sm">
+                                        <thead>
+                                            <tr>
                                                 <th>Medio de pago</th>
                                                 <th class="text-end">Total</th>
                                             </tr>

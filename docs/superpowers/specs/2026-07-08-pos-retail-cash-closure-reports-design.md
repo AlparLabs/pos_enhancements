@@ -39,8 +39,12 @@ serie el botón "Daily Sale"):
   y punto de venta alcanza.
 - **Saldo de caja: solo métodos de pago tipo cash con control de efectivo
   activado.** No se contemplan otros medios de pago en el resumen de saldo.
-- **"Ventas x Vendedor" solo muestra totales por medio de pago**, no el
-  detalle orden por orden (ese detalle ya existe en otros reportes de Odoo).
+- **"Ventas x Vendedor" muestra, por vendedor, los comprobantes de cada venta
+  y los totales por medio de pago.** Cada venta se lista con su referencia —
+  el número de factura (`account_move.name`) si la orden se facturó, o el
+  número de orden (`pos_reference`/`name`) si no — y su monto total.
+  (Originalmente solo llevaba totales por medio de pago; el cliente pidió
+  agregar el detalle de comprobantes el 2026-07-11.)
 - **Fallback de vendedor**: si `counter_salesperson_id` está vacío (la orden
   no pasó por la cola de "enviar a caja"), se usa `employee_id` y si tampoco
   hay, `user_id` (el cajero que la cobró). Solo si ninguno de los tres campos
@@ -167,8 +171,9 @@ Estructura de salida pasada al template:
 **Layout del template (`report_sales_by_salesperson_template.xml`):**
 
 1. Encabezado: sesión, punto de venta, fecha.
-2. Por cada grupo: título con nombre del vendedor, tabla Medio de pago |
-   Total, fila de subtotal del vendedor.
+2. Por cada grupo: título con nombre del vendedor, tabla Comprobante |
+   Monto (una fila por venta: factura o número de orden), luego tabla
+   Medio de pago | Total con fila de subtotal del vendedor.
 3. Total general de la sesión al final del documento.
 
 ### Integración con el popup de cierre
