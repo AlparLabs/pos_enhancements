@@ -153,9 +153,6 @@ class PosPaymentMethod(models.Model):
 
         amount_str = "{:.2f}".format(infos['amount'] / 100)
 
-        base_url = self.env['ir.config_parameter'].sudo().get_param('web.base.url', '')
-        notification_url = f"{base_url}/pos_mercado_pago_alpy/notification"
-
         # Single generic item avoids rounding/tax validation errors in MP
         items = [{
             "title": infos.get('title', 'Venta POS'),
@@ -170,7 +167,6 @@ class PosPaymentMethod(models.Model):
             "total_amount": amount_str,
             "description": infos.get('title', 'Venta POS'),
             "external_reference": infos['external_reference'],
-            "notification_url": notification_url,
             "config": {
                 "qr": {
                     "external_pos_id": record.mp_external_pos_id,
