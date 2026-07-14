@@ -32,6 +32,7 @@ export class SpoolPickerPopup extends Component {
         this.state = useState({
             requested: this.props.requested,
             lots: this.props.lots.map((l) => ({ ...l, qty: qtyById[l.id] || 0 })),
+            vanishedNotice: "",
         });
     }
 
@@ -75,11 +76,21 @@ export class SpoolPickerPopup extends Component {
             return;
         }
         const fresh = await this.props.refresh();
+        const freshIds = new Set(fresh.map((l) => l.id));
         const qtyById = Object.fromEntries(this.state.lots.map((l) => [l.id, l.qty]));
+        const vanished = this.state.lots.filter((l) => l.qty > 0 && !freshIds.has(l.id));
+        this.state.vanishedNotice = vanished.length
+            ? _t("No longer available, assigned meters removed: %(names)s", {
+                  names: vanished.map((l) => l.name).join(", "),
+              })
+            : "";
         this.state.lots = fresh.map((l) => ({ ...l, qty: qtyById[l.id] || 0 }));
     }
 
     confirm() {
+        if (!this.canConfirm) {
+            return;
+        }
         const allocation = this.state.lots
             .filter((l) => (l.qty || 0) > 0)
             .map((l) => ({ lot_name: l.name, id: l.id, qty: l.qty }));

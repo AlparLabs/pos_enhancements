@@ -38,6 +38,7 @@
                 <small class="text-warning" t-if="isUnder">
                     Estás asignando menos que lo pedido; se venderán los metros asignados.
                 </small>
+                <small class="text-danger" t-if="state.vanishedNotice" t-esc="state.vanishedNotice"/>
             </div>
             <t t-set-slot="footer">
                 <button class="btn btn-secondary btn-lg" t-on-click="cancel">Cancelar</button>
