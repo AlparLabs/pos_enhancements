@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="res_config_settings_view_form_spool" model="ir.ui.view">
+        <field name="name">res.config.settings.view.form.spool.picker</field>
+        <field name="model">res.config.settings</field>
+        <field name="inherit_id" ref="point_of_sale.res_config_settings_view_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//block[@id='pos_inventory_section']" position="inside">
+                <setting id="spool_picker_enforce_stock_setting"
+                         title="Block assigning more meters than a spool has in stock.">
+                    <field name="pos_config_id" invisible="1"/>
+                    <field name="spool_picker_enforce_stock"/>
+                </setting>
+            </xpath>
+        </field>
+    </record>
+</odoo>
