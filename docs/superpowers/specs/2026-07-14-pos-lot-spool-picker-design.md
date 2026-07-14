@@ -64,11 +64,13 @@ para el que corta el cable.
 lotes al agregar un producto trackeado; en su lugar abre `SpoolPickerPopup`. El nombre
 exacto del método/componente nativo se fija contra el código V19 durante la implementación.
 
-**Datos cargados en el POS al abrir sesión** (modelos nuevos en la lista de carga del POS;
-**no se toca `pos.order`** — ver memoria `pos-order-load-fields-all`):
-- `stock.lot` — lotes de los productos del POS.
-- `stock.quant` — dominio `location_id.usage = 'internal'` y `quantity > 0`, para traer
-  metros restantes + ubicación por lote, acotado a lo que hay realmente en stock.
+**Fuente de datos de bobinas (RPC fresco, no carga masiva):** reusamos el RPC nativo
+`pos.order.line.get_existing_lots(company_id, config_id, product_id)`, que ya devuelve
+los lotes con stock disponible (`product_qty`) agrupados desde `stock.quant` sobre las
+ubicaciones internas del `picking_type` del POS. Lo **extendemos** para que además
+devuelva la **ubicación** por lote. Se llama al abrir el `SpoolPickerPopup` → dato
+**fresco en cada apertura**, sin agregar modelos a la carga del POS ni tocar `pos.order`
+(ver memoria `pos-order-load-fields-all`). El botón "Actualizar" re-invoca este RPC.
 
 ## Componente: `SpoolPickerPopup` (OWL)
 
@@ -104,12 +106,12 @@ Visible en Ajustes del POS (Inventario).
 
 ## Frescura del stock entre cajas
 
-Los metros se cargan al abrir la sesión. Manejo en v1:
-- **Mismo pedido:** se descuenta en vivo lo que el propio ticket ya asignó.
-- **Entre cajas / backend:** el número puede quedar viejo. Como el default es modo aviso,
-  a lo sumo dispara una alerta imprecisa; **la verdad la valida el picking en el servidor**
-  al cerrar. El inventario no se rompe.
-- **Botón Actualizar** refresca por RPC antes de confirmar.
+Los metros se traen por RPC (`get_existing_lots`) al abrir el popup. Manejo en v1:
+- **Por apertura:** cada vez que se abre el `SpoolPickerPopup` el dato es fresco del servidor.
+- **Durante el popup:** el número podría quedar viejo si otra caja despacha mientras está
+  abierto. Como el default es modo aviso, a lo sumo dispara una alerta imprecisa;
+  **la verdad la valida el picking en el servidor** al cerrar. El inventario no se rompe.
+- **Botón Actualizar** re-llama el RPC sin cerrar el popup.
 
 Limitación conocida (documentada en README): en modo bloqueo el dato puede quedar
 levemente viejo entre cajas; Actualizar es la vía para refrescar.
