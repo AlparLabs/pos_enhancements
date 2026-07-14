@@ -8,8 +8,9 @@ class StockMove(models.Model):
         """Same as core, but each pack lot consumes its own `qty` (meters) when set.
 
         Only lot-tracked lines whose pack lots carry a positive `qty` deviate from core;
-        everything else is delegated to super so serial tracking and single-lot lines keep
-        native behaviour. Pinned to Odoo 19.0 core logic — re-verify on version upgrade.
+        everything else (serial tracking, or lot lines with no per-lot qty set) is delegated
+        to super so untouched flows keep native behaviour exactly. Pinned to Odoo 19.0 core
+        logic — re-verify on version upgrade.
         """
         # Lines where our per-lot qty applies: lot tracking with at least one qty > 0.
         def uses_spool_qty(line):
@@ -45,8 +46,16 @@ class StockMove(models.Model):
             if are_qties_done:
                 move.move_line_ids.unlink()
             for line in lines:
-                for lot in line.pack_lot_ids.filtered(lambda l: l.lot_name):
-                    qty = abs(lot.qty) if lot.qty else abs(line.qty)
+                named_lots = line.pack_lot_ids.filtered(lambda l: l.lot_name)
+                for lot in named_lots:
+                    if lot.qty:
+                        qty = abs(lot.qty)
+                    elif len(named_lots) == 1:
+                        qty = abs(line.qty)
+                    else:
+                        qty = 0.0
+                    if not qty:
+                        continue
                     existing_lot = existing_lots.filtered_domain(
                         [('product_id', '=', line.product_id.id), ('name', '=', lot.lot_name)]
                     ) if existing_lots else self.env['stock.lot']
