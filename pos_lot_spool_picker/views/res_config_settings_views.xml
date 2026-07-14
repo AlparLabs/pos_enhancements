@@ -7,9 +7,10 @@
         <field name="arch" type="xml">
             <xpath expr="//block[@id='pos_inventory_section']" position="inside">
                 <setting id="spool_picker_enforce_stock_setting"
-                         title="Block assigning more meters than a spool has in stock.">
+                         string="Enforce Spool Stock"
+                         help="Block assigning more meters than a spool has in stock.">
                     <field name="pos_config_id" invisible="1"/>
-                    <field name="spool_picker_enforce_stock"/>
+                    <field name="pos_spool_picker_enforce_stock"/>
                 </setting>
             </xpath>
         </field>
