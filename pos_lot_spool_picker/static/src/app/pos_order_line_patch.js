@@ -27,8 +27,15 @@ patch(PosOrderline.prototype, {
         // Re-apply both here so re-editing an already-split lot-tracked line keeps its
         // per-lot meters — otherwise every lot silently ends up qty=0 and the backend
         // falls back to native's full-line-qty-per-lot behaviour, the exact bug this addon
-        // exists to prevent.
-        if (this.product_id?.tracking !== "lot" || !newPackLotLines?.length) {
+        // exists to prevent. Only do this when the caller actually wants auto-quantity
+        // (mirrors native's own `!to_weight && setQuantity` gate) and the product isn't
+        // weight-based, where qty comes from the scale, not the lots.
+        if (
+            this.product_id?.tracking !== "lot" ||
+            this.product_id?.to_weight ||
+            !setQuantity ||
+            !newPackLotLines?.length
+        ) {
             return;
         }
         const qtyByName = Object.fromEntries(
