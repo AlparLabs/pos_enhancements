@@ -27,13 +27,19 @@ patch(PosStore.prototype, {
     async editLots(product, packLotLinesToEdit) {
         // Only take over lot-tracked products; serials keep the native popup.
         if (product.tracking !== "lot") {
-            return await super.editLots(...arguments);
+            return await super.editLots(product, packLotLinesToEdit);
         }
 
-        const lots = await this._getSpoolLots(product);
+        let lots;
+        try {
+            lots = await this._getSpoolLots(product);
+        } catch {
+            // RPC failed — degrade to native behaviour rather than crash the add-product flow.
+            return await super.editLots(product, packLotLinesToEdit);
+        }
         if (!lots.length) {
             // Nothing in stock to pick from — fall back to native (create-lot flow).
-            return await super.editLots(...arguments);
+            return await super.editLots(product, packLotLinesToEdit);
         }
 
         const requested = Math.abs(parseFloat(this.numberBuffer?.get()) || 0) || 1;
