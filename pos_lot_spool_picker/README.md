@@ -28,3 +28,5 @@ already maps 1:1 to a unit and has no "remaining meters" concept.
 - Internal pre-ticket copy with per-bobina breakdown is not included (planned v2).
 - Real-time cross-terminal stock reservation is not included beyond the manual **Actualizar**
   refresh (planned v2 — this client runs multiple POS terminals against shared stock).
+- Refund lines still use the native single-lot editor, not the spool picker — a refund against
+  a spool-split sale won't show the original per-lot breakdown.
