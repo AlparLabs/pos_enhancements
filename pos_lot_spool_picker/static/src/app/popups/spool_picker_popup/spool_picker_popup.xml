@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates id="template" xml:space="preserve">
+    <t t-name="pos_lot_spool_picker.SpoolPickerPopup">
+        <Dialog title="props.productName">
+            <div class="d-flex flex-column gap-2 p-2">
+                <div class="d-flex align-items-center gap-3">
+                    <label class="fw-bold w-50">Metros pedidos:</label>
+                    <input type="number" class="form-control" t-att-value="state.requested"
+                           t-on-change="(ev) => this.setRequested(ev.target.value)"/>
+                </div>
+                <div class="d-flex justify-content-between align-items-center">
+                    <span class="fw-bold"
+                          t-attf-class="{{ isComplete ? 'text-success' : (isUnder ? 'text-warning' : 'text-danger') }}">
+                        Asignado: <t t-esc="assigned"/> / <t t-esc="state.requested"/>
+                    </span>
+                    <button class="btn btn-sm btn-secondary" t-on-click="onRefresh"
+                            t-if="props.refresh">Actualizar</button>
+                </div>
+                <table class="table table-sm">
+                    <thead>
+                        <tr><th>Bobina</th><th>Restante</th><th>Ubicación</th><th>Metros</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr t-foreach="state.lots" t-as="lot" t-key="lot.id"
+                            t-attf-class="{{ lotOverStock(lot) ? 'table-danger' : '' }}">
+                            <td t-esc="lot.name"/>
+                            <td t-esc="lot.remaining"/>
+                            <td t-esc="lot.location_name"/>
+                            <td>
+                                <input type="number" min="0" class="form-control form-control-sm"
+                                       t-att-value="lot.qty"
+                                       t-on-change="(ev) => this.setQty(lot, ev.target.value)"/>
+                                <small class="text-danger" t-esc="warningText(lot)"/>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+                <small class="text-warning" t-if="isUnder">
+                    Estás asignando menos que lo pedido; se venderán los metros asignados.
+                </small>
+                <small class="text-danger" t-if="state.vanishedNotice" t-esc="state.vanishedNotice"/>
+            </div>
+            <t t-set-slot="footer">
+                <button class="btn btn-secondary btn-lg" t-on-click="cancel">Cancelar</button>
+                <button class="btn btn-primary btn-lg" t-on-click="confirm"
+                        t-att-disabled="!canConfirm">Confirmar</button>
+            </t>
+        </Dialog>
+    </t>
+</templates>
