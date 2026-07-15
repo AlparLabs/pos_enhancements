@@ -59,4 +59,17 @@ patch(PosStore.prototype, {
         const newPackLotLines = allocation.map((a) => ({ lot_name: a.lot_name, qty: a.qty }));
         return { modifiedPackLotLines: {}, newPackLotLines };
     },
+
+    async addLineToOrder(vals, order, opts = {}, configure = true) {
+        const line = await super.addLineToOrder(vals, order, opts, configure);
+        // For lot-tracked lines whose pack lots carry per-lot meters, the customer-facing
+        // line qty must equal the total assigned meters (native leaves it at 1 for lots).
+        if (line && line.product_id?.tracking === "lot") {
+            const total = line.pack_lot_ids.reduce((sum, pl) => sum + (pl.qty || 0), 0);
+            if (total > 0 && Math.abs(line.qty - total) > 1e-6) {
+                line.setQuantity(total);
+            }
+        }
+        return line;
+    },
 });
