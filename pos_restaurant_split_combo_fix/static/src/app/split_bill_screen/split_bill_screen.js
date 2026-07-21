@@ -8,7 +8,7 @@ import { patch } from "@web/core/utils/patch";
  *
  * The core method (addons/pos_restaurant/static/src/app/split_bill_screen/
  * split_bill_screen.js) serializes every selected line and re-creates it on
- * the new order with `create(vals, false /*ignoreRelations*/, true /*fromSerialized*/)`.
+ * the new order with create(vals, ignoreRelations=false, fromSerialized=true).
  *
  * `line.serialize()` (orm=false) keeps `combo_parent_id` / `combo_line_ids`,
  * whose values are the *original* order's line ids. With `fromSerialized=true`
