@@ -2,6 +2,7 @@ from collections import defaultdict
 from typing import Any
 
 from odoo import models, _
+from odoo.exceptions import UserError
 from odoo.tools import float_is_zero
 
 
@@ -57,20 +58,39 @@ class PosSession(models.Model):
         payment_method_to_receivable_lines = data.get('payment_method_to_receivable_lines', {})
 
         # ── 3. Per-lot processing for terminal-detail methods ─────────────────
-        for method in terminal_methods:
+        for method, amounts in terminal_methods.items():
             if not method.journal_id:
                 continue
 
-            payments = self.env['pos.payment'].search([
-                ('session_id', '=', self.id),
-                ('payment_method_id', '=', method.id),
-            ])
+            # Read the payments from the same source the core accumulated
+            # ``combine_receivables_bank`` from. A plain search on the session would
+            # also pick up payments belonging to draft/cancelled orders, which the
+            # core excludes via _get_closed_orders(); those extra receivable lines
+            # would leave self.move_id unbalanced.
+            payments = self._get_closed_orders().payment_ids.filtered(
+                lambda p, m=method: p.payment_method_id == m
+            )
 
             # Group payment amounts by lot number
             lots = defaultdict(float)
             for payment in payments:
                 lot_key = payment.lot_number or _('Sin Lote')
                 lots[lot_key] += payment.amount
+
+            # The per-lot split replaces what super() would have posted for this
+            # method, so it has to add up to exactly the same total. If it ever
+            # diverges, fail at closing time instead of writing an entry that
+            # silently does not balance.
+            split_total = sum(lots.values())
+            if self.currency_id.compare_amounts(split_total, amounts['amount']) != 0:
+                raise UserError(_(
+                    "Cannot close the session: the per-lot breakdown for payment "
+                    "method %(method)s adds up to %(split)s, but the session "
+                    "accumulated %(expected)s for it.",
+                    method=method.name,
+                    split=split_total,
+                    expected=amounts['amount'],
+                ))
 
             destination_account = self._get_receivable_account(method)
             method_lines = self.env['account.move.line']
