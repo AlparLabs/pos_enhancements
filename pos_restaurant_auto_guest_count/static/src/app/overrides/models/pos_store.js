@@ -1,47 +1,31 @@
 import { patch } from "@web/core/utils/patch";
-import { PosStore } from "@point_of_sale/app/store/pos_store";
-import { NumberPopup } from "@point_of_sale/app/components/popups/number_popup/number_popup";
-import { _t } from "@web/core/l10n/translation";
+import { PosStore } from "@point_of_sale/app/services/pos_store";
 
 patch(PosStore.prototype, {
     /**
      * @override
-     * @param {Object} table
-     * @param {string|null} orderUuid
-     * @returns {Promise<any>}
+     * Prompt for the guest count right after a table is opened with a fresh
+     * (empty, non-finalized) order. Reuses the core pos_restaurant popup
+     * (PosStore.setCustomerCount), which handles the amount-per-guest
+     * feedback and syncs the order via addPendingOrder.
+     *
+     * The core only asks for guests on its own when presets with `use_guest`
+     * are enabled (see ensureGuestCustomerCount); without presets it silently
+     * defaults the count to the table's seats, which is what this overrides.
      */
     async setTableFromUi(table, orderUuid = null) {
         await super.setTableFromUi(...arguments);
-        if (this.config.module_pos_restaurant) {
-            const order = this.getOrder();
-            // Prompt for guest count if the order is new (no lines) and hasn't been finalized.
-            // Odoo 18 defaults guest count to 1, but we want to confirm it.
-            if (order && order.lines.length === 0 && !order.finalized) {
-                this.askCustomerCount(order);
-            }
+        if (!this.config.module_pos_restaurant) {
+            return;
+        }
+        const order = this.getOrder();
+        if (order && order.lines.length === 0 && !order.finalized) {
+            // removeEmptyOrder=false: cancelling the popup keeps the order,
+            // the count simply stays at the table's default seat count.
+            await this.setCustomerCount(order, false);
+            // Prevent ensureGuestCustomerCount() from asking a second time
+            // when presets with guest tracking are enabled.
+            order.uiState.guestSetted = true;
         }
     },
-    /**
-     * Shows the guest count popup.
-     * @param {Object} order
-     */
-    askCustomerCount(order) {
-        this.dialog.add(NumberPopup, {
-            startingValue: order.getCustomerCount() || 0,
-            title: _t("Guests?"),
-            feedback: (buffer) => {
-                const value = this.env.utils.formatCurrency(
-                    order.amountPerGuest(parseInt(buffer, 10) || 0) || 0
-                );
-                return value ? `${value} / ${_t("Guest")}` : "";
-            },
-            getPayload: (inputNumber) => {
-                const guestCount = parseInt(inputNumber, 10) || 0;
-                order.setCustomerCount(guestCount);
-                if (typeof order.id === "number") {
-                    this.addPendingOrder([order.id]);
-                }
-            },
-        });
-    }
 });
