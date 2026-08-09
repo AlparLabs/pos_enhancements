@@ -1,6 +1,6 @@
 {
     "name": "POS Restaurant Table Time",
-    "version": "19.0.1.0.0",
+    "version": "19.0.1.0.1",
     "category": "Point of Sale",
     "summary": "Show time passed since the table was occupied",
     "description": "Displays a timer on each occupied table in the POS Restaurant floor screen.",

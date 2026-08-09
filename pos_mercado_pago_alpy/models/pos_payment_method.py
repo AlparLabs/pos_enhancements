@@ -8,6 +8,14 @@ from .mercado_pago_post_request import MercadoPagoPosRequest
 
 _logger = logging.getLogger(__name__)
 
+# All payment-terminal types provided by this module.
+MP_TERMINAL_TYPES = (
+    'mercado_pago_alpy',
+    'mercado_pago_qr_local',
+    'mercado_pago_qr_screen',
+    'mercado_pago_qr_hybrid',
+)
+
 
 class PosPaymentMethod(models.Model):
     _inherit = 'pos.payment.method'

@@ -1,88 +1,57 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <templates id="template" xml:space="preserve">
     <!--
-        Hereda de point_of_sale.OrderChangeReceipt (template base de Odoo) y reemplaza
-        el loop de líneas planas por un agrupamiento por Categoría del POS.
-        La secuencia se controla con el campo 'kitchen_sequence' de pos.category.
-        Los productos Padre de Combo se ignoran; los subproductos se anotan con [Nombre Combo].
+        Hereda de point_of_sale.OrderChangeReceipt (template base de Odoo 19).
+        El agrupamiento por categoría lo hace el core vía change.group
+        (ver receiptLineGrouper.getGroup en services/pos_store.js);
+        acá sólo se ajusta la presentación:
+        - Encabezado en español, con el mozo asignado si existe.
+        - "Mesa X" en lugar de la referencia de la orden cuando hay mesa.
+        - Encabezado de categoría estilo "► CATEGORÍA".
+        - Las variantes de producto se muestran en negrita, en la misma línea.
     -->
     <t t-name="pos_kitchen_receipt_grouping.OrderChangeReceipt"
        t-inherit="point_of_sale.OrderChangeReceipt"
        t-inherit-mode="extension">
-        <xpath expr="//div[@t-foreach='changedlines']" position="replace">
-            <t t-if="changedlines.changedByCategory and changedlines.changedByCategory.length > 0">
-                <t t-foreach="changedlines.changedByCategory" t-as="group" t-key="group.name">
-                    <!-- Encabezado de categoría -->
-                    <div class="pos-receipt-title text-center mb-1"
-                         style="font-size: 110%; border-bottom: 2px solid black; font-weight: bold; padding: 2px 0; letter-spacing: 0.05rem;">
-                        &#9658; <t t-esc="group.name"/>
-                    </div>
-                    <!-- Líneas de esta categoría -->
-                    <div t-foreach="group.lines" t-as="line" t-key="line_index" style="font-size: 120%;">
-                        <div class="orderline mx-1">
-                            <div class="d-flex medium">
-                                <span class="me-3" t-esc="line.quantity"/>
-                                <span class="product-name" t-esc="line.name"/>
-                            </div>
-                            <t t-if="line.note">
-                                <div class="pos-receipt-note ms-3">
-                                    <t t-esc="line.note"/>
-                                </div>
-                            </t>
-                            <t t-if="line.customer_note">
-                                <div class="pos-receipt-note ms-3">
-                                    <t t-esc="line.customer_note"/>
-                                </div>
-                            </t>
-                        </div>
-                    </div>
-                </t>
-            </t>
-            <!-- Fallback: lista plana si changedByCategory no está disponible -->
-            <t t-else="">
-                <div t-foreach="changedlines" t-as="line" t-key="line_index" style="font-size: 120%;">
-                    <div class="orderline mx-1">
-                        <div class="d-flex medium">
-                            <span class="me-3" t-esc="line.quantity"/>
-                            <span class="product-name" t-esc="line.name"/>
-                        </div>
-                        <t t-if="line.note">
-                            <div class="pos-receipt-note ms-3">
-                                <t t-esc="line.note"/>
-                            </div>
-                        </t>
-                        <t t-if="line.customer_note">
-                            <div class="pos-receipt-note ms-3">
-                                <t t-esc="line.customer_note"/>
-                            </div>
-                        </t>
-                    </div>
-                </div>
-            </t>
-        </xpath>
-        <xpath expr="//div[@class='pos-receipt-title']" position="replace">
-            <div class="pos-receipt-title">
-                <t t-if="changes.diningModeUpdate">
-                    <t t-if="changes.takeaway">Comer aquí -&gt; Para llevar</t>
-                    <t t-else="">Para llevar -&gt; Comer aquí</t>
-                </t>
-                <t t-else="">
-                    <t t-if="changes.takeaway">Para llevar</t>
-                    <t t-else="">Comer aquí</t>
-                </t>
-            </div>
-        </xpath>
-        <xpath expr="//div[@class='o-employee-name']" position="replace">
+        <xpath expr="//div[hasclass('o-employee-name')]" position="replace">
             <div class="o-employee-name" style="font-size: 78%;">
-                <span><t t-esc="changes.config_name"/> : <t t-esc="changes.time"/></span><br/>
-                <span>Por: <t t-esc="changes.employee_name"/></span>
+                <span><t t-esc="data.config_name"/> : <t t-esc="data.time"/></span><br/>
+                <span>Por: <t t-esc="data.employee_name"/></span>
+                <t t-if="data.waiter_name">
+                    <br/><span>Mozo: <strong><t t-esc="data.waiter_name"/></strong></span>
+                </t>
             </div>
         </xpath>
-        <xpath expr="//span[@class='my-4']" position="replace">
-            <span class="my-4" style="font-size: 120%;">
-                <t t-if="changes.table_name">Mesa <strong><t t-esc="changes.table_name"/></strong></t>
-                <t t-if="changes.tracking_number" class="fw-light my-3"> # <strong><t t-esc="changes.tracking_number"/></strong></t>
+        <xpath expr="//span[hasclass('my-4')]" position="replace">
+            <span class="my-4" style="font-size: 150%;">
+                <t t-if="data.table_name">Mesa <strong><t t-esc="data.table_name"/></strong></t>
+                <t t-else="">
+                    <span class="order-ref-prefix">Orden </span><strong><t t-esc="data.pos_reference"/></strong>
+                </t>
+                <strong t-if="data.tracking_number" class="fw-light my-3">
+                    # <t t-esc="data.tracking_number"/>
+                </strong>
             </span>
         </xpath>
+        <xpath expr="//div[@t-foreach='data.changes.groupedData']/div[1]" position="replace">
+            <div class="pos-receipt-title text-center mb-1"
+                 style="font-size: 130%; border-bottom: 2px solid black; font-weight: bold; padding: 2px 0; letter-spacing: 0.05rem;">
+                &#9658; <t t-esc="group.name"/>
+            </div>
+        </xpath>
+    </t>
+
+    <t t-name="pos_kitchen_receipt_grouping.OrderChangeReceiptLine"
+       t-inherit="point_of_sale.OrderChangeReceiptLine"
+       t-inherit-mode="extension">
+        <!-- Variantes en negrita al lado del nombre, en vez de la lista debajo -->
+        <xpath expr="//span[hasclass('product-name')]" position="after">
+            <t t-if="line.attribute_value_names?.length">
+                <t t-foreach="line.attribute_value_names" t-as="attr" t-key="attr_index">
+                    <strong> (<t t-esc="attr"/>)</strong>
+                </t>
+            </t>
+        </xpath>
+        <xpath expr="//div[hasclass('ms-5')]" position="replace"/>
     </t>
 </templates>

@@ -1,6 +1,6 @@
 /** @odoo-module **/
 
-import { FloorScreen } from "@pos_restaurant/app/floor_screen/floor_screen";
+import { FloorScreen } from "@pos_restaurant/app/screens/floor_screen/floor_screen";
 import { patch } from "@web/core/utils/patch";
 import { useState, onMounted, onWillUnmount } from "@odoo/owl";
 

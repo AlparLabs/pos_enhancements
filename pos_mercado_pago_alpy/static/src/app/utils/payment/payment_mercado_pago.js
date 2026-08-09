@@ -35,7 +35,7 @@ export class PaymentMercadoPago extends PaymentInterface {
         if (cid) {
             return order.payment_ids.find((pl) => pl.uuid === cid);
         }
-        return order.get_selected_paymentline();
+        return order.getSelectedPaymentline();
     }
 
     // ── RPC helpers (Terminal Smart) ─────────────────────────────────────────
@@ -50,10 +50,14 @@ export class PaymentMercadoPago extends PaymentInterface {
             this.pos.config?.current_session_id?.id ||
             this.pos.config?.current_session_id ||
             "0";
+        const extRef = `${sessionId}_${line.payment_method_id.id}_${order.uuid}_${Date.now()}`;
+        // Persisted on the pos.payment so the backend can look the payment up
+        // on Mercado Pago at session close (bank reconciliation).
+        line.update({ mp_external_reference: extRef });
         const infos = {
             amount: parseInt(line.amount * 100, 10),
             additional_info: {
-                external_reference: `${sessionId}_${line.payment_method_id.id}_${order.uuid}_${Date.now()}`,
+                external_reference: extRef,
                 print_on_terminal: true,
             },
         };
@@ -128,8 +132,8 @@ export class PaymentMercadoPago extends PaymentInterface {
             "0";
 
         const items = order.getOrderlines().map((ol) => {
-            const unitPrice = Math.round(ol.get_unit_price() * 100) / 100;
-            const qty = ol.get_quantity ? ol.get_quantity() : (ol.quantity || 1);
+            const unitPrice = Math.round((ol.price_unit || 0) * 100) / 100;
+            const qty = ol.getQuantity ? ol.getQuantity() : (ol.qty || 1);
             const total = Math.round(unitPrice * qty * 100) / 100;
             return {
                 sku_number: String(ol.product_id.id),
@@ -145,6 +149,9 @@ export class PaymentMercadoPago extends PaymentInterface {
 
         const extRef = `${sessionId}_${line.payment_method_id.id}_${order.uuid}_${Date.now()}`;
         this.mp_qr_ext_ref = extRef;
+        // Persisted on the pos.payment so the backend can look the payment up
+        // on Mercado Pago at session close (bank reconciliation).
+        line.update({ mp_external_reference: extRef });
         const infos = {
             amount: parseInt(line.amount * 100, 10),
             external_reference: extRef,
@@ -212,6 +219,23 @@ export class PaymentMercadoPago extends PaymentInterface {
         return resp && typeof resp.status === "string";
     }
 
+    /**
+     * Extracts the Mercado Pago payment id from an Orders API order
+     * (resp.transactions.payments) or a merchant_order (resp.payments).
+     * Prefers the approved payment; falls back to the last one.
+     * @returns {string}
+     */
+    _extractApprovedPaymentId(resp) {
+        const payments = resp?.transactions?.payments || resp?.payments || [];
+        const approved = payments.find(
+            (p) =>
+                ["approved", "accredited", "processed"].includes(p.status) ||
+                ["approved", "accredited"].includes(p.status_detail)
+        );
+        const payment = approved || payments[payments.length - 1];
+        return payment?.id != null ? String(payment.id) : "";
+    }
+
     _isOrderApproved(resp) {
         if (!resp) return false;
         if (["paid", "processed", "finished"].includes(resp.status)) return true;
@@ -241,7 +265,7 @@ export class PaymentMercadoPago extends PaymentInterface {
         this.pending_cid = cid;
         const line = this._findPaymentLine(cid);
         try {
-            line.set_payment_status("waitingCapture");
+            line.setPaymentStatus("waitingCapture");
             if (this._isQr) {
                 return await this._sendQrPaymentRequest(cid, line);
             } else {
@@ -261,7 +285,7 @@ export class PaymentMercadoPago extends PaymentInterface {
         }
         this.mp_order = mp_response;
         this.mp_qr_order_id = mp_response?.id || null;
-        line.set_payment_status("waitingCard");
+        line.setPaymentStatus("waitingCard");
 
         const qrData = mp_response?.config?.qr?.qr_data || mp_response?.type_response?.qr_data || mp_response?.qr_data;
         if (this._showQrOnScreen) {
@@ -326,7 +350,7 @@ export class PaymentMercadoPago extends PaymentInterface {
             return false;
         }
         this.mp_order = mp_response;
-        line.set_payment_status("waitingCard");
+        line.setPaymentStatus("waitingCard");
         return await new Promise((resolve) => {
             this.webhook_resolver = resolve;
             let pollCount = 0;
@@ -433,7 +457,11 @@ export class PaymentMercadoPago extends PaymentInterface {
 
         this._closeQrPopup();
         if (this._isOrderApproved(statusResp)) {
-            line.set_payment_status("done");
+            const mpPaymentId = this._extractApprovedPaymentId(statusResp);
+            if (mpPaymentId) {
+                line.update({ mp_payment_id: mpPaymentId });
+            }
+            line.setPaymentStatus("done");
             this.webhook_resolver?.(true);
             this.webhook_resolver = null;
         } else {
@@ -453,7 +481,7 @@ export class PaymentMercadoPago extends PaymentInterface {
             if (!resolverValue) {
                 this._showMsg(messageKey, status);
             }
-            line.set_payment_status("done");
+            line.setPaymentStatus("done");
             this.webhook_resolver?.(resolverValue);
             this.webhook_resolver = null;
             return resolverValue;
@@ -473,6 +501,9 @@ export class PaymentMercadoPago extends PaymentInterface {
                         ["approved", "accredited", "processed"].includes(innerStatus) ||
                         ["approved", "accredited"].includes(innerDetail)
                     ) {
+                        if (lastPayment.id != null) {
+                            line.update({ mp_payment_id: String(lastPayment.id) });
+                        }
                         return showMessageAndResolve(_t("Payment has been processed"), "info", true);
                     }
                 }

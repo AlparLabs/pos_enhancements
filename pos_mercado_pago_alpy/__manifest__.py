@@ -1,6 +1,6 @@
 {
     'name': 'POS Mercado Pago (Alpy)',
-    'version': '19.0.2.2',
+    'version': '19.0.3.0',
     'category': 'Sales/Point of Sale',
     'summary': 'Integrate your POS with Mercado Pago: Point Smart terminals and QR code payments',
     'description': """
@@ -21,6 +21,7 @@ Features:
     'depends': ['point_of_sale'],
     'data': [
         'views/pos_payment_method_views.xml',
+        'views/pos_payment_views.xml',
     ],
     'assets': {
         'point_of_sale._assets_pos': [

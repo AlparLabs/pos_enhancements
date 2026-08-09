@@ -18,12 +18,7 @@ patch(PaymentScreen.prototype, {
 
         // Print any unprinted bar tickets before finalizing the order
         if (order) {
-            await printBarTicketsForOrder(
-                order,
-                this._barTicketPos,
-                this._barTicketPrinter,
-                this.env
-            );
+            await printBarTicketsForOrder(order, this._barTicketPos, this._barTicketPrinter);
         }
 
         return super.validateOrder(...arguments);

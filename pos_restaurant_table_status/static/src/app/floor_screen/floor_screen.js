@@ -1,23 +1,25 @@
 /** @odoo-module **/
 
-import { FloorScreen } from "@pos_restaurant/app/floor_screen/floor_screen";
+import { FloorScreen } from "@pos_restaurant/app/screens/floor_screen/floor_screen";
 import { patch } from "@web/core/utils/patch";
 
 patch(FloorScreen.prototype, {
     /**
-     * Returns an inline style string for the full-coverage overlay div injected
-     * inside each table tile. Priority: verified (teal) > pre-cuenta printed (amber).
-     * Returns empty string when no status applies (overlay hidden).
+     * Returns an inline style string for the colour overlay injected by
+     * floor_screen.xml before the .label (table number) inside .info.
+     * DOM order ensures the number renders above the overlay naturally.
+     * .info overflow:hidden clips the overlay to the table shape.
+     *
+     * Priority: verified (teal) > pre-cuenta printed (amber).
      *
      * @param {object} table  restaurant.table record
-     * @returns {string}
+     * @returns {string}  inline style string or empty string (no overlay)
      */
     getTableStatusStyle(table) {
         const order = table.getOrder?.();
         if (!order) return "";
 
-        const radius = table.shape === "round" ? "1000px" : "3px";
-        const base = `pointer-events: none; z-index: 1; border-radius: ${radius};`;
+        const base = `pointer-events: none;`;
 
         if (order.is_table_verified)  return `${base} background-color: rgba(16, 185, 129, 0.82);`;
         if (order.pre_cuenta_printed) return `${base} background-color: rgba(245, 158, 11, 0.82);`;

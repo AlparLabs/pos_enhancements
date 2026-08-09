@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_pos_payment_tree_inherit_mp" model="ir.ui.view">
+        <field name="name">pos.payment.tree.inherit.mercado.pago</field>
+        <field name="model">pos.payment</field>
+        <field name="inherit_id" ref="point_of_sale.view_pos_payment_tree"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='payment_method_id']" position="after">
+                <field name="mp_payment_id" optional="hide"/>
+                <field name="mp_net_amount" optional="show"/>
+                <field name="mp_fee_amount" optional="show"/>
+                <field name="mp_release_date" optional="show"/>
+                <field name="mp_status_detail" optional="hide"/>
+            </xpath>
+        </field>
+    </record>
+
+    <record id="view_pos_payment_form_inherit_mp" model="ir.ui.view">
+        <field name="name">pos.payment.form.inherit.mercado.pago</field>
+        <field name="model">pos.payment</field>
+        <field name="inherit_id" ref="point_of_sale.view_pos_payment_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='payment_method_id']" position="after">
+                <field name="mp_payment_id"/>
+                <field name="mp_external_reference"/>
+                <field name="mp_net_amount"/>
+                <field name="mp_fee_amount"/>
+                <field name="mp_release_date"/>
+                <field name="mp_status_detail"/>
+                <field name="mp_info_fetched"/>
+            </xpath>
+        </field>
+    </record>
+</odoo>

@@ -36,6 +36,15 @@ export class PreCuentaButton extends Component {
             return;
         }
         await this.printer.print(PreCuentaReceipt, { order }, { webPrintFallback: true });
+
+        // If pos_restaurant_table_status is installed, flag the table as
+        // pre-cuenta printed so the floor screen shows the amber overlay.
+        if (order.pre_cuenta_printed !== undefined) {
+            order.update({ pre_cuenta_printed: true });
+            if (typeof order.id === "number") {
+                this.pos.addPendingOrder([order.id]);
+            }
+        }
     }
 }
 
