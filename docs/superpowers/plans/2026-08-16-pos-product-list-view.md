@@ -514,8 +514,12 @@ describe("pickTaxTotal", () => {
         expect(pickTaxTotal(details, "subtotal")).toBe(100);
     });
 
-    test("treats a missing setting as tax-excluded", () => {
-        expect(pickTaxTotal(details, undefined)).toBe(100);
+    test("treats a missing setting as tax-included", () => {
+        expect(pickTaxTotal(details, undefined)).toBe(121);
+    });
+
+    test("treats an unrecognised setting as tax-included", () => {
+        expect(pickTaxTotal(details, "kanban")).toBe(121);
     });
 
     test("returns 0 when there are no tax details", () => {
@@ -568,9 +572,13 @@ export function pickTaxTotal(taxDetails, ifaceTaxIncluded) {
     if (!taxDetails) {
         return 0;
     }
-    return ifaceTaxIncluded === "total"
-        ? taxDetails.total_included
-        : taxDetails.total_excluded;
+    // Mirrors the core default: pos.config.iface_tax_included is required with
+    // default='total' (point_of_sale/models/pos_config.py:111). Anything that is not an
+    // explicit "subtotal" falls back to the tax-included price. Falling back the other
+    // way would quote the customer a price lower than the register charges.
+    return ifaceTaxIncluded === "subtotal"
+        ? taxDetails.total_excluded
+        : taxDetails.total_included;
 }
 
 /**
@@ -690,10 +698,10 @@ export class ProductRow extends Component {
     }
 
     get imageUrl() {
-        if (!this.config.product_list_show_image) {
-            return false;
-        }
-        return `/web/image?model=product.template&field=image_128&id=${this.props.product.id}&unique=${this.props.product.write_date}`;
+        // Core builds this URL in product.template.getImageUrl()
+        // (models/product_template.js:101). Use the method rather than duplicating the
+        // format, so a change in v20 lands here for free.
+        return this.config.product_list_show_image ? this.props.product.getImageUrl() : false;
     }
 
     get price() {
