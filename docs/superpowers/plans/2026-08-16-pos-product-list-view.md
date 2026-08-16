@@ -706,7 +706,13 @@ export class ProductRow extends Component {
 
     get price() {
         const product = this.props.product;
-        const taxDetails = product.getTaxDetails(priceOptionsFromOrder(this.pos.getOrder()));
+        // getBaseLine reads opts.overridedValues, NOT the top level
+        // (product_template_accounting.js:179). Passing {pricelist, fiscalPosition}
+        // flat would silently drop both and fall back to raw list_price. Core wraps it
+        // the same way at pos_store.js:1713.
+        const taxDetails = product.getTaxDetails({
+            overridedValues: priceOptionsFromOrder(this.pos.getOrder()),
+        });
         const amount = pickTaxTotal(taxDetails, this.config.iface_tax_included);
         return formatCurrency(amount, this.config.currency_id.id);
     }
