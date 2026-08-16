@@ -21,5 +21,9 @@ class TestProductListViewConfig(TestPoSCommon):
             'pos_product_list_show_uom': True,
         })
         settings.execute()
+        # The write-through to pos_config_id already happened above, inside create(),
+        # not here in execute(). See the create() override in
+        # point_of_sale/models/res_config_settings.py, which strips 'pos_'-prefixed
+        # vals and writes them to pos_config_id right after the super().create() call.
         self.assertEqual(self.config.product_view_default, 'list')
         self.assertTrue(self.config.product_list_show_uom)

@@ -4,8 +4,8 @@ from odoo import fields, models
 class PosConfig(models.Model):
     _inherit = 'pos.config'
 
-    # Semilla para dispositivos nuevos. El cajero puede cambiar de vista en cualquier
-    # momento; su eleccion se guarda en localStorage y pisa este valor.
+    # Seed value for new devices. The cashier can switch views at any time; their
+    # choice is stored in localStorage and overrides this value.
     product_view_default = fields.Selection(
         selection=[('grid', 'Grid'), ('list', 'List')],
         string='Default Product View',
