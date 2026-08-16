@@ -12,8 +12,12 @@ describe("pickTaxTotal", () => {
         expect(pickTaxTotal(details, "subtotal")).toBe(100);
     });
 
-    test("treats a missing setting as tax-excluded", () => {
-        expect(pickTaxTotal(details, undefined)).toBe(100);
+    test("treats a missing setting as tax-included", () => {
+        expect(pickTaxTotal(details, undefined)).toBe(121);
+    });
+
+    test("treats an unrecognised setting as tax-included", () => {
+        expect(pickTaxTotal(details, "kanban")).toBe(121);
     });
 
     test("returns 0 when there are no tax details", () => {
