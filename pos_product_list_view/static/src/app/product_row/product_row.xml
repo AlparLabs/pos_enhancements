@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<templates id="template" xml:space="preserve">
+
+    <t t-name="pos_product_list_view.ProductRow">
+        <article tabindex="0"
+            role="button"
+            class="o_pos_product_row d-flex align-items-center gap-2 px-2 btn btn-light rounded-0 text-start cursor-pointer"
+            t-att-data-product-id="props.product.id"
+            t-on-click.stop="props.onClick"
+            t-on-keypress="(event) => event.code === 'Space' ? props.onClick(event) : ()=>{}"
+            t-on-mousedown="(event) => props.longPressHandlers.onMouseDown(event, props.product)"
+            t-on-mouseup="props.longPressHandlers.onMouseUp"
+            t-on-touchstart="() => props.longPressHandlers.onTouchStart(props.product)"
+            t-on-touchend="props.longPressHandlers.onTouchEnd">
+
+            <div t-if="config.product_list_show_image" class="o_pos_product_row_img flex-shrink-0">
+                <img t-if="imageUrl" t-att-src="imageUrl" t-att-alt="props.name"
+                     class="w-100 h-100 object-fit-cover rounded pe-none" draggable="false"/>
+            </div>
+
+            <div class="o_pos_product_row_name flex-grow-1 text-truncate" t-esc="props.name"/>
+
+            <div t-if="config.product_list_show_ref"
+                 class="o_pos_product_row_ref flex-shrink-0 text-muted text-truncate"
+                 t-esc="props.product.default_code or ''"/>
+
+            <div t-if="config.product_list_show_barcode"
+                 class="o_pos_product_row_barcode flex-shrink-0 text-muted text-truncate"
+                 t-esc="props.product.barcode or ''"/>
+
+            <div t-if="config.product_list_show_uom"
+                 class="o_pos_product_row_uom flex-shrink-0 text-muted text-truncate"
+                 t-esc="props.product.uom_id?.name or ''"/>
+
+            <div class="o_pos_product_row_price flex-shrink-0 text-end" t-esc="price"/>
+
+            <span t-if="props.cartQty"
+                  class="o_pos_product_row_qty flex-shrink-0 px-2 rounded bg-black text-white fw-bolder"
+                  t-out="formattedCartQty"/>
+        </article>
+    </t>
+
+</templates>
