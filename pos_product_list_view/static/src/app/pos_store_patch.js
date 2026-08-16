@@ -13,6 +13,12 @@ patch(PosStore.prototype, {
         await super.setup(...arguments);
         // PosStore is reactive (core mutates pos.scanning from templates the same way),
         // so assigning this property re-renders the product screen.
+        //
+        // Not to be confused with core's productListView / productViewMode pair
+        // (pos_store.js:747-754): that property is never assigned anywhere in core, and its
+        // getter only returns Bootstrap flex classes for the mobile card layout. Different
+        // identifiers, no runtime collision — this comment exists so an upgrade-diff reviewer
+        // does not conflate them.
         this.productListViewMode = resolveInitialMode(
             readStoredMode(window.localStorage),
             this.config.product_view_default

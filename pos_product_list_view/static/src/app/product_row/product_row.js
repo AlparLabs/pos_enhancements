@@ -28,6 +28,11 @@ export class ProductRow extends Component {
         return this.config.product_list_show_image ? this.props.product.getImageUrl() : false;
     }
 
+    // Runs the full tax pipeline once per row. Core's grid never pays this: its card shows
+    // no price at all, so the cost is new here rather than inherited. It is cheap per call,
+    // and the reactive dependencies (the order's pricelist and fiscal position) are stable
+    // for the order's lifetime, so it should not churn on every keystroke. Worth
+    // re-measuring if a single category can render 1000+ rows.
     get price() {
         const product = this.props.product;
         // getTaxDetails reads pricelist/fiscalPosition out of `overridedValues`, not out of
