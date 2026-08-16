@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates id="template" xml:space="preserve">
+
+    <t t-name="pos_product_list_view.ProductScreen"
+       t-inherit="point_of_sale.ProductScreen"
+       t-inherit-mode="extension">
+
+        <!-- Toggle sits above the category selector: it must live OUTSIDE the product
+             container, otherwise there would be no way back from grid mode. -->
+        <xpath expr="//CategorySelector" position="before">
+            <ProductViewToggle t-if="pos.productsToDisplay.length > 0"/>
+        </xpath>
+
+        <!-- $0 is the original node: the native grid is preserved untouched in the
+             else branch, not reimplemented. The matched div is the one carrying
+             t-foreach="pos.productToDisplayByCateg". -->
+        <xpath expr="//div[hasclass('product-list')]" position="replace">
+            <t t-if="pos.isProductListView">
+                <ProductList
+                    onProductClick.bind="addProductToOrder"
+                    getProductName.bind="getProductName"
+                    longPressHandlers="longPressHandlers"
+                    quantityByProductTmplId="state.quantityByProductTmplId"/>
+            </t>
+            <t t-else="">
+                $0
+            </t>
+        </xpath>
+
+    </t>
+
+</templates>
