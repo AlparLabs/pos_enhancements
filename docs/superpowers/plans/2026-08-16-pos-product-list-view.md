@@ -972,7 +972,14 @@ Este es el único punto de contacto con el core. Cuando salga Odoo 20, verificar
 
         <!-- $0 is the original node: the native grid is preserved untouched in the
              else branch, not reimplemented. The matched div is the one carrying
-             t-foreach="pos.productToDisplayByCateg". -->
+             t-foreach="pos.productToDisplayByCateg".
+
+             $0 MUST sit on one line with no surrounding whitespace. The substitution
+             XPath is .//*[text()='$0'] (template_inheritance.js:268), which compares the
+             text node's string-value — indentation makes it "\n    $0\n" and it does not
+             match. When it does not match, line 280 still deletes the original node, so
+             the native grid vanishes and the literal text $0 renders, with no error
+             thrown. All 33 uses of $0 in the Odoo 19 tree are on one line. -->
         <xpath expr="//div[hasclass('product-list')]" position="replace">
             <t t-if="pos.isProductListView">
                 <ProductList
@@ -981,9 +988,7 @@ Este es el único punto de contacto con el core. Cuando salga Odoo 20, verificar
                     longPressHandlers="longPressHandlers"
                     quantityByProductTmplId="state.quantityByProductTmplId"/>
             </t>
-            <t t-else="">
-                $0
-            </t>
+            <t t-else="">$0</t>
         </xpath>
 
     </t>
