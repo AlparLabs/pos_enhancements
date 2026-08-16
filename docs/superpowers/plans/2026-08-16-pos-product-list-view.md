@@ -794,8 +794,11 @@ git commit -m "feat(pos_product_list_view): ProductRow component"
 
 ```javascript
 import { Component } from "@odoo/owl";
+import { _t } from "@web/core/l10n/translation";
 import { usePos } from "@point_of_sale/app/hooks/pos_hook";
 import { ProductRow } from "@pos_product_list_view/app/product_row/product_row";
+
+const UNCATEGORIZED = "0";
 
 export class ProductList extends Component {
     static template = "pos_product_list_view.ProductList";
@@ -821,7 +824,13 @@ export class ProductList extends Component {
     }
 
     getCategoryName(categId) {
-        return this.pos.models["pos.category"].get(parseInt(categId))?.name || "";
+        // "0" is a sentinel core pushes for products with no category, mixed in with
+        // real numeric ids (pos_store.js:2957-2959). Looking it up would return nothing
+        // and the group would render with a blank header.
+        if (categId === UNCATEGORIZED) {
+            return _t("Without category");
+        }
+        return this.pos.models["pos.category"].get(categId)?.name || "";
     }
 }
 ```
