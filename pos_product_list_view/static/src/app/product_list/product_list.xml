@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<templates id="template" xml:space="preserve">
+
+    <t t-name="pos_product_list_view.ProductList">
+        <div class="o_pos_product_list d-flex flex-column px-2 pb-2">
+
+            <!-- One header for the whole list, not one per category group. Every group
+                 shares the same column widths, so a single row labels them all; this is
+                 also what the web list view does with its thead. Rendering it once leaves
+                 Task 8 free to make it position:sticky, which is meaningless when the
+                 header repeats between category names. -->
+            <div t-if="pos.productToDisplayByCateg.length"
+                 class="o_pos_product_list_head d-flex align-items-center gap-2 px-2 text-muted">
+                <div t-if="config.product_list_show_image" class="o_pos_product_row_img flex-shrink-0"/>
+                <div class="o_pos_product_row_name flex-grow-1">Product</div>
+                <div t-if="config.product_list_show_ref" class="o_pos_product_row_ref flex-shrink-0">Ref.</div>
+                <div t-if="config.product_list_show_barcode" class="o_pos_product_row_barcode flex-shrink-0">Barcode</div>
+                <div t-if="config.product_list_show_uom" class="o_pos_product_row_uom flex-shrink-0">UoM</div>
+                <div class="o_pos_product_row_price flex-shrink-0 text-end">Price</div>
+            </div>
+
+            <t t-foreach="pos.productToDisplayByCateg" t-as="productCateg" t-key="productCateg[0]">
+
+                <div t-if="config.iface_group_by_categ"
+                     class="o_pos_product_list_categ fw-bold text-muted px-2 pt-2"
+                     t-esc="getCategoryName(productCateg[0])"/>
+
+                <ProductRow
+                    t-foreach="productCateg[1]" t-as="product" t-key="product.id"
+                    product="product"
+                    name="props.getProductName(product)"
+                    cartQty="props.quantityByProductTmplId[product.id]"
+                    longPressHandlers="props.longPressHandlers"
+                    onClick="() => props.onProductClick(product)"/>
+            </t>
+        </div>
+    </t>
+
+</templates>
