@@ -21,7 +21,10 @@
 
             <t t-foreach="pos.productToDisplayByCateg" t-as="productCateg" t-key="productCateg[0]">
 
-                <div t-if="config.iface_group_by_categ"
+                <!-- Also guarded on the name itself: an unresolved id would render an
+                     empty div that eats vertical space and reads as a glitch. The "0"
+                     sentinel is unaffected — it returns a real translated string. -->
+                <div t-if="config.iface_group_by_categ and getCategoryName(productCateg[0])"
                      class="o_pos_product_list_categ fw-bold text-muted px-2 pt-2"
                      t-esc="getCategoryName(productCateg[0])"/>
 

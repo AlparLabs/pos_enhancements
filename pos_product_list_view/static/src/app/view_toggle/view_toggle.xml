@@ -7,7 +7,10 @@
                     t-att-title="label"
                     t-att-aria-label="label"
                     t-on-click="() => pos.toggleProductListView()">
-                <i class="fa" t-att-class="icon" role="img" aria-hidden="true"/>
+                <!-- No role="img": aria-hidden already removes this from the
+                     accessibility tree, and the button carries the accessible
+                     name via title/aria-label. -->
+                <i class="fa" t-att-class="icon" aria-hidden="true"/>
             </button>
         </div>
     </t>

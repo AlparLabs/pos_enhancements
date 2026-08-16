@@ -17,7 +17,15 @@ export class ProductList extends Component {
         // useLongPress: the scroll container cancels long-press through THIS object,
         // so a second instance would keep firing the popup while the cashier scrolls.
         longPressHandlers: Object,
-        quantityByProductTmplId: Object,
+        // Optional with a {} default rather than a required Object: core seeds
+        // state.quantityByProductTmplId to {} (product_screen.js:62) but the useEffect at
+        // :118 reassigns it from `this.currentOrder?.lines?.reduce(...)`, which yields
+        // undefined if either optional chain short-circuits. Native gets away with it by
+        // dereferencing inline; across a props boundary OWL validation would throw instead.
+        quantityByProductTmplId: { type: Object, optional: true },
+    };
+    static defaultProps = {
+        quantityByProductTmplId: {},
     };
 
     setup() {
