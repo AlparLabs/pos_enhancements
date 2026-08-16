@@ -1081,6 +1081,7 @@ Los helpers viven en dos carpetas distintas: `chrome_util` bajo `tests/pos/tours
 
 ```javascript
 import { registry } from "@web/core/registry";
+import { LONG_PRESS_DURATION } from "@point_of_sale/utils";
 import * as Chrome from "@point_of_sale/../tests/pos/tours/utils/chrome_util";
 import * as Dialog from "@point_of_sale/../tests/generic_helpers/dialog_util";
 import * as ProductScreen from "@point_of_sale/../tests/pos/tours/utils/product_screen_util";
@@ -1090,6 +1091,14 @@ registry.category("web_tour.tours").add("ProductListViewTour", {
         [
             Chrome.startPoS(),
             Dialog.confirm("Open Register"),
+            // Regression guard. If the $0 substitution in product_screen.xml ever stops
+            // matching, the native grid div is deleted and the literal text "$0" renders
+            // instead — with no error thrown. This is the only thing that makes that
+            // failure loud. Do not remove it.
+            {
+                content: "grid mode still renders the native product container",
+                trigger: ".rightpane div.product-list",
+            },
             {
                 content: "switch the product screen to list view",
                 trigger: ".o_pos_view_toggle_btn",
@@ -1110,7 +1119,22 @@ registry.category("web_tour.tours").add("ProductListViewTour", {
             {
                 content: "long-press a row opens the product info popup",
                 trigger: ".o_pos_product_row:contains('Letter Tray')",
-                run: "press_and_hold",
+                // There is no press_and_hold run action; the real ones are check, clear,
+                // click, dblclick, drag_and_drop, edit, editor, fill, hover, press, range,
+                // select, selectByIndex, selectByLabel, uncheck, goToUrl, canvasNotEmpty
+                // (tour_helpers_hoot.js). run() is invoked as
+                // run.call({ anchor: this.element }, helpers) — tour_step_automatic.js:109.
+                // Synthetic mousedown/mouseup do not synthesize a click, so this does not
+                // add the product a second time.
+                async run() {
+                    this.anchor.dispatchEvent(
+                        new MouseEvent("mousedown", { button: 0, bubbles: true })
+                    );
+                    await new Promise((resolve) =>
+                        setTimeout(resolve, LONG_PRESS_DURATION + 200)
+                    );
+                    this.anchor.dispatchEvent(new MouseEvent("mouseup", { bubbles: true }));
+                },
             },
             {
                 content: "the product info popup is shown",
@@ -1124,10 +1148,8 @@ registry.category("web_tour.tours").add("ProductListViewTour", {
 `Letter Tray` es un producto que crea `TestPointOfSaleHttpCommon`
 (`point_of_sale/tests/test_frontend.py:200`), así que existe en la base de pruebas.
 
-Si el paso de long-press falla porque `press_and_hold` no está disponible como acción de
-tour en esta versión, reemplazarlo por un `run` explícito que dispare `mousedown`, espere
-el `LONG_PRESS_DURATION` de `@point_of_sale/utils` y dispare `mouseup`. Verificar la
-constante antes de hardcodear un número.
+`LONG_PRESS_DURATION` es `session.test_mode ? 100 : 500` (`point_of_sale/static/src/utils.js:225`),
+así que el margen de 200ms cubre ambos casos sin hardcodear un número.
 
 - [ ] **Step 2: Escribir el test que lanza el tour**
 
