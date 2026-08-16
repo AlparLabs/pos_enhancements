@@ -13,7 +13,24 @@
 
         <!-- $0 is the original node: the native grid is preserved untouched in the
              else branch, not reimplemented. The matched div is the one carrying
-             t-foreach="pos.productToDisplayByCateg". -->
+             t-foreach="pos.productToDisplayByCateg".
+
+             DO NOT REFORMAT THE `<t t-else="">$0</t>` LINE BELOW. The $0 substitution is
+             found with the XPath `.//*[text()='$0']`
+             (web/static/src/core/template_inheritance.js:268), and an XPath string
+             comparison uses the text node's FULL string-value. This file carries
+             xml:space="preserve", so putting $0 on its own indented line makes that value
+             "\n    $0\n  " and the element no longer matches.
+
+             The failure is silent and total. On a miss, the substitution loop at :274-277
+             simply does not run, but `target.replaceWith(...nodes)` at :280 executes
+             regardless and deletes the native product grid. Grid mode would then render
+             the literal text "$0" and zero products, with nothing thrown and no console
+             error — inverting this module's one guarantee (be inert in grid mode) into a
+             total break of the native screen.
+
+             Every $0 in the Odoo 19 tree is on a single line; the structurally identical
+             POS case is pos_restaurant/static/src/app/screens/payment_screen/payment_screen.xml:13. -->
         <xpath expr="//div[hasclass('product-list')]" position="replace">
             <t t-if="pos.isProductListView">
                 <ProductList
@@ -22,9 +39,7 @@
                     longPressHandlers="longPressHandlers"
                     quantityByProductTmplId="state.quantityByProductTmplId"/>
             </t>
-            <t t-else="">
-                $0
-            </t>
+            <t t-else="">$0</t>
         </xpath>
 
     </t>

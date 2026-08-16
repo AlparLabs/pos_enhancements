@@ -35,7 +35,9 @@ $o-pos-list-img-size: 32px !default;
 // Reserved strip at the inline end of every header and row. The cart-quantity badge is
 // painted into it as an OVERLAY (see .o_pos_product_row_qty). It is reserved on the
 // shared price cell, so the header reserves exactly as much as the rows do.
-$o-pos-list-qty-gutter: 3rem !default;
+// Sized to clear four bold glyphs plus the badge's own px-2: `formatProductQty` produces
+// ordinary values like "1000" and "12.5", and a clipped quantity is corrupted data.
+$o-pos-list-qty-gutter: 4.5rem !default;
 
 $o-pos-list-ref-width: 7rem !default;
 $o-pos-list-barcode-width: 9rem !default;
@@ -56,8 +58,13 @@ $o-pos-list-price-width: 6rem !default;
         z-index: 1;
         background-color: var(--background-color, #{$body-bg});
         border-bottom: 1px solid var(--border-color, #{$border-color});
-        // The header has no py-* utility of its own.
-        padding-block: .375rem;
+        // The header carries no py-* utility of its own. Borrowed from the framework's
+        // control padding (bootstrap/scss/_variables.scss:819, itself
+        // $input-btn-padding-y, overridden to o-to-rem(5) at
+        // web/static/src/scss/bootstrap_overridden.scss:161) rather than frozen at
+        // today's value, so a Bootstrap bump moves it. The rows do not follow this
+        // metric — their height is pinned by min-height below.
+        padding-block: $btn-padding-y;
         font-size: .8125rem;
         font-weight: 600;
     }
@@ -78,11 +85,19 @@ $o-pos-list-price-width: 6rem !default;
     }
 
     // Header spacer (product_list.xml:14) and row thumbnail wrapper
-    // (product_row.xml:17) share this class, so one declaration keeps them equal. The
-    // header cell is empty, hence the explicit height — otherwise it would collapse and
-    // the first column would start at a different x than in the rows.
+    // (product_row.xml:17) share this class, so one width declaration keeps the first
+    // column starting at the same x in both. Width plus the markup's `flex-shrink-0` is
+    // all the inline axis needs — the spacer holds its 32px whatever its height.
     .o_pos_product_row_img {
         width: $o-pos-list-img-size;
+    }
+
+    // Height is scoped to the rows on purpose. Applied to the shared class it would also
+    // apply to the empty header spacer, whose only effect there is to swell the header by
+    // 32px when the image column is enabled and shrink it back when it is not — a header
+    // whose height depends on a config flag. Scoped here, the thumbnail is 32x32 and the
+    // header keeps its compact padding either way.
+    .o_pos_product_row .o_pos_product_row_img {
         height: $o-pos-list-img-size;
     }
 
@@ -132,17 +147,20 @@ $o-pos-list-price-width: 6rem !default;
     // overlaps nothing. `inset-inline-end: .5rem` matches the row's `px-2`, which lands
     // the badge's end edge on the content-box edge, i.e. flush with the end of the
     // reserved strip.
+    // Deliberately unbounded: no max-width and no overflow clipping. The gutter is sized
+    // for ordinary quantities, but an unusual one must overflow visibly rather than be
+    // silently ellipsised — a cashier reading "10…" when the cart holds 1000 is far worse
+    // than a badge that overlaps the price. Core's own card badge sets no bound either
+    // (point_of_sale/.../product_card.xml:24-27), and it can render negative quantities.
+    // Being out of flow, the badge's width costs nothing structurally.
     .o_pos_product_row_qty {
         position: absolute;
         inset-inline-end: .5rem;
         top: 50%;
         transform: translateY(-50%);
-        max-width: $o-pos-list-qty-gutter - .5rem;
         // Out of flow, so `align-items-center` no longer applies; centre it by hand.
         text-align: center;
         white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
     }
 
     // Group heading (product_list.xml:27-29). Sticks to nothing — it scrolls under the
@@ -151,9 +169,16 @@ $o-pos-list-price-width: 6rem !default;
         font-size: .8125rem;
     }
 
-    // Narrow tablets in portrait: shed width from the widest optional columns first, so
-    // the name column keeps room before anything is forced to truncate. The columns stay
-    // fixed — only the constant changes, and it changes for header and rows together.
+    // Shed width from the widest optional columns first, so the name column keeps room
+    // before anything is forced to truncate. The columns stay fixed — only the constant
+    // changes, and it changes for header and rows together.
+    //
+    // Note this breakpoint is VIEWPORT-relative while the list actually lives in
+    // .rightpane, i.e. viewport minus $pos-left-pane-width (450px, dropping to 400px
+    // under xl — point_of_sale/static/src/scss/pos_variables_extra.scss:1-2). So the list
+    // is already this narrow well before the query fires, and the query fires later than
+    // the list's own crowding would suggest. Core's grid has the same characteristic
+    // (product_screen.scss:8-14); left as-is rather than diverging from it.
     @include media-breakpoint-down(lg) {
         .o_pos_product_row_ref {
             width: 5rem;
