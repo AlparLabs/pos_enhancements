@@ -1,0 +1,195 @@
+// POS product list view — column geometry.
+//
+// Column alignment is the feature. Every rule below serves one guarantee: a header
+// cell and the data cell under it resolve to the same box on the inline axis.
+//
+// The two roots do NOT start from the same box model:
+//   * the header (product_list.xml:13) is a plain div — no border, no button padding;
+//   * a row (product_row.xml:7) carries `btn btn-light`, and `.btn` declares
+//     `border: var(--btn-border-width) solid var(--btn-border-color)`
+//     (bootstrap/scss/_buttons.scss:37) with
+//     `$btn-border-width: $input-btn-border-width: var(--border-width)`
+//     (bootstrap/scss/_variables.scss:834 and :809), i.e. 1px.
+//     Under border-box sizing that 1px inset the row's content box on BOTH inline
+//     edges, so every column in every row sat 1px off the header and had 2px less
+//     width to distribute. `--btn-border-width: 0` removes it explicitly instead of
+//     hoping it cancels out; the visible separator comes back as a bottom-only
+//     border, which cannot touch the inline axis.
+//
+// The horizontal padding needs no correction: both roots carry `px-2`, and Bootstrap
+// spacing utilities are !important, so they already beat `.btn`'s padding shorthand on
+// the left/right edges. Only the vertical half of that shorthand survives, which is why
+// `--btn-padding-y` is overridden rather than `padding`.
+//
+// Colours come from `--border-color` (bootstrap/scss/_root.scss:100, emitted unprefixed
+// because `$variable-prefix: ''`, web/static/src/scss/bootstrap_overridden.scss:51) and
+// from `--background-color`, the custom property every Odoo bg-* utility sets
+// (web/static/src/scss/functions.scss:48-51) and that POS re-declares for the pane this
+// list lives in (`.bg-secondary`, point_of_sale/static/src/scss/pos.scss:42-44). Both
+// carry an SCSS fallback so the file degrades to a sane colour if it is ever compiled
+// outside the POS bundle.
+
+$o-pos-list-row-min-height: 48px !default;
+$o-pos-list-img-size: 32px !default;
+
+// Reserved strip at the inline end of every header and row. The cart-quantity badge is
+// painted into it as an OVERLAY (see .o_pos_product_row_qty). It is reserved on the
+// shared price cell, so the header reserves exactly as much as the rows do.
+// Sized to clear four bold glyphs plus the badge's own px-2: `formatProductQty` produces
+// ordinary values like "1000" and "12.5", and a clipped quantity is corrupted data.
+$o-pos-list-qty-gutter: 4.5rem !default;
+
+$o-pos-list-ref-width: 7rem !default;
+$o-pos-list-barcode-width: 9rem !default;
+$o-pos-list-uom-width: 5rem !default;
+$o-pos-list-price-width: 6rem !default;
+
+.o_pos_product_list {
+
+    // Rendered once, at the top of the whole list (product_list.xml:7-11), so it can
+    // stick to the scroll port — core's `.overflow-y-auto` wrapper at
+    // point_of_sale/.../product_screen.xml:31, of which this list is the only child.
+    // Nothing between the two clips overflow, so sticky resolves against that port.
+    .o_pos_product_list_head {
+        position: sticky;
+        top: 0;
+        // Above the rows: those become positioned (z-index auto) so the badge can be
+        // absolutely placed, and `auto` loses to an explicit 1.
+        z-index: 1;
+        background-color: var(--background-color, #{$body-bg});
+        border-bottom: 1px solid var(--border-color, #{$border-color});
+        // The header carries no py-* utility of its own. Borrowed from the framework's
+        // control padding (bootstrap/scss/_variables.scss:819, itself
+        // $input-btn-padding-y, overridden to o-to-rem(5) at
+        // web/static/src/scss/bootstrap_overridden.scss:161) rather than frozen at
+        // today's value, so a Bootstrap bump moves it. The rows do not follow this
+        // metric — their height is pinned by min-height below.
+        padding-block: $btn-padding-y;
+        font-size: .8125rem;
+        font-weight: 600;
+    }
+
+    // Specificity 0,2,0 so the bottom border and the padding beat `.btn` (0,1,0)
+    // regardless of the order the POS bundle happens to concatenate the files in.
+    .o_pos_product_row {
+        --btn-border-width: 0;
+        --btn-padding-y: 0;
+
+        // Comfortable tablet touch target. Legibility over density: the row is taller
+        // than its content needs, and `align-items-center` (product_row.xml:7) centres
+        // the cells in the extra space.
+        min-height: $o-pos-list-row-min-height;
+        border-bottom: 1px solid var(--border-color, #{$border-color});
+        // Containing block for the absolutely positioned quantity badge.
+        position: relative;
+    }
+
+    // Header spacer (product_list.xml:14) and row thumbnail wrapper
+    // (product_row.xml:17) share this class, so one width declaration keeps the first
+    // column starting at the same x in both. Width plus the markup's `flex-shrink-0` is
+    // all the inline axis needs — the spacer holds its 32px whatever its height.
+    .o_pos_product_row_img {
+        width: $o-pos-list-img-size;
+    }
+
+    // Height is scoped to the rows on purpose. Applied to the shared class it would also
+    // apply to the empty header spacer, whose only effect there is to swell the header by
+    // 32px when the image column is enabled and shrink it back when it is not — a header
+    // whose height depends on a config flag. Scoped here, the thumbnail is 32x32 and the
+    // header keeps its compact padding either way.
+    .o_pos_product_row .o_pos_product_row_img {
+        height: $o-pos-list-img-size;
+    }
+
+    // `text-truncate` alone is not enough inside a flex row: a flex item defaults to
+    // `min-width: auto`, so a long product name would refuse to shrink, push the fixed
+    // columns out and break alignment for that row only. This is what actually holds the
+    // right-hand columns still.
+    .o_pos_product_row_name {
+        min-width: 0;
+    }
+
+    // Fixed so they cannot drift between rows or against the header. The markup already
+    // carries `flex-shrink-0`, so a definite width fully pins them.
+    .o_pos_product_row_ref {
+        width: $o-pos-list-ref-width;
+    }
+
+    .o_pos_product_row_barcode {
+        width: $o-pos-list-barcode-width;
+    }
+
+    .o_pos_product_row_uom {
+        width: $o-pos-list-uom-width;
+    }
+
+    .o_pos_product_row_price {
+        width: $o-pos-list-price-width;
+        // Reserves the badge strip. Applied to the price cell because that class is the
+        // last in-flow cell of BOTH the header (product_list.xml:19) and the row
+        // (product_row.xml:43), so header and rows reserve identically and the price
+        // column lands on the same x in every row.
+        margin-inline-end: $o-pos-list-qty-gutter;
+        // Prices are numbers: keep them on one line so the row never grows a second one.
+        white-space: nowrap;
+    }
+
+    // OVERLAY, not an in-flow column.
+    //
+    // The badge is conditional (`t-if="props.cartQty"`, product_row.xml:45) and has no
+    // header counterpart. In flow it would consume `gap-2` + its own width on the rows
+    // that have it and nothing on the rows that do not, so the price column would sit at
+    // two different x positions depending on whether the product is in the cart — and at
+    // a third one in the header. Taking it out of flow makes its width structurally
+    // irrelevant: the flex line is identical with and without a cart quantity.
+    //
+    // It is not merely floated over the price either — the gutter reserved above means it
+    // overlaps nothing. `inset-inline-end: .5rem` matches the row's `px-2`, which lands
+    // the badge's end edge on the content-box edge, i.e. flush with the end of the
+    // reserved strip.
+    // Deliberately unbounded: no max-width and no overflow clipping. The gutter is sized
+    // for ordinary quantities, but an unusual one must overflow visibly rather than be
+    // silently ellipsised — a cashier reading "10…" when the cart holds 1000 is far worse
+    // than a badge that overlaps the price. Core's own card badge sets no bound either
+    // (point_of_sale/.../product_card.xml:24-27), and it can render negative quantities.
+    // Being out of flow, the badge's width costs nothing structurally.
+    .o_pos_product_row_qty {
+        position: absolute;
+        inset-inline-end: .5rem;
+        top: 50%;
+        transform: translateY(-50%);
+        // Out of flow, so `align-items-center` no longer applies; centre it by hand.
+        text-align: center;
+        white-space: nowrap;
+    }
+
+    // Group heading (product_list.xml:27-29). Sticks to nothing — it scrolls under the
+    // column header — but it must not be mistaken for a row, so no separator.
+    .o_pos_product_list_categ {
+        font-size: .8125rem;
+    }
+
+    // Shed width from the widest optional columns first, so the name column keeps room
+    // before anything is forced to truncate. The columns stay fixed — only the constant
+    // changes, and it changes for header and rows together.
+    //
+    // Note this breakpoint is VIEWPORT-relative while the list actually lives in
+    // .rightpane, i.e. viewport minus $pos-left-pane-width (450px, dropping to 400px
+    // under xl — point_of_sale/static/src/scss/pos_variables_extra.scss:1-2). So the list
+    // is already this narrow well before the query fires, and the query fires later than
+    // the list's own crowding would suggest. Core's grid has the same characteristic
+    // (product_screen.scss:8-14); left as-is rather than diverging from it.
+    @include media-breakpoint-down(lg) {
+        .o_pos_product_row_ref {
+            width: 5rem;
+        }
+
+        .o_pos_product_row_barcode {
+            width: 6.5rem;
+        }
+
+        .o_pos_product_row_uom {
+            width: 4rem;
+        }
+    }
+}

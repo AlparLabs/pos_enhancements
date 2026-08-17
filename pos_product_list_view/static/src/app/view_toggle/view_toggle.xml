@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<templates id="template" xml:space="preserve">
+
+    <t t-name="pos_product_list_view.ProductViewToggle">
+        <div class="o_pos_view_toggle d-flex justify-content-end px-2 pt-2">
+            <button class="btn btn-light o_pos_view_toggle_btn"
+                    t-att-title="label"
+                    t-att-aria-label="label"
+                    t-on-click="() => pos.toggleProductListView()">
+                <!-- No role="img": aria-hidden already removes this from the
+                     accessibility tree, and the button carries the accessible
+                     name via title/aria-label. -->
+                <i class="fa" t-att-class="icon" aria-hidden="true"/>
+            </button>
+        </div>
+    </t>
+
+</templates>
