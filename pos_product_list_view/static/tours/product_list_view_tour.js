@@ -40,6 +40,22 @@ registry.category("web_tour.tours").add("ProductListViewTour", {
                 trigger: ".o_pos_product_list .o_pos_product_row",
             },
             {
+                content: "the price column actually rendered a number",
+                trigger: ".o_pos_product_row:contains('Letter Tray') .o_pos_product_row_price",
+                // The price is the reason this module exists: the native ProductCard
+                // renders no price at all (product_card.xml). It is also the subtlest path
+                // in the module — getTaxDetails must receive the pricelist nested under
+                // `overridedValues`, or getBaseLine drops it and falls back to raw
+                // list_price (product_template_accounting.js:179). A bare trigger would
+                // match the empty cell and pass in that broken state, so assert content.
+                run() {
+                    const text = this.anchor.textContent.trim();
+                    if (!/\d/.test(text)) {
+                        throw new Error(`Price cell rendered no number: "${text}"`);
+                    }
+                },
+            },
+            {
                 content: "clicking a row adds the product to the order",
                 trigger: ".o_pos_product_row:contains('Letter Tray')",
                 run: "click",
