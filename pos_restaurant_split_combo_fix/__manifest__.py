@@ -1,6 +1,7 @@
 {
     'name': 'POS Restaurant Split Bill Combo Fix',
     'version': '19.0.2.0.0',
+    'website': 'https://www.alpardata.com.ar',
     'category': 'Point of Sale',
     'summary': 'Fix combo lines getting corrupted when splitting a restaurant table',
     'description': """
@@ -18,7 +19,7 @@ which was the corruption (stray children at catalog price, later crash in
 The module is kept as an empty shell so databases that had it installed can
 upgrade to 19.0 without breaking; it can be uninstalled safely afterwards.
     """,
-    'author': 'Alpar Data',
+    'author': 'AlparData',
     'depends': ['pos_restaurant'],
     'data': [],
     'assets': {},

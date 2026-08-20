@@ -1,6 +1,8 @@
 {
     'name': 'POS Mercado Pago (Alpy)',
     'version': '19.0.3.1',
+    'author': 'AlparData',
+    'website': 'https://www.alpardata.com.ar',
     'category': 'Sales/Point of Sale',
     'summary': 'Integrate your POS with Mercado Pago: Point Smart terminals and QR code payments',
     'description': """

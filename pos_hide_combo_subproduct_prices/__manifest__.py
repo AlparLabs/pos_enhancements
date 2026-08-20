@@ -1,6 +1,8 @@
 {
     'name': 'POS Hide Combo Subproduct Prices',
     'version': '19.0.2.0.0',
+    'author': 'AlparData',
+    'website': 'https://www.alpardata.com.ar',
     'category': 'Point of Sale',
     'summary': 'Hide prices and subtotals of combo subproducts on POS receipts',
     'description': """
