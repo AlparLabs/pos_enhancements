@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 {
     'name': 'POS Argentina Receipt Enhancement',
-    'version': '19.0.1.5.0',
+    'version': '19.0.1.6.0',
     'category': 'Sales/Point of Sale',
     'summary': 'Add Argentina ARCA (AFIP) details to POS receipt',
     'description': """
