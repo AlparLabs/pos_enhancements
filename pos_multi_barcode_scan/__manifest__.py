@@ -1,6 +1,7 @@
 {
     'name': 'POS Multi Barcode Scan',
     'version': '19.0.1.1.0',
+    'website': 'https://www.alpardata.com.ar',
     'category': 'Point of Sale',
     'summary': 'Scan a single QR code containing multiple barcodes (e.g. client and coupon)',
     'description': (

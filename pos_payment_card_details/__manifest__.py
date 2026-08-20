@@ -1,6 +1,7 @@
 {
     'name': 'POS Payment Card Details',
     'version': '19.0.1.1.1',
+    'website': 'https://www.alpardata.com.ar',
     'category': 'Sales/Point of Sale',
     'summary': 'Add Lot Number, Coupon, and Installments to POS payments for banking conciliation.',
     'description': """
