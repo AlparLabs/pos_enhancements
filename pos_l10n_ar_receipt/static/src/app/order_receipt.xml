@@ -77,6 +77,21 @@
             </div>
         </xpath>
 
+        <!--
+            Fiscal Transparency Regime: on B/C/X/R documents the price already
+            includes VAT, so the Subtotal + tax-group breakdown must not be
+            printed — only the total and the disclosure block below it. The
+            letters match core's account.move._l10n_ar_include_vat(), which
+            drives the same rule on the PDF invoice report.
+
+            Overriding the t-if via position="attributes" rather than replacing
+            the whole block keeps core's markup, so upstream changes to the tax
+            rows are inherited instead of frozen at this version.
+        -->
+        <xpath expr="//div[hasclass('pos-receipt-taxes')]" position="attributes">
+            <attribute name="t-if">taxTotals and taxTotals.has_tax_groups and !['B', 'C', 'X', 'R'].includes(order.l10n_ar_letter)</attribute>
+        </xpath>
+
         <!-- Optional: Breakdown of taxes if it's Factura A -->
         <xpath expr="//div[hasclass('pos-receipt-amount')]" position="after">
             <div t-if="order.l10n_ar_letter === 'A' and order.l10n_ar_tax_details and order.l10n_ar_tax_details.length" class="pos-receipt-taxes" style="font-size: 0.8em; margin-top: 5px;">
