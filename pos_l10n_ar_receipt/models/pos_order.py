@@ -52,6 +52,12 @@ class PosOrder(models.Model):
         string="ARCA Tax Details",
         compute='_compute_l10n_ar_tax_details',
     )
+    l10n_ar_custom_tax_summary = fields.Json(
+        string="Fiscal Transparency Summary",
+        compute='_compute_l10n_ar_custom_tax_summary',
+        help="VAT content and other national indirect taxes to disclose on B/C "
+             "invoices under the Fiscal Transparency Regime (Law 27.743).",
+    )
 
     @api.depends('account_move', 'account_move.line_ids')
     def _compute_l10n_ar_tax_details(self):
@@ -66,3 +72,28 @@ class PosOrder(models.Model):
                         'amount': line.price_subtotal,
                     })
             order.l10n_ar_tax_details = details
+
+    @api.depends('account_move', 'account_move.line_ids')
+    def _compute_l10n_ar_custom_tax_summary(self):
+        """Fiscal Transparency Regime (Law 27.743 / RG 5614-2024).
+
+        Core's `_l10n_ar_get_invoice_custom_tax_summary_for_report` already
+        returns an empty list for document types other than 6/7/8 (B, C, ...),
+        so the receipt block simply stays hidden on A invoices. Amounts come
+        back pre-formatted by the server (`formatted_tax_amount_currency`).
+        """
+        for order in self:
+            summary = []
+            # sudo(): the summary is recomputed while a cashier reads back the
+            # synced order, and POS users have no read access on account.move
+            # lines (core loads account.move into the POS with sudo() too).
+            move = order.account_move.sudo()
+            if move and hasattr(move, '_l10n_ar_get_invoice_custom_tax_summary_for_report'):
+                summary = [
+                    {
+                        'name': detail['name'],
+                        'formatted_tax_amount_currency': detail['formatted_tax_amount_currency'],
+                    }
+                    for detail in move._l10n_ar_get_invoice_custom_tax_summary_for_report()
+                ]
+            order.l10n_ar_custom_tax_summary = summary
