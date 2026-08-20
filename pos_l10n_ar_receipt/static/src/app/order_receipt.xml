@@ -87,6 +87,30 @@
                     </div>
                 </t>
             </div>
+
+            <!--
+                Fiscal Transparency Regime (Law 27.743 / RG 5614-2024): B and C
+                invoices show the price with VAT included, so the VAT content and
+                other national indirect taxes have to be disclosed separately.
+                order.l10n_ar_custom_tax_summary is computed server-side by core's
+                _l10n_ar_get_invoice_custom_tax_summary_for_report(), which already
+                returns an empty list for A invoices, so no letter check is needed
+                here. Amounts arrive pre-formatted in the invoice currency.
+            -->
+            <div t-if="order.l10n_ar_custom_tax_summary and order.l10n_ar_custom_tax_summary.length"
+                 class="pos-receipt-ar-transparency"
+                 style="font-size: 0.8em; margin-top: 10px; border-top: 1px dashed black; padding-top: 5px;">
+                <div class="pos-receipt-center-align"
+                     style="font-weight: bold; margin-bottom: 5px; padding-bottom: 5px; border-bottom: 1px solid black;">
+                    Régimen de Transparencia Fiscal al Consumidor (Ley 27.743)
+                </div>
+                <t t-foreach="order.l10n_ar_custom_tax_summary" t-as="detail" t-key="detail.name">
+                    <div class="d-flex justify-content-between">
+                        <span t-esc="detail.name"/>
+                        <span t-esc="detail.formatted_tax_amount_currency"/>
+                    </div>
+                </t>
+            </div>
         </xpath>
 
     </t>
