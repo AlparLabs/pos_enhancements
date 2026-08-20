@@ -157,7 +157,6 @@ export class PaymentMercadoPago extends PaymentInterface {
             external_reference: extRef,
             title: `Orden POS #${order.sequence_number || order.uid}`,
             items: items,
-            notification_url: `${window.location.origin}/pos_mercado_pago_alpy/notification`,
         };
         return await this.env.services.orm.silent.call(
             "pos.payment.method",
@@ -370,8 +369,26 @@ export class PaymentMercadoPago extends PaymentInterface {
                         this.handleMercadoPagoWebhook();
                     }
                 } catch (e) { /* ignore */ }
-                if (pollCount > 18) {
+                if (pollCount > 36) {
+                    // 3 minutes without a final status: cancel the order on the
+                    // terminal so it cannot be paid after the POS gave up, warn
+                    // the cashier and release the payment line. Without the
+                    // resolve() the promise never settles and the payment screen
+                    // stays on "waitingCard" forever.
                     clearInterval(pollInterval);
+                    this.webhook_resolver = null;
+                    try {
+                        await this._cancelOrder();
+                    } catch (e) {
+                        console.warn("MercadoPago: could not cancel order on timeout", e);
+                    }
+                    this._showMsg(
+                        _t(
+                            "Tiempo de espera agotado. Verifique el estado del pago en la terminal antes de reintentar."
+                        ),
+                        "info"
+                    );
+                    resolve(false);
                 }
             }, 5000);
         });

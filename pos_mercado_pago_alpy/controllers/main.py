@@ -12,6 +12,9 @@ from odoo.addons.pos_mercado_pago_alpy.models.pos_payment_method import MP_TERMI
 
 _logger = logging.getLogger(__name__)
 
+# External reference format written by this module: <session>_<payment_method>_<uuid>
+MP_EXT_REF_PATTERN = r'([^_]+)_(\d+)_([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})(?:_\d+)?'
+
 
 class PosMercadoPagoWebhook(http.Controller):
     @http.route('/pos_mercado_pago_alpy/notification', methods=['POST'], type="http", auth="none", csrf=False)
@@ -44,6 +47,15 @@ class PosMercadoPagoWebhook(http.Controller):
         if not data:
             _logger.warning('POST message received with no data')
             return http.Response(status=400)
+
+        # QR (Instore) payments notify with topic `merchant_order` and carry a
+        # merchant_order id instead of an external_reference, so they never match
+        # the Orders-API lookup below: it would query /v1/orders with a
+        # merchant_order id, fail, and give up with a 400. Resolve them against
+        # /merchant_orders/<id> instead.
+        topic = data.get('topic') or request.params.get('topic') or data.get('type', '')
+        if topic == 'merchant_order':
+            return self._handle_merchant_order(data, ts, v1, x_request_id)
 
         # If and only if this webhook is related with an order or payment intent
         # then the field data['data']['external_reference'] (new format) or
@@ -156,4 +168,105 @@ class PosMercadoPagoWebhook(http.Controller):
         })
 
         # Acknowledge Mercado Pago message
+        return http.Response('OK', status=200)
+
+    # ────────────────────────────────────────────────────────────────────────
+    # merchant_order (QR) handling
+    # ────────────────────────────────────────────────────────────────────────
+
+    def _handle_merchant_order(self, data, ts, v1, x_request_id):
+        """Resolve a QR merchant_order notification and notify the POS.
+
+        The notification only carries a merchant_order id, so the external
+        reference has to be fetched from Mercado Pago. Any configured MP token
+        can read it, so every MP payment method is tried until one resolves.
+        """
+        resource_id = (
+            data.get('data', {}).get('id')
+            or data.get('id')
+            or request.params.get('data.id')
+            or request.params.get('id')
+        )
+        if not resource_id:
+            _logger.warning('merchant_order webhook with no resource id, data: %s', data)
+            return http.Response('OK', status=200)
+
+        payment_methods = request.env['pos.payment.method'].sudo().search([
+            ('use_payment_terminal', 'in', list(MP_TERMINAL_TYPES))
+        ])
+
+        external_reference = None
+        matched_pm = None
+        for pm in payment_methods:
+            if not pm.mp_bearer_token:
+                continue
+            mercado_pago = MercadoPagoPosRequest(pm.mp_bearer_token)
+            try:
+                resp = mercado_pago.call_mercado_pago('get', f'/merchant_orders/{resource_id}', {})
+                ext_ref_candidate = resp.get('external_reference', '')
+                if ext_ref_candidate and re.fullmatch(MP_EXT_REF_PATTERN, ext_ref_candidate):
+                    external_reference = ext_ref_candidate
+                    matched_pm = pm
+                    break
+            except Exception as e:
+                _logger.debug('Could not fetch merchant_order %s with pm %s: %s', resource_id, pm.id, e)
+
+        if not external_reference or not matched_pm:
+            _logger.warning(
+                'merchant_order webhook: could not resolve external_reference for resource %s', resource_id)
+            return http.Response('OK', status=200)
+
+        # Signature check is best-effort here: Mercado Pago does not sign every
+        # QR webhook configuration, so a mismatch is logged but not fatal. The
+        # terminal path above still rejects unsigned notifications outright.
+        if matched_pm.mp_webhook_secret_key:
+            webhook_id = (
+                request.params.get('data.id')
+                or request.params.get('id')
+                or data.get('id')
+                or resource_id
+            )
+            signed_template = f"id:{str(webhook_id).lower()};request-id:{x_request_id};ts:{ts};"
+            cyphed_signature = hmac.new(
+                matched_pm.mp_webhook_secret_key.encode(),
+                signed_template.encode(),
+                hashlib.sha256,
+            ).hexdigest()
+            if not hmac.compare_digest(cyphed_signature, v1):
+                _logger.warning('merchant_order webhook signature mismatch (best-effort check, continuing)')
+
+        return self._resolve_and_notify(external_reference)
+
+    def _resolve_and_notify(self, external_reference):
+        """Look the POS session up from external_reference and fire the bus notification."""
+        match = re.fullmatch(MP_EXT_REF_PATTERN, external_reference)
+        if not match:
+            return http.Response('OK', status=200)
+
+        session_id_str, payment_method_id_str, _uuid = match.groups()
+        try:
+            session_id = int(session_id_str)
+        except ValueError:
+            session_id = 0
+
+        pos_session_sudo = request.env['pos.session'].sudo().browse(session_id)
+        if not pos_session_sudo or pos_session_sudo.state != 'opened':
+            payment_method_sudo = request.env['pos.payment.method'].sudo().browse(int(payment_method_id_str))
+            if payment_method_sudo.exists() and payment_method_sudo.use_payment_terminal in MP_TERMINAL_TYPES:
+                configs = request.env['pos.config'].sudo().search(
+                    [('payment_method_ids', 'in', payment_method_sudo.ids)])
+                for config in configs:
+                    config._notify('MERCADO_PAGO_LATEST_MESSAGE', {'config_id': config.id})
+            _logger.error('_resolve_and_notify: invalid or closed session id: %s', session_id)
+            return http.Response('OK', status=200)
+
+        payment_method_sudo = pos_session_sudo.config_id.payment_method_ids.filtered(
+            lambda p: p.id == int(payment_method_id_str))
+        if not payment_method_sudo or payment_method_sudo.use_payment_terminal not in MP_TERMINAL_TYPES:
+            _logger.error('_resolve_and_notify: invalid payment method id: %s', payment_method_id_str)
+            return http.Response('OK', status=200)
+
+        pos_session_sudo.config_id._notify('MERCADO_PAGO_LATEST_MESSAGE', {
+            'config_id': pos_session_sudo.config_id.id
+        })
         return http.Response('OK', status=200)
