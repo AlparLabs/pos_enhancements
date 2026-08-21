@@ -1,7 +1,8 @@
 /** @odoo-module **/
 
 import { Component } from "@odoo/owl";
-import { DateTime } from "luxon";
+
+const { DateTime } = luxon;
 
 /**
  * Isolated one-unit bar ticket for a single order line.
