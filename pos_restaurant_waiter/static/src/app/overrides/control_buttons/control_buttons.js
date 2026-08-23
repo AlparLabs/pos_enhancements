@@ -37,7 +37,7 @@ export class ChangeWaiterButton extends Component {
         const order = this.currentOrder;
         if (!order) return;
 
-        const employees = this.pos.models["hr.employee"] || [];
+        const employees = this.pos.models["hr.employee"]?.getAll() ?? [];
         if (!employees.length) return;
 
         const selectedEmployee = await makeAwaitable(this.dialog, WaiterPopup, {

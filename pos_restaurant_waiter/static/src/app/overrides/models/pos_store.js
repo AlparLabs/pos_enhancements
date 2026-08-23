@@ -37,7 +37,7 @@ patch(PosStore.prototype, {
     },
 
     async askWaiter(order) {
-        const employees = this.models["hr.employee"] || [];
+        const employees = this.models["hr.employee"]?.getAll() ?? [];
         if (!employees.length) return;
 
         const selectedEmployee = await makeAwaitable(this.dialog, WaiterPopup, {
