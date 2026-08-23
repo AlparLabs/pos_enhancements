@@ -60,6 +60,22 @@ export async function requestSupervisorPin(pos, dialog, notification) {
 }
 
 /**
+ * Returns true when the order is a direct sale, i.e. it is not attached to a
+ * restaurant table. Table orders are served through the regular kitchen/bar
+ * order flow, so they must never emit individual bar tickets.
+ *
+ * `getTable()` is only patched onto PosOrder by pos_restaurant; when that
+ * module is not installed there are no tables at all and every order counts
+ * as a direct sale.
+ * @param {import("@point_of_sale/app/models/pos_order").PosOrder} order
+ * @returns {boolean}
+ */
+export function isDirectSaleOrder(order) {
+    const table = order?.getTable ? order.getTable() : order?.table_id;
+    return !table;
+}
+
+/**
  * Returns true if the given orderline belongs to a POS category
  * that has the "Print Single Ticket" flag enabled and is available
  * in the current POS configuration.
@@ -122,6 +138,11 @@ export async function printBarTicketsForOrder(order, pos, printer) {
         return;
     }
 
+    // Bar tickets are for direct sales only — never for table orders.
+    if (!isDirectSaleOrder(order)) {
+        return;
+    }
+
     for (const line of order.getOrderlines()) {
         // Skip if already printed at payment time
         if (!shouldSplitLine(line, pos) || line.bar_ticket_paid_and_printed) {
@@ -151,6 +172,11 @@ export async function printBarTicketsForOrder(order, pos, printer) {
  */
 export async function reprintBarTicketsForOrder(order, pos, printer) {
     if (!order || order.getOrderlines().length === 0) {
+        return;
+    }
+
+    // Bar tickets are for direct sales only — never for table orders.
+    if (!isDirectSaleOrder(order)) {
         return;
     }
 

@@ -7,6 +7,7 @@ import { useService } from "@web/core/utils/hooks";
 import { _t } from "@web/core/l10n/translation";
 import {
     shouldSplitLine,
+    isDirectSaleOrder,
     reprintBarTicketsForOrder,
     requestSupervisorPin,
 } from "@pos_bar_single_ticket/app/utils/bar_ticket_utils";
@@ -38,6 +39,10 @@ export class BarReprintButton extends Component {
     get hasReprintableLines() {
         const order = this.currentOrder;
         if (!order || order.getOrderlines().length === 0) {
+            return false;
+        }
+        // Bar tickets are for direct sales only — never for table orders.
+        if (!isDirectSaleOrder(order)) {
             return false;
         }
         return order.getOrderlines().some(
