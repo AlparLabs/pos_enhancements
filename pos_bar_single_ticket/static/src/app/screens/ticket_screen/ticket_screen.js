@@ -7,6 +7,7 @@ import { usePos } from "@point_of_sale/app/hooks/pos_hook";
 import { _t } from "@web/core/l10n/translation";
 import {
     shouldSplitLine,
+    isDirectSaleOrder,
     reprintBarTicketsForOrder,
     requestSupervisorPin,
 } from "@pos_bar_single_ticket/app/utils/bar_ticket_utils";
@@ -28,6 +29,10 @@ patch(TicketScreen.prototype, {
      */
     hasBarTicketLines(order) {
         if (!order || !order.getOrderlines) {
+            return false;
+        }
+        // Bar tickets are for direct sales only — never for table orders.
+        if (!isDirectSaleOrder(order)) {
             return false;
         }
         return order.getOrderlines().some((line) => shouldSplitLine(line, this._barTicketPos));
