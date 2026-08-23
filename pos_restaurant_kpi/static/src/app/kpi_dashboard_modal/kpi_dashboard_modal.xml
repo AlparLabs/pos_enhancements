@@ -1,44 +1,96 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <templates id="template" xml:space="preserve">
     <t t-name="pos_restaurant_kpi.KpiDashboardModal">
-        <div class="modal-dialog">
-            <div class="popup popup-text shadow-lg rounded-4 border-0" style="max-width: 600px; width: 90%;">
-                <header class="title d-flex justify-content-between align-items-center bg-primary text-white p-3 rounded-top-4">
-                    <h4 class="mb-0 fw-bold"><i class="fa fa-bar-chart me-2"/> Dashboard de Rendimiento</h4>
-                    <button class="btn btn-close btn-close-white shadow-none" aria-label="Close" t-on-click="props.close"></button>
-                </header>
-                <main class="body text-start p-4 bg-light">
-                    <div class="row w-100 g-4 m-0">
-                        <div class="col-6">
-                            <div class="card p-4 shadow-sm border-0 bg-white rounded-4 h-100 text-center transition-all hover-up">
-                                <h6 class="text-muted fw-bold text-uppercase mb-2" style="font-size: 0.85rem; letter-spacing: 0.5px;">Ocupación Actual</h6>
-                                <h2 class="text-primary fw-bolder mb-0" style="font-size: 2.5rem;" t-esc="(props.occupancyRate || 0) + '%'"/>
-                            </div>
-                        </div>
-                        <div class="col-6">
-                            <div class="card p-4 shadow-sm border-0 bg-white rounded-4 h-100 text-center transition-all hover-up">
-                                <h6 class="text-muted fw-bold text-uppercase mb-2" style="font-size: 0.85rem; letter-spacing: 0.5px;">Rotación de Mesas</h6>
-                                <h2 class="text-info fw-bolder mb-0" style="font-size: 2.5rem;" t-esc="props.turnoverRate || 0"/>
-                            </div>
-                        </div>
-                        <div class="col-6">
-                            <div class="card p-4 shadow-sm border-0 bg-white rounded-4 h-100 text-center transition-all hover-up">
-                                <h6 class="text-muted fw-bold text-uppercase mb-2" style="font-size: 0.85rem; letter-spacing: 0.5px;">$ En Curso</h6>
-                                <h2 class="text-success fw-bolder mb-0" style="font-size: 2.5rem;" t-esc="env.utils.formatCurrency(props.openAmount || 0)"/>
-                            </div>
-                        </div>
-                        <div class="col-6">
-                            <div class="card p-4 shadow-sm border-0 bg-white rounded-4 h-100 text-center transition-all hover-up">
-                                <h6 class="text-muted fw-bold text-uppercase mb-2" style="font-size: 0.85rem; letter-spacing: 0.5px;">Tiempo Prom. Mesa</h6>
-                                <h2 class="text-warning fw-bolder mb-0" style="font-size: 2.5rem;" t-esc="(props.avgTableTime || 0) + ' min'"/>
-                            </div>
+        <Dialog size="'lg'" title="'Dashboard de Rendimiento'">
+            <main class="p-4" style="background: #f0f4f8;">
+                <!-- Sección: En este momento -->
+                <p class="text-muted fw-bold text-uppercase mb-2" style="font-size: 0.75rem; letter-spacing: 0.8px;">
+                    <i class="fa fa-clock-o me-1"/> En este momento
+                </p>
+                <div class="row g-3 mb-3">
+                    <div class="col-4">
+                        <div class="card border-0 shadow-sm rounded-4 h-100 text-center p-3">
+                            <span class="text-muted fw-bold text-uppercase mb-1" style="font-size: 0.72rem; letter-spacing: 0.5px;">Cubiertos activos</span>
+                            <span class="fw-bolder" style="font-size: 2.2rem; color: #1a73e8;" t-esc="props.totalCustomers || 0"/>
                         </div>
                     </div>
-                </main>
-                <footer class="footer p-3 bg-white border-top rounded-bottom-4 text-center">
-                    <button class="button btn btn-primary w-50 py-2 fs-5 fw-bold rounded-pill shadow-sm" t-on-click="props.close">Cerrar</button>
-                </footer>
-            </div>
-        </div>
+                    <div class="col-4">
+                        <div class="card border-0 shadow-sm rounded-4 h-100 text-center p-3">
+                            <span class="text-muted fw-bold text-uppercase mb-1" style="font-size: 0.72rem; letter-spacing: 0.5px;">Prom. consumo actual</span>
+                            <span class="fw-bolder" style="font-size: 1.7rem; color: #2e7d32;" t-esc="env.utils.formatCurrency(props.avgConsumption || 0)"/>
+                        </div>
+                    </div>
+                    <div class="col-4">
+                        <div class="card border-0 shadow-sm rounded-4 h-100 text-center p-3"
+                             t-att-style="(props.singleDinerTables || 0) > 0 ? 'border-left: 4px solid #f59e0b !important;' : ''">
+                            <span class="text-muted fw-bold text-uppercase mb-1" style="font-size: 0.72rem; letter-spacing: 0.5px;">Mesas 1 comensal</span>
+                            <span class="fw-bolder" t-att-style="(props.singleDinerTables || 0) > 0 ? 'font-size: 2.2rem; color: #f59e0b;' : 'font-size: 2.2rem; color: #9ca3af;'"
+                                  t-esc="props.singleDinerTables || 0"/>
+                            <span t-if="(props.singleDinerTables || 0) > 0" class="badge mt-1" style="background:#fef3c7; color:#92400e; font-size:0.65rem;">
+                                <i class="fa fa-exclamation-triangle me-1"/>Atención
+                            </span>
+                        </div>
+                    </div>
+                    <div class="col-4">
+                        <div class="card border-0 shadow-sm rounded-4 h-100 text-center p-3">
+                            <span class="text-muted fw-bold text-uppercase mb-1" style="font-size: 0.72rem; letter-spacing: 0.5px;">Ocupación</span>
+                            <span class="fw-bolder" style="font-size: 2.2rem; color: #6366f1;" t-esc="(props.occupancyRate || 0) + '%'"/>
+                        </div>
+                    </div>
+                    <div class="col-4">
+                        <div class="card border-0 shadow-sm rounded-4 h-100 text-center p-3">
+                            <span class="text-muted fw-bold text-uppercase mb-1" style="font-size: 0.72rem; letter-spacing: 0.5px;">$ En curso</span>
+                            <span class="fw-bolder" style="font-size: 1.7rem; color: #2e7d32;" t-esc="env.utils.formatCurrency(props.openAmount || 0)"/>
+                        </div>
+                    </div>
+                    <div class="col-4">
+                        <div class="card border-0 shadow-sm rounded-4 h-100 text-center p-3">
+                            <span class="text-muted fw-bold text-uppercase mb-1" style="font-size: 0.72rem; letter-spacing: 0.5px;">Tiempo prom. mesa</span>
+                            <span class="fw-bolder" style="font-size: 2.2rem; color: #d97706;" t-esc="(props.avgTableTime || 0) + ' min'"/>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Sección: Sesión -->
+                <p class="text-muted fw-bold text-uppercase mb-2" style="font-size: 0.75rem; letter-spacing: 0.8px;">
+                    <i class="fa fa-history me-1"/> Sesión actual
+                </p>
+                <div class="row g-3">
+                    <div class="col-3">
+                        <div class="card border-0 shadow-sm rounded-4 h-100 text-center p-3"
+                             style="background: linear-gradient(135deg, #e8f4fd 0%, #dbeafe 100%);">
+                            <span class="text-muted fw-bold text-uppercase mb-1" style="font-size: 0.72rem; letter-spacing: 0.5px;">Cubiertos sesión</span>
+                            <span class="fw-bolder" style="font-size: 2.2rem; color: #1a73e8;" t-esc="props.sessionTotalCustomers || 0"/>
+                        </div>
+                    </div>
+                    <div class="col-3">
+                        <div class="card border-0 shadow-sm rounded-4 h-100 text-center p-3"
+                             style="background: linear-gradient(135deg, #e8f4fd 0%, #dbeafe 100%);">
+                            <span class="text-muted fw-bold text-uppercase mb-1" style="font-size: 0.72rem; letter-spacing: 0.5px;">Prom. sesión</span>
+                            <span class="fw-bolder" style="font-size: 1.7rem; color: #2e7d32;" t-esc="env.utils.formatCurrency(props.sessionAvgConsumption || 0)"/>
+                        </div>
+                    </div>
+                    <div class="col-3">
+                        <div class="card border-0 shadow-sm rounded-4 h-100 text-center p-3"
+                             style="background: linear-gradient(135deg, #e8f4fd 0%, #dbeafe 100%);">
+                            <span class="text-muted fw-bold text-uppercase mb-1" style="font-size: 0.72rem; letter-spacing: 0.5px;">$ Total Sesión</span>
+                            <span class="fw-bolder" style="font-size: 1.7rem; color: #2e7d32;" t-esc="env.utils.formatCurrency(props.sessionTotalAmount || 0)"/>
+                        </div>
+                    </div>
+                    <div class="col-3">
+                        <div class="card border-0 shadow-sm rounded-4 h-100 text-center p-3"
+                             style="background: linear-gradient(135deg, #e8f4fd 0%, #dbeafe 100%);">
+                            <span class="text-muted fw-bold text-uppercase mb-1" style="font-size: 0.72rem; letter-spacing: 0.5px;">Rotación de mesas</span>
+                            <span class="fw-bolder" style="font-size: 2.2rem; color: #0891b2;" t-esc="props.turnoverRate || 0"/>
+                        </div>
+                    </div>
+                </div>
+            </main>
+            <t t-set-slot="footer">
+                <button class="btn btn-primary px-5 py-2 fw-bold rounded-pill shadow-sm" t-on-click="props.close">
+                    Cerrar
+                </button>
+            </t>
+        </Dialog>
     </t>
 </templates>
