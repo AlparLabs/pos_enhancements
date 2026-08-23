@@ -1,6 +1,6 @@
 {
     'name': 'POS Restaurant KPI',
-    'version': '19.0.1.0.1',
+    'version': '19.0.2.0.0',
     'author': 'AlparData',
     'website': 'https://www.alpardata.com.ar',
     'category': 'Point of Sale',

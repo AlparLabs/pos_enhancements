@@ -3,19 +3,40 @@
 import { FloorScreen } from "@pos_restaurant/app/screens/floor_screen/floor_screen";
 import { patch } from "@web/core/utils/patch";
 import { KpiDashboardModal } from "@pos_restaurant_kpi/app/kpi_dashboard_modal/kpi_dashboard_modal";
+import { useState, onMounted } from "@odoo/owl";
 
 patch(FloorScreen.prototype, {
-    /**
-     * @returns {number}
-     */
+    setup() {
+        super.setup(...arguments);
+        this.kpiState = useState({ sessionPaidOrders: [] });
+        onMounted(() => this._loadSessionPaidOrders());
+    },
+
+    async _loadSessionPaidOrders() {
+        try {
+            const sessionId = this.pos.session.id;
+            const records = await this.pos.data.orm.searchRead(
+                "pos.order",
+                [
+                    ["session_id", "=", sessionId],
+                    ["state", "not in", ["draft", "cancel"]],
+                    ["table_id", "!=", false],
+                ],
+                ["customer_count", "amount_total"]
+            );
+            this.kpiState.sessionPaidOrders = records;
+        } catch (e) {
+            console.warn("[pos_restaurant_kpi] No se pudieron cargar las órdenes pagadas de la sesión:", e);
+            this.kpiState.sessionPaidOrders = [];
+        }
+    },
+
     get totalCustomers() {
         return this.pos.models["pos.order"]
             .filter((order) => order.state === "draft" && order.table_id)
             .reduce((sum, order) => sum + (order.customer_count || 0), 0);
     },
-    /**
-     * @returns {number}
-     */
+
     get avgConsumption() {
         const customers = this.totalCustomers;
         if (customers === 0) {
@@ -26,27 +47,53 @@ patch(FloorScreen.prototype, {
             .reduce((sum, order) => sum + order.priceIncl, 0);
         return totalAmount / customers;
     },
-    /**
-     * @returns {number}
-     */
+
     get sessionTotalCustomers() {
-        return this.pos.models["pos.order"]
-            .filter((order) => order.state !== "draft" && order.state !== "cancel" && order.table_id)
+        // Órdenes en memoria ya pagadas de esta sesión (cargadas al entrar a Orders)
+        const sessionId = this.pos.session.id;
+        const fromMemory = this.pos.models["pos.order"]
+            .filter((order) =>
+                order.state !== "draft" &&
+                order.state !== "cancel" &&
+                order.table_id &&
+                order.session_id?.id === sessionId
+            )
             .reduce((sum, order) => sum + (order.customer_count || 0), 0);
+
+        // Fallback: órdenes cargadas desde el servidor al montar (evita el 0 inicial)
+        const fromServer = this.kpiState.sessionPaidOrders
+            .reduce((sum, order) => sum + (order.customer_count || 0), 0);
+
+        // Usamos el mayor de los dos para evitar doble-conteo pero garantizar datos
+        return Math.max(fromMemory, fromServer);
     },
-    /**
-     * @returns {number}
-     */
+
+    get sessionTotalAmount() {
+        const sessionId = this.pos.session.id;
+        const fromMemory = this.pos.models["pos.order"]
+            .filter((order) =>
+                order.state !== "draft" &&
+                order.state !== "cancel" &&
+                order.table_id &&
+                order.session_id?.id === sessionId
+            )
+            .reduce((sum, order) => sum + order.priceIncl, 0);
+
+        const fromServer = this.kpiState.sessionPaidOrders
+            .reduce((sum, order) => sum + (order.amount_total || 0), 0);
+
+        return Math.max(fromMemory, fromServer);
+    },
+
     get sessionAvgConsumption() {
         const customers = this.sessionTotalCustomers;
         if (customers === 0) {
             return 0;
         }
-        const totalAmount = this.pos.models["pos.order"]
-            .filter((order) => order.state !== "draft" && order.state !== "cancel" && order.table_id)
-            .reduce((sum, order) => sum + order.priceIncl, 0);
-        return totalAmount / customers;
+
+        return this.sessionTotalAmount / customers;
     },
+
     get occupancyRate() {
         const totalTables = this.pos.models["restaurant.table"].length;
         if (!totalTables) return 0;
@@ -57,38 +104,94 @@ patch(FloorScreen.prototype, {
         ).size;
         return Math.round((occupiedTables / totalTables) * 100);
     },
+
     get turnoverRate() {
         const totalTables = this.pos.models["restaurant.table"].length;
         if (!totalTables) return 0;
-        // Approximation: count unique sessions or total done orders divided by total tables
-        const doneOrders = this.pos.models["pos.order"]
-            .filter((order) => order.state !== "draft" && order.state !== "cancel" && order.table_id).length;
+
+        const sessionId = this.pos.session.id;
+        const memoryDoneOrders = this.pos.models["pos.order"]
+            .filter((order) => 
+                order.state !== "draft" && 
+                order.state !== "cancel" && 
+                order.table_id &&
+                order.session_id?.id === sessionId
+            ).length;
+
+        const serverDoneOrders = this.kpiState.sessionPaidOrders.length;
+        const doneOrders = Math.max(memoryDoneOrders, serverDoneOrders);
+
         return parseFloat((doneOrders / totalTables).toFixed(1));
     },
+
     get openAmount() {
         return this.pos.models["pos.order"]
             .filter((order) => order.state === "draft" && order.table_id)
             .reduce((sum, order) => sum + order.priceIncl, 0);
     },
+
     get avgTableTime() {
         const activeOrders = this.pos.models["pos.order"].filter((order) => order.state === "draft" && order.table_id);
         if (!activeOrders.length) return 0;
-        
+
         const now = new Date();
         const totalMinutes = activeOrders.reduce((sum, order) => {
-            // Using creation_date, fallback to date_order if order has been synchronized somehow
-            const orderDate = new Date(order.creation_date || order.date_order || now);
-            const diffMs = now - orderDate;
-            return sum + (diffMs / 60000); // converting to minutes
+            let orderDate = now;
+            const rawDate = order.creation_date || order.date_order;
+            
+            if (rawDate) {
+                if (rawDate instanceof Date) {
+                    orderDate = rawDate;
+                } else if (rawDate.isLuxonDateTime) {
+                    orderDate = rawDate.toJSDate();
+                } else if (typeof rawDate === "string") {
+                    if (rawDate.includes("T")) {
+                        orderDate = new Date(rawDate);
+                    } else {
+                        // Odoo DB string is in UTC: "YYYY-MM-DD HH:mm:ss"
+                        orderDate = new Date(rawDate.replace(" ", "T") + "Z");
+                    }
+                }
+            }
+            
+            // Si por algún motivo el tiempo es negativo (futuro cercano por desajuste de reloj), lo limitamos a 0
+            let diffMs = now - orderDate;
+            if (diffMs < 0) diffMs = 0;
+            
+            return sum + (diffMs / 60000);
         }, 0);
         return Math.round(totalMinutes / activeOrders.length);
     },
+
+    get singleDinerTables() {
+        // Mesas activas con exactamente 1 comensal
+        return this.pos.models["pos.order"]
+            .filter((order) => order.state === "draft" && order.table_id && order.customer_count === 1)
+            .length;
+    },
+
     openKpiDashboard() {
+        // Prevent stacking multiple instances of the dialog
+        if (this._kpiDialogOpen) {
+            return;
+        }
+        this._kpiDialogOpen = true;
         this.dialog.add(KpiDashboardModal, {
             occupancyRate: this.occupancyRate,
             turnoverRate: this.turnoverRate,
             openAmount: this.openAmount,
             avgTableTime: this.avgTableTime,
+            totalCustomers: this.totalCustomers,
+            avgConsumption: this.avgConsumption,
+            sessionTotalCustomers: this.sessionTotalCustomers,
+            sessionAvgConsumption: this.sessionAvgConsumption,
+            sessionTotalAmount: this.sessionTotalAmount,
+            singleDinerTables: this.singleDinerTables,
+        }, {
+            onClose: () => {
+                this._kpiDialogOpen = false;
+            },
         });
     },
 });
+
