@@ -8,7 +8,12 @@ import { PreCuentaReceipt } from "@pos_restaurant_pre_cuenta/app/receipt/pre_cue
 
 export class PreCuentaButton extends Component {
     static template = "pos_restaurant_pre_cuenta.PreCuentaButton";
-    static props = {};
+    static props = {
+        buttonClass: { type: String, optional: true },
+    };
+    static defaultProps = {
+        buttonClass: "btn btn-secondary btn-lg py-5",
+    };
 
     setup() {
         this.pos = usePos();
