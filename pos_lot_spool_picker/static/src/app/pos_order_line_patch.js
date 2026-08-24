@@ -15,8 +15,60 @@
 
 import { PosOrderline } from "@point_of_sale/app/models/pos_order_line";
 import { patch } from "@web/core/utils/patch";
+import {
+    allocatedTotal,
+    allocationCoversQty,
+} from "@pos_lot_spool_picker/app/spool_allocation";
 
 patch(PosOrderline.prototype, {
+    /**
+     * Native counts lots to decide a line is complete:
+     *
+     *     const lotsRequired = this.product_id.tracking == "serial" ? Math.abs(this.qty) : 1;
+     *     return lotsRequired === valid_product_lot.length;
+     *
+     * For lot tracking that means EXACTLY ONE lot per line, so every sale this addon splits
+     * across two or more bobinas fails the check and `pay()` raises "Some Serial/Lot Numbers
+     * are missing" on a line that is in fact fully allocated. Validate the assigned meters
+     * instead: the sum across bobinas must equal the line quantity.
+     *
+     * Serial tracking, and lot lines with no per-lot meters (native single-lot flow), keep
+     * native behaviour exactly.
+     */
+    hasValidProductLot() {
+        if (this.product_id?.tracking !== "lot") {
+            return super.hasValidProductLot();
+        }
+        const validLots = this.getValidLots();
+        if (!allocatedTotal(validLots)) {
+            // Nothing assigned, or lots without meters — native rules still apply.
+            return super.hasValidProductLot();
+        }
+        return allocationCoversQty(validLots, this.qty);
+    },
+
+    /**
+     * Native renders one bare label per lot ("Lot Number 124761"), which is all a
+     * one-lot-per-line world needs. A spool line splits meters across bobinas, so without
+     * the per-lot quantity nobody at the counter can tell whether 234 m is 134+100 or
+     * 117+117 — that split only exists in the move lines. Append the assigned meters to
+     * each label; lots carrying no meters (native single-lot flow) render unchanged.
+     */
+    get packLotLines() {
+        const labels = super.packLotLines;
+        if (this.product_id?.tracking !== "lot") {
+            return labels;
+        }
+        const uom = this.product_id?.uom_id?.name;
+        return labels.map((label, index) => {
+            const qty = this.pack_lot_ids[index]?.qty;
+            if (!qty) {
+                return label;
+            }
+            return uom ? `${label} (${qty} ${uom})` : `${label} (${qty})`;
+        });
+    },
+
     setPackLotLines({ modifiedPackLotLines, newPackLotLines, setQuantity = true }) {
         super.setPackLotLines({ modifiedPackLotLines, newPackLotLines, setQuantity });
 

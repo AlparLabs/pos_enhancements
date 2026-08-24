@@ -44,3 +44,18 @@ export function suggestAllocation(lots, requested) {
 export function allocatedTotal(allocation) {
     return allocation.reduce((sum, a) => sum + (a.qty || 0), 0);
 }
+
+/**
+ * Does an allocation cover exactly `qty`?
+ *
+ * Native validates a lot-tracked line by COUNTING lots (`1 === getValidLots().length`),
+ * which rejects every line split across several bobinas. Spool lines carry the meters
+ * per lot instead, so completeness is a sum, not a count.
+ *
+ * @param {{qty:number}[]} allocation
+ * @param {number} qty line quantity (sign is ignored: refunds allocate the same meters)
+ * @returns {boolean}
+ */
+export function allocationCoversQty(allocation, qty) {
+    return Math.abs(allocatedTotal(allocation) - Math.abs(qty)) < 1e-6;
+}
