@@ -6,7 +6,10 @@
         placed immediately after the existing "Daily Sale" button.
     -->
     <t t-inherit="point_of_sale.ClosePosPopup" t-inherit-mode="extension" owl="1">
-        <xpath expr="//button[@t-on-click='this.downloadSalesReport']" position="after">
+        <!-- The native button's attribute is exactly "downloadSalesReport"
+             (no "this." prefix) in Odoo 19 — the xpath must match it verbatim
+             or OWL fails to render the whole popup. -->
+        <xpath expr="//button[@t-on-click='downloadSalesReport']" position="after">
             <button
                 class="button icon btn btn-secondary"
                 t-on-click="this.downloadSessionControlReport"

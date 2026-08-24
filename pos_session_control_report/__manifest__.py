@@ -1,6 +1,6 @@
 {
     'name': 'POS Session Control Report',
-    'version': '19.0.1.0.0',
+    'version': '19.0.1.0.1',
     'category': 'Sales/Point of Sale',
     'summary': 'Customised POS closing receipt and slim session-control PDF.',
     'description': """
