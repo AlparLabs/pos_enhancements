@@ -3,6 +3,7 @@
 import { PosStore } from "@point_of_sale/app/services/pos_store";
 import { makeAwaitable } from "@point_of_sale/app/utils/make_awaitable_dialog";
 import { patch } from "@web/core/utils/patch";
+import { _t } from "@web/core/l10n/translation";
 import { SpoolPickerPopup } from "@pos_lot_spool_picker/app/popups/spool_picker_popup/spool_picker_popup";
 
 patch(PosStore.prototype, {
@@ -34,11 +35,26 @@ patch(PosStore.prototype, {
         try {
             lots = await this._getSpoolLots(product);
         } catch {
-            // RPC failed — degrade to native behaviour rather than crash the add-product flow.
+            // Degrade to native rather than crash the add-product flow — but never in
+            // silence. A cable line that ends up with no lot is a real stock loss, and the
+            // cashier is the only one who can still catch it while the sale is open.
+            this.notification.add(
+                _t("Could not load the spools for %(product)s. Falling back to the standard lot selector.", {
+                    product: product.display_name,
+                }),
+                { type: "warning" }
+            );
             return await super.editLots(product, packLotLinesToEdit);
         }
         if (!lots.length) {
             // Nothing in stock to pick from — fall back to native (create-lot flow).
+            // Say why: the lot may well exist, just not in THIS shop's stock location.
+            this.notification.add(
+                _t("%(product)s has no spool with stock in this point of sale's stock location. Falling back to the standard lot selector.", {
+                    product: product.display_name,
+                }),
+                { type: "warning" }
+            );
             return await super.editLots(product, packLotLinesToEdit);
         }
 

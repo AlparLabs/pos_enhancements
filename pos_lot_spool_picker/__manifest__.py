@@ -1,6 +1,6 @@
 {
     'name': 'POS Lot Spool Picker',
-    'version': '19.0.1.0.0',
+    'version': '19.0.1.1.0',
     'category': 'Sales/Point of Sale',
     'summary': 'Pick lot-tracked products (cable spools) by remaining meters and location, split a sale across bobinas.',
     'description': """

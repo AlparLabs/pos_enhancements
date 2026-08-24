@@ -13,6 +13,12 @@ tailored to selling by the meter from large spools (bobinas).
   as one stock move with several move lines.
 - **Warn (default)** or **hard-block** when the assignment exceeds real stock, toggled per POS
   in Settings → Point of Sale → Inventory section → `Enforce Spool Stock`.
+- Shows the **meters taken from each bobina** on the order line (`Lot Number 124761 (134 m)`),
+  so the split is readable at the counter and not only in the delivery picking.
+- Overrides the native **one-lot-per-line validation**. Native decides a lot line is complete
+  by counting lots (`lotsRequired = 1`), so every multi-bobina line showed a red lot icon and
+  raised *"Some Serial/Lot Numbers are missing"* at payment even though the allocation was
+  correct. Completeness is now the sum of assigned meters against the line quantity.
 
 ## Scope
 Only products tracked **by lot** (`tracking = 'lot'`) get the new picker. Serial-tracked
@@ -24,7 +30,10 @@ already maps 1:1 to a unit and has no "remaining meters" concept.
   lot while the popup is open, the number can go stale; use **Actualizar** to refetch. The
   authoritative check still happens server-side at picking validation.
 - If the `get_existing_lots` RPC fails (network/server error) when a product is first added,
-  the picker falls back to the native lot popup rather than blocking the sale.
+  the picker falls back to the native lot popup rather than blocking the sale. The cashier now
+  gets a warning notification saying so, instead of the fallback happening silently. The same
+  notification appears when the product simply has no spool with stock in **this** POS's own
+  source location — the lot may exist, just in another warehouse.
 - Internal pre-ticket copy with per-bobina breakdown is not included (planned v2).
 - Real-time cross-terminal stock reservation is not included beyond the manual **Actualizar**
   refresh (planned v2 — this client runs multiple POS terminals against shared stock).
