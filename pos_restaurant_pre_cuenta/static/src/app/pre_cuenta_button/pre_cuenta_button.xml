@@ -3,7 +3,8 @@
 
     <t t-name="pos_restaurant_pre_cuenta.PreCuentaButton" owl="1">
         <button t-if="isVisible"
-                class="control-button btn btn-light rounded-0 fw-bolder mb-2"
+                class="control-button o_pre_cuenta_button"
+                t-att-class="props.buttonClass"
                 t-on-click="() => this.click()">
             <i class="fa fa-print me-1" role="img" aria-label="Pre-cuenta" title="Pre-cuenta"/>
             <span>Pre-cuenta</span>
@@ -13,11 +14,8 @@
     <t t-name="pos_restaurant_pre_cuenta.ControlButtons"
        t-inherit="point_of_sale.ControlButtons"
        t-inherit-mode="extension">
-        <xpath expr="//button[hasclass('more-btn')]" position="before">
-            <PreCuentaButton t-if="!props.showRemainingButtons and !ui.isSmall"/>
-        </xpath>
         <xpath expr="//div[hasclass('control-buttons-modal')]" position="inside">
-            <PreCuentaButton t-if="props.showRemainingButtons"/>
+            <PreCuentaButton buttonClass="buttonClass"/>
         </xpath>
     </t>
 
