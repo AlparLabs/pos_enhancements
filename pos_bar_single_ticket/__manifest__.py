@@ -1,6 +1,6 @@
 {
     'name': 'POS Bar Single Ticket',
-    'version': '19.0.2.0.0',
+    'version': '19.0.2.1.0',
     'category': 'Sales/Point of Sale',
     'summary': 'Print bar tickets only at payment time; supervisor PIN required for reprints.',
     'description': """
@@ -11,6 +11,9 @@ deleting and re-adding products.
 
 A "Reimprimir Barra" button (warning colour) appears after payment to allow
 supervisors to force-reprint tickets after verifying their PIN.
+
+Bar tickets are issued for direct sales only. Orders attached to a restaurant
+table are served through the regular kitchen/bar flow and never emit them.
 
 Example: 3 Mojitos → 3 separate bar tickets printed at checkout.
     """,
