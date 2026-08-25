@@ -78,10 +78,13 @@ class PosOrder(models.Model):
             'invoice_name': order.account_move.name,
         }
 
-    def _prepare_invoice_lines(self) -> list:
+    def _prepare_invoice_lines(self, move_type) -> list:
         """
         Override to inject our single concept line when generating a concept invoice,
         instead of the normal order lines.
+
+        `move_type` is passed by _prepare_invoice_vals since 19.0; the core uses it to
+        sign the quantities, so it must be forwarded to super() untouched.
         """
         ctx = self.env.context.get('concept_invoice_data')
         if ctx:
@@ -93,4 +96,4 @@ class PosOrder(models.Model):
                 'price_unit': ctx.get('price_unit', self.amount_total),
                 'tax_ids': ctx['tax_ids'],
             })]
-        return super()._prepare_invoice_lines()
+        return super()._prepare_invoice_lines(move_type)
