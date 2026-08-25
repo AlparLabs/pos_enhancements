@@ -3,6 +3,7 @@ import {
     FALLBACK_GROUP_INDEX,
     FALLBACK_GROUP_NAME,
     resolveKitchenGroup,
+    sortChangeLines,
 } from "@pos_kitchen_receipt_grouping/app/kitchen_group";
 
 const STARTERS = { name: "Entradas", sequence: 10 };
@@ -69,5 +70,77 @@ describe("resolveKitchenGroup", () => {
             pos_categ_ids: [{ name: "Bebidas", kitchen_sequence: 40 }],
         };
         expect(resolveKitchenGroup(product)).toEqual({ name: "Bebidas", index: 40 });
+    });
+});
+
+describe("sortChangeLines", () => {
+    const PASTAS = { name: "Pastas", kitchen_sequence: 30 };
+    const BURGERS = { name: "Hamburguesas", kitchen_sequence: 10 };
+
+    function products(map) {
+        return (change) => map[change.product_id];
+    }
+
+    test("orders lines by the kitchen sequence of their category", () => {
+        const changes = [
+            { product_id: 1, basic_name: "Sorrentinos" },
+            { product_id: 2, basic_name: "Doble cheddar" },
+        ];
+        const sorted = sortChangeLines(
+            changes,
+            products({ 1: { pos_categ_ids: [PASTAS] }, 2: { pos_categ_ids: [BURGERS] } })
+        );
+        expect(sorted.map((c) => c.basic_name)).toEqual(["Doble cheddar", "Sorrentinos"]);
+    });
+
+    test("orders alphabetically within the same kitchen sequence", () => {
+        const changes = [
+            { product_id: 1, basic_name: "Triple" },
+            { product_id: 2, basic_name: "Doble cheddar" },
+        ];
+        const sorted = sortChangeLines(
+            changes,
+            products({ 1: { pos_categ_ids: [BURGERS] }, 2: { pos_categ_ids: [BURGERS] } })
+        );
+        expect(sorted.map((c) => c.basic_name)).toEqual(["Doble cheddar", "Triple"]);
+    });
+
+    test("is stable for lines that share the same key", () => {
+        const changes = [
+            { product_id: 1, basic_name: "Doble cheddar", uuid: "a" },
+            { product_id: 1, basic_name: "Doble cheddar", uuid: "b" },
+        ];
+        const sorted = sortChangeLines(changes, products({ 1: { pos_categ_ids: [BURGERS] } }));
+        expect(sorted.map((c) => c.uuid)).toEqual(["a", "b"]);
+    });
+
+    test("falls back to the line name when there is no basic_name", () => {
+        const changes = [
+            { product_id: 1, name: "Zapallo" },
+            { product_id: 1, name: "Acelga" },
+        ];
+        const sorted = sortChangeLines(changes, products({ 1: { pos_categ_ids: [BURGERS] } }));
+        expect(sorted.map((c) => c.name)).toEqual(["Acelga", "Zapallo"]);
+    });
+
+    test("does not crash on a line whose product is unknown", () => {
+        const changes = [
+            { product_id: 9, basic_name: "Fantasma" },
+            { product_id: 1, basic_name: "Doble cheddar" },
+        ];
+        const sorted = sortChangeLines(changes, products({ 1: { pos_categ_ids: [BURGERS] } }));
+        expect(sorted.map((c) => c.basic_name)).toEqual(["Doble cheddar", "Fantasma"]);
+    });
+
+    test("does not mutate the array it receives", () => {
+        const changes = [
+            { product_id: 1, basic_name: "Triple" },
+            { product_id: 2, basic_name: "Doble cheddar" },
+        ];
+        sortChangeLines(
+            changes,
+            products({ 1: { pos_categ_ids: [BURGERS] }, 2: { pos_categ_ids: [BURGERS] } })
+        );
+        expect(changes.map((c) => c.basic_name)).toEqual(["Triple", "Doble cheddar"]);
     });
 });

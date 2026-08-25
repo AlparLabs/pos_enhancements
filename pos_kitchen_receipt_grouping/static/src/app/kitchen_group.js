@@ -48,3 +48,38 @@ export function resolveKitchenGroup(product) {
     }
     return { name: categ.name, index: toIndex(categ.kitchen_sequence) };
 }
+
+/**
+ * Clave de orden de una línea dentro de su bloque: la secuencia de cocina de su
+ * categoría primero, el nombre después.
+ *
+ * @returns {[number, string]}
+ */
+export function kitchenSortKey(change, product) {
+    const categ = product?.pos_categ_ids?.[0];
+    return [toIndex(categ?.kitchen_sequence), change?.basic_name || change?.name || ""];
+}
+
+/**
+ * El core respeta el orden del array dentro de cada bloque, así que ordenar acá
+ * alcanza para controlar el orden de las líneas impresas.
+ *
+ * @param {Array} changes
+ * @param {(change: object) => object | undefined} getProduct
+ * @returns {Array} copia ordenada; no muta el array recibido
+ */
+export function sortChangeLines(changes, getProduct) {
+    return changes
+        .map((change, position) => ({
+            change,
+            position,
+            key: kitchenSortKey(change, getProduct(change)),
+        }))
+        .sort(
+            (a, b) =>
+                a.key[0] - b.key[0] ||
+                a.key[1].localeCompare(b.key[1]) ||
+                a.position - b.position
+        )
+        .map((entry) => entry.change);
+}
