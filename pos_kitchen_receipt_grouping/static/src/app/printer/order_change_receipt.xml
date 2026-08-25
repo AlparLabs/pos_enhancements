@@ -44,13 +44,22 @@
     <t t-name="pos_kitchen_receipt_grouping.OrderChangeReceiptLine"
        t-inherit="point_of_sale.OrderChangeReceiptLine"
        t-inherit-mode="extension">
-        <!-- Variantes en negrita al lado del nombre, en vez de la lista debajo -->
-        <xpath expr="//span[hasclass('product-name')]" position="after">
-            <t t-if="line.attribute_value_names?.length">
-                <t t-foreach="line.attribute_value_names" t-as="attr" t-key="attr_index">
-                    <strong> (<t t-esc="attr"/>)</strong>
-                </t>
-            </t>
+        <xpath expr="//div[1]" position="attributes">
+            <attribute name="style">font-size: 110%;</attribute>
+        </xpath>
+        <!-- Reemplaza el contenedor d-flex para que el texto y variantes fluyan como texto corrido normal sin dividirse en columnas estrechas -->
+        <xpath expr="//div[hasclass('d-flex')]" position="replace">
+            <div class="medium">
+                <span class="me-2" t-esc="line.quantity"/>
+                <span class="product-name">
+                    <t t-esc="line.basic_name"/>
+                    <t t-if="line.attribute_value_names?.length">
+                        <t t-foreach="line.attribute_value_names" t-as="attr" t-key="attr_index">
+                            <strong> (<t t-esc="attr"/>)</strong>
+                        </t>
+                    </t>
+                </span>
+            </div>
         </xpath>
         <xpath expr="//div[hasclass('ms-5')]" position="replace"/>
     </t>
