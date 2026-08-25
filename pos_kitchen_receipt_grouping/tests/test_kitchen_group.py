@@ -34,3 +34,16 @@ class TestKitchenGroup(TestPoSCommon):
         with self.assertRaises(IntegrityError):
             with self.env.cr.savepoint():
                 self.env['pos.kitchen.group'].create({'name': 'Principales'})
+
+    def test_category_kitchen_group_travels_to_the_pos(self):
+        fields = self.env['pos.category']._load_pos_data_fields(self.config)
+        self.assertIn('kitchen_group_id', fields)
+        self.assertIn('kitchen_sequence', fields)
+
+    def test_category_ids_is_the_inverse_of_kitchen_group_id(self):
+        group = self.env['pos.kitchen.group'].create({'name': 'Entradas', 'sequence': 10})
+        category = self.env['pos.category'].create({
+            'name': 'Picadas',
+            'kitchen_group_id': group.id,
+        })
+        self.assertIn(category, group.category_ids)
