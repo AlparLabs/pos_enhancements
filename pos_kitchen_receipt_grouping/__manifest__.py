@@ -1,6 +1,6 @@
 {
     'name': 'POS Kitchen Receipt Grouping',
-    'version': '19.0.2.0.0',
+    'version': '19.0.2.1.0',
     'website': 'https://www.alpardata.com.ar',
     'category': 'Sales/Point of Sale',
     'summary': 'Group POS kitchen receipts by POS Category sequence and decompose Combos',
