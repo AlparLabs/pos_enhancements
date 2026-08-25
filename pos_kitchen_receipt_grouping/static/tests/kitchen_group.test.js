@@ -1,7 +1,5 @@
 import { describe, expect, test } from "@odoo/hoot";
 import {
-    FALLBACK_GROUP_INDEX,
-    FALLBACK_GROUP_NAME,
     resolveKitchenGroup,
     sortChangeLines,
 } from "@pos_kitchen_receipt_grouping/app/kitchen_group";
@@ -52,22 +50,29 @@ describe("resolveKitchenGroup", () => {
 
     test("returns the fallback block when the product has no category", () => {
         expect(resolveKitchenGroup({ pos_categ_ids: [] })).toEqual({
-            name: FALLBACK_GROUP_NAME,
-            index: FALLBACK_GROUP_INDEX,
+            name: "Otros",
+            index: 999999,
         });
     });
 
     test("returns the fallback block when there is no product at all", () => {
-        expect(resolveKitchenGroup(undefined)).toEqual({
-            name: FALLBACK_GROUP_NAME,
-            index: FALLBACK_GROUP_INDEX,
-        });
+        expect(resolveKitchenGroup(undefined)).toEqual({ name: "Otros", index: 999999 });
     });
 
     test("ignores a group record that has no name", () => {
         const product = {
             kitchen_group_id: { sequence: 3 },
             pos_categ_ids: [{ name: "Bebidas", kitchen_sequence: 40 }],
+        };
+        expect(resolveKitchenGroup(product)).toEqual({ name: "Bebidas", index: 40 });
+    });
+
+    test("uses only the first POS category, ignoring the rest", () => {
+        const product = {
+            pos_categ_ids: [
+                { name: "Bebidas", kitchen_sequence: 40 },
+                { name: "Minutas", kitchen_group_id: MAINS, kitchen_sequence: 5 },
+            ],
         };
         expect(resolveKitchenGroup(product)).toEqual({ name: "Bebidas", index: 40 });
     });
@@ -83,14 +88,14 @@ describe("sortChangeLines", () => {
 
     test("orders lines by the kitchen sequence of their category", () => {
         const changes = [
-            { product_id: 1, basic_name: "Sorrentinos" },
-            { product_id: 2, basic_name: "Doble cheddar" },
+            { product_id: 1, basic_name: "Arroz con pollo" },
+            { product_id: 2, basic_name: "Zeta burger" },
         ];
         const sorted = sortChangeLines(
             changes,
             products({ 1: { pos_categ_ids: [PASTAS] }, 2: { pos_categ_ids: [BURGERS] } })
         );
-        expect(sorted.map((c) => c.basic_name)).toEqual(["Doble cheddar", "Sorrentinos"]);
+        expect(sorted.map((c) => c.basic_name)).toEqual(["Zeta burger", "Arroz con pollo"]);
     });
 
     test("orders alphabetically within the same kitchen sequence", () => {
@@ -142,5 +147,24 @@ describe("sortChangeLines", () => {
             products({ 1: { pos_categ_ids: [BURGERS] }, 2: { pos_categ_ids: [BURGERS] } })
         );
         expect(changes.map((c) => c.basic_name)).toEqual(["Triple", "Doble cheddar"]);
+    });
+
+    test("prefers basic_name over name when both are present", () => {
+        const changes = [
+            { product_id: 1, basic_name: "Arroz", name: "Zeta" },
+            { product_id: 1, basic_name: "Zapallo", name: "Alfa" },
+        ];
+        const sorted = sortChangeLines(changes, products({ 1: { pos_categ_ids: [BURGERS] } }));
+        expect(sorted.map((c) => c.basic_name)).toEqual(["Arroz", "Zapallo"]);
+    });
+
+    test("sorts accented names the way Spanish expects", () => {
+        const changes = [
+            { product_id: 1, basic_name: "Zapallo" },
+            { product_id: 1, basic_name: "Ñoquis" },
+            { product_id: 1, basic_name: "Nuez" },
+        ];
+        const sorted = sortChangeLines(changes, products({ 1: { pos_categ_ids: [BURGERS] } }));
+        expect(sorted.map((c) => c.basic_name)).toEqual(["Nuez", "Ñoquis", "Zapallo"]);
     });
 });

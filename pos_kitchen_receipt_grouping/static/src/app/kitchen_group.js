@@ -27,6 +27,14 @@ function ownGroupOf(product) {
 }
 
 /**
+ * Igual que ownGroupOf: el POS delega los campos del template al product.product,
+ * pero se explicita el fallback para no depender de esa delegación.
+ */
+function firstCategoryOf(product) {
+    return product?.pos_categ_ids?.[0] || product?.product_tmpl_id?.pos_categ_ids?.[0] || null;
+}
+
+/**
  * Devuelve el bloque del ticket de cocina al que pertenece un producto:
  * grupo propio → grupo de la primera categoría POS → la categoría misma →
  * bloque "Otros" al final.
@@ -38,7 +46,7 @@ export function resolveKitchenGroup(product) {
     if (own) {
         return own;
     }
-    const categ = product?.pos_categ_ids?.[0];
+    const categ = firstCategoryOf(product);
     if (!categ) {
         return { name: FALLBACK_GROUP_NAME, index: FALLBACK_GROUP_INDEX };
     }
@@ -56,7 +64,7 @@ export function resolveKitchenGroup(product) {
  * @returns {[number, string]}
  */
 export function kitchenSortKey(change, product) {
-    const categ = product?.pos_categ_ids?.[0];
+    const categ = firstCategoryOf(product);
     return [toIndex(categ?.kitchen_sequence), change?.basic_name || change?.name || ""];
 }
 
