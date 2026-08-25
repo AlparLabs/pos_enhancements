@@ -12,104 +12,44 @@ patch(FloorScreen.prototype, {
         onMounted(() => this._loadSessionPaidOrders());
     },
 
-    _getSessionId() {
-        return this.pos.session?.id ?? this.pos.pos_session?.id;
-    },
-
-    _isOrderInCurrentSession(order, sessionId) {
-        if (!order) return false;
-        const sId = order.session_id?.id ?? (typeof order.session_id === "number" ? order.session_id : (Array.isArray(order.session_id) ? order.session_id[0] : null));
-        // Local orders created in current session may not have session_id set yet
-        if (!sId && !order.server_id && typeof order.id === "string") {
-            return true;
-        }
-        return sId === sessionId;
-    },
-
-    _isTableOrder(order) {
-        if (!order || !order.table_id) return false;
-        const tableId = order.table_id?.id ?? (Array.isArray(order.table_id) ? order.table_id[0] : order.table_id);
-        return Boolean(tableId);
-    },
-
-    _isDraftOrder(order) {
-        if (!order) return false;
-        return order.state === "draft" && !order.finalized && order.state !== "cancel" && order.state !== "cancelled";
-    },
-
-    _isPaidOrder(order) {
-        if (!order) return false;
-        if (order.state === "cancel" || order.state === "cancelled") return false;
-        if (order.state === "draft" && !order.finalized) return false;
-        return order.state !== "draft" || Boolean(order.finalized);
-    },
-
-    _getActiveDraftOrders() {
-        const sessionId = this._getSessionId();
+    _getActiveTableOrders() {
         const tables = this.pos.models["restaurant.table"] || [];
-        const validTableIds = new Set(tables.map((t) => t.id));
+        const activeOrders = [];
+        const seenOrderIds = new Set();
+        const sessionId = this.pos.session?.id || this.pos.pos_session?.id;
 
-        return (this.pos.models["pos.order"] || []).filter((order) => {
-            if (!this._isOrderInCurrentSession(order, sessionId)) {
-                return false;
-            }
-            if (!this._isTableOrder(order)) {
-                return false;
-            }
-            if (!this._isDraftOrder(order)) {
-                return false;
-            }
-            const tableId = order.table_id?.id ?? (Array.isArray(order.table_id) ? order.table_id[0] : order.table_id);
-            if (validTableIds.size > 0 && !validTableIds.has(tableId)) {
-                return false;
-            }
-            return true;
-        });
-    },
+        for (const table of tables) {
+            // 1. Obtener la orden activa de la mesa si está disponible (pos_restaurant)
+            let order = table.getOrder?.();
 
-    _getSessionPaidOrdersList() {
-        const sessionId = this._getSessionId();
-        const serverOrders = this.kpiState?.sessionPaidOrders || [];
-        const paidOrdersMap = new Map();
-
-        // 1. Agregar órdenes pagadas del servidor correspondientes a la sesión
-        for (const rec of serverOrders) {
-            if (rec && rec.id) {
-                paidOrdersMap.set(`server_${rec.id}`, {
-                    id: rec.id,
-                    customer_count: rec.customer_count || 0,
-                    amount_total: rec.amount_total || 0,
+            // 2. Fallback: buscar orden borrador de esta mesa en la sesión activa
+            if (!order) {
+                order = this.pos.models["pos.order"]?.find((o) => {
+                    const oTableId = o.table_id?.id ?? (Array.isArray(o.table_id) ? o.table_id[0] : o.table_id);
+                    const oSessionId = o.session_id?.id ?? (typeof o.session_id === "number" ? o.session_id : (Array.isArray(o.session_id) ? o.session_id[0] : null));
+                    return (
+                        oTableId === table.id &&
+                        o.state === "draft" &&
+                        !o.finalized &&
+                        (!oSessionId || oSessionId === sessionId)
+                    );
                 });
             }
+
+            if (order && order.state === "draft" && !order.finalized) {
+                const orderKey = order.uuid || order.id || order;
+                if (!seenOrderIds.has(orderKey)) {
+                    seenOrderIds.add(orderKey);
+                    activeOrders.push(order);
+                }
+            }
         }
-
-        // 2. Agregar o fusionar órdenes pagadas en memoria de la sesión
-        const memoryPaidOrders = (this.pos.models["pos.order"] || []).filter((order) => {
-            return (
-                this._isOrderInCurrentSession(order, sessionId) &&
-                this._isTableOrder(order) &&
-                this._isPaidOrder(order)
-            );
-        });
-
-        for (const order of memoryPaidOrders) {
-            const serverId = (typeof order.id === "number" ? order.id : null) || order.server_id;
-            const key = serverId ? `server_${serverId}` : `local_${order.uuid || order.id}`;
-            const amount = order.priceIncl ?? order.amount_total ?? order.get_total_with_tax?.() ?? 0;
-
-            paidOrdersMap.set(key, {
-                id: order.id,
-                customer_count: order.customer_count || 0,
-                amount_total: amount,
-            });
-        }
-
-        return Array.from(paidOrdersMap.values());
+        return activeOrders;
     },
 
     async _loadSessionPaidOrders() {
         try {
-            const sessionId = this._getSessionId();
+            const sessionId = this.pos.session?.id || this.pos.pos_session?.id;
             if (!sessionId) {
                 this.kpiState.sessionPaidOrders = [];
                 return;
@@ -118,7 +58,7 @@ patch(FloorScreen.prototype, {
                 "pos.order",
                 [
                     ["session_id", "=", sessionId],
-                    ["state", "not in", ["draft", "cancel"]],
+                    ["state", "in", ["paid", "done", "invoiced"]],
                     ["table_id", "!=", false],
                 ],
                 ["id", "customer_count", "amount_total"]
@@ -131,7 +71,7 @@ patch(FloorScreen.prototype, {
     },
 
     get totalCustomers() {
-        return this._getActiveDraftOrders()
+        return this._getActiveTableOrders()
             .reduce((sum, order) => sum + (order.customer_count || 0), 0);
     },
 
@@ -140,18 +80,18 @@ patch(FloorScreen.prototype, {
         if (customers === 0) {
             return 0;
         }
-        const totalAmount = this._getActiveDraftOrders()
-            .reduce((sum, order) => sum + (order.priceIncl ?? order.get_total_with_tax?.() ?? 0), 0);
+        const totalAmount = this._getActiveTableOrders()
+            .reduce((sum, order) => sum + (order.priceIncl ?? order.amount_total ?? 0), 0);
         return totalAmount / customers;
     },
 
     get sessionTotalCustomers() {
-        return this._getSessionPaidOrdersList()
+        return (this.kpiState.sessionPaidOrders || [])
             .reduce((sum, order) => sum + (order.customer_count || 0), 0);
     },
 
     get sessionTotalAmount() {
-        return this._getSessionPaidOrdersList()
+        return (this.kpiState.sessionPaidOrders || [])
             .reduce((sum, order) => sum + (order.amount_total || 0), 0);
     },
 
@@ -167,28 +107,23 @@ patch(FloorScreen.prototype, {
     get occupancyRate() {
         const totalTables = this.pos.models["restaurant.table"]?.length || 0;
         if (!totalTables) return 0;
-        const occupiedTables = new Set(
-            this._getActiveDraftOrders()
-                .map((order) => order.table_id?.id ?? (Array.isArray(order.table_id) ? order.table_id[0] : order.table_id))
-                .filter(Boolean)
-        ).size;
-        return Math.round((occupiedTables / totalTables) * 100);
+        return Math.round((this._getActiveTableOrders().length / totalTables) * 100);
     },
 
     get turnoverRate() {
         const totalTables = this.pos.models["restaurant.table"]?.length || 0;
         if (!totalTables) return 0;
-        const doneOrdersCount = this._getSessionPaidOrdersList().length;
+        const doneOrdersCount = (this.kpiState.sessionPaidOrders || []).length;
         return parseFloat((doneOrdersCount / totalTables).toFixed(1));
     },
 
     get openAmount() {
-        return this._getActiveDraftOrders()
-            .reduce((sum, order) => sum + (order.priceIncl ?? order.get_total_with_tax?.() ?? 0), 0);
+        return this._getActiveTableOrders()
+            .reduce((sum, order) => sum + (order.priceIncl ?? order.amount_total ?? 0), 0);
     },
 
     get avgTableTime() {
-        const activeOrders = this._getActiveDraftOrders();
+        const activeOrders = this._getActiveTableOrders();
         if (!activeOrders.length) return 0;
 
         const now = new Date();
@@ -222,17 +157,19 @@ patch(FloorScreen.prototype, {
 
     get singleDinerTables() {
         // Mesas activas con exactamente 1 comensal
-        return this._getActiveDraftOrders()
+        return this._getActiveTableOrders()
             .filter((order) => (order.customer_count || 0) === 1)
             .length;
     },
 
-    openKpiDashboard() {
+    async openKpiDashboard() {
         // Prevent stacking multiple instances of the dialog
         if (this._kpiDialogOpen) {
             return;
         }
         this._kpiDialogOpen = true;
+        // Refrescar órdenes pagadas de la sesión antes de abrir modal
+        await this._loadSessionPaidOrders();
         this.dialog.add(KpiDashboardModal, {
             occupancyRate: this.occupancyRate,
             turnoverRate: this.turnoverRate,
