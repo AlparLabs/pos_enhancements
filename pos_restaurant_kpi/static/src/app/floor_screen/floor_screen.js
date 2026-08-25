@@ -116,22 +116,14 @@ patch(FloorScreen.prototype, {
         return totalAmount / customers;
     },
 
-    get sessionPaidCustomers() {
+    get sessionTotalCustomers() {
         return (this.kpiState.sessionPaidOrders || [])
             .reduce((sum, order) => sum + (order.customer_count || 0), 0);
     },
 
-    get sessionTotalCustomers() {
-        return this.sessionPaidCustomers + this.totalCustomers;
-    },
-
-    get sessionPaidAmount() {
+    get sessionTotalAmount() {
         return (this.kpiState.sessionPaidOrders || [])
             .reduce((sum, order) => sum + (order.amount_total || 0), 0);
-    },
-
-    get sessionTotalAmount() {
-        return this.sessionPaidAmount + this.openAmount;
     },
 
     get sessionAvgConsumption() {
@@ -153,8 +145,7 @@ patch(FloorScreen.prototype, {
         const totalTables = this._getAllTables().length;
         if (!totalTables) return 0;
         const doneOrdersCount = (this.kpiState.sessionPaidOrders || []).length;
-        const activeOrdersCount = this._getActiveTableOrders().length;
-        return parseFloat(((doneOrdersCount + activeOrdersCount) / totalTables).toFixed(1));
+        return parseFloat((doneOrdersCount / totalTables).toFixed(1));
     },
 
     get openAmount() {
