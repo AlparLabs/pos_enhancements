@@ -21,8 +21,12 @@
     ],
     'assets': {
         'point_of_sale._assets_pos': [
+            'pos_kitchen_receipt_grouping/static/src/app/kitchen_group.js',
             'pos_kitchen_receipt_grouping/static/src/app/services/pos_store.js',
             'pos_kitchen_receipt_grouping/static/src/app/printer/order_change_receipt.xml',
+        ],
+        'web.assets_unit_tests': [
+            'pos_kitchen_receipt_grouping/static/tests/**/*',
         ],
     },
     'installable': True,
