@@ -47,3 +47,23 @@ class TestKitchenGroup(TestPoSCommon):
             'kitchen_group_id': group.id,
         })
         self.assertIn(category, group.category_ids)
+
+    def test_product_kitchen_group_travels_to_the_pos(self):
+        fields = self.env['product.template']._load_pos_data_fields(self.config)
+        self.assertIn('kitchen_group_id', fields)
+
+    def test_product_can_override_the_category_group(self):
+        starters = self.env['pos.kitchen.group'].create({'name': 'Entradas', 'sequence': 10})
+        mains = self.env['pos.kitchen.group'].create({'name': 'Principales', 'sequence': 20})
+        category = self.env['pos.category'].create({
+            'name': 'Minutas',
+            'kitchen_group_id': mains.id,
+        })
+        product = self.env['product.template'].create({
+            'name': 'Empanada',
+            'available_in_pos': True,
+            'pos_categ_ids': [(6, 0, category.ids)],
+            'kitchen_group_id': starters.id,
+        })
+        self.assertEqual(product.kitchen_group_id, starters)
+        self.assertEqual(product.pos_categ_ids.kitchen_group_id, mains)
