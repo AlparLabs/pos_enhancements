@@ -12,9 +12,108 @@ patch(FloorScreen.prototype, {
         onMounted(() => this._loadSessionPaidOrders());
     },
 
+    _getSessionId() {
+        return this.pos.session?.id ?? this.pos.pos_session?.id;
+    },
+
+    _isOrderInCurrentSession(order, sessionId) {
+        if (!order) return false;
+        const sId = order.session_id?.id ?? (typeof order.session_id === "number" ? order.session_id : (Array.isArray(order.session_id) ? order.session_id[0] : null));
+        // Local orders created in current session may not have session_id set yet
+        if (!sId && !order.server_id && typeof order.id === "string") {
+            return true;
+        }
+        return sId === sessionId;
+    },
+
+    _isTableOrder(order) {
+        if (!order || !order.table_id) return false;
+        const tableId = order.table_id?.id ?? (Array.isArray(order.table_id) ? order.table_id[0] : order.table_id);
+        return Boolean(tableId);
+    },
+
+    _isDraftOrder(order) {
+        if (!order) return false;
+        return order.state === "draft" && !order.finalized && order.state !== "cancel" && order.state !== "cancelled";
+    },
+
+    _isPaidOrder(order) {
+        if (!order) return false;
+        if (order.state === "cancel" || order.state === "cancelled") return false;
+        if (order.state === "draft" && !order.finalized) return false;
+        return order.state !== "draft" || Boolean(order.finalized);
+    },
+
+    _getActiveDraftOrders() {
+        const sessionId = this._getSessionId();
+        const tables = this.pos.models["restaurant.table"] || [];
+        const validTableIds = new Set(tables.map((t) => t.id));
+
+        return (this.pos.models["pos.order"] || []).filter((order) => {
+            if (!this._isOrderInCurrentSession(order, sessionId)) {
+                return false;
+            }
+            if (!this._isTableOrder(order)) {
+                return false;
+            }
+            if (!this._isDraftOrder(order)) {
+                return false;
+            }
+            const tableId = order.table_id?.id ?? (Array.isArray(order.table_id) ? order.table_id[0] : order.table_id);
+            if (validTableIds.size > 0 && !validTableIds.has(tableId)) {
+                return false;
+            }
+            return true;
+        });
+    },
+
+    _getSessionPaidOrdersList() {
+        const sessionId = this._getSessionId();
+        const serverOrders = this.kpiState?.sessionPaidOrders || [];
+        const paidOrdersMap = new Map();
+
+        // 1. Agregar órdenes pagadas del servidor correspondientes a la sesión
+        for (const rec of serverOrders) {
+            if (rec && rec.id) {
+                paidOrdersMap.set(`server_${rec.id}`, {
+                    id: rec.id,
+                    customer_count: rec.customer_count || 0,
+                    amount_total: rec.amount_total || 0,
+                });
+            }
+        }
+
+        // 2. Agregar o fusionar órdenes pagadas en memoria de la sesión
+        const memoryPaidOrders = (this.pos.models["pos.order"] || []).filter((order) => {
+            return (
+                this._isOrderInCurrentSession(order, sessionId) &&
+                this._isTableOrder(order) &&
+                this._isPaidOrder(order)
+            );
+        });
+
+        for (const order of memoryPaidOrders) {
+            const serverId = (typeof order.id === "number" ? order.id : null) || order.server_id;
+            const key = serverId ? `server_${serverId}` : `local_${order.uuid || order.id}`;
+            const amount = order.priceIncl ?? order.amount_total ?? order.get_total_with_tax?.() ?? 0;
+
+            paidOrdersMap.set(key, {
+                id: order.id,
+                customer_count: order.customer_count || 0,
+                amount_total: amount,
+            });
+        }
+
+        return Array.from(paidOrdersMap.values());
+    },
+
     async _loadSessionPaidOrders() {
         try {
-            const sessionId = this.pos.session.id;
+            const sessionId = this._getSessionId();
+            if (!sessionId) {
+                this.kpiState.sessionPaidOrders = [];
+                return;
+            }
             const records = await this.pos.data.orm.searchRead(
                 "pos.order",
                 [
@@ -22,9 +121,9 @@ patch(FloorScreen.prototype, {
                     ["state", "not in", ["draft", "cancel"]],
                     ["table_id", "!=", false],
                 ],
-                ["customer_count", "amount_total"]
+                ["id", "customer_count", "amount_total"]
             );
-            this.kpiState.sessionPaidOrders = records;
+            this.kpiState.sessionPaidOrders = records || [];
         } catch (e) {
             console.warn("[pos_restaurant_kpi] No se pudieron cargar las órdenes pagadas de la sesión:", e);
             this.kpiState.sessionPaidOrders = [];
@@ -32,8 +131,7 @@ patch(FloorScreen.prototype, {
     },
 
     get totalCustomers() {
-        return this.pos.models["pos.order"]
-            .filter((order) => order.state === "draft" && order.table_id)
+        return this._getActiveDraftOrders()
             .reduce((sum, order) => sum + (order.customer_count || 0), 0);
     },
 
@@ -42,47 +140,19 @@ patch(FloorScreen.prototype, {
         if (customers === 0) {
             return 0;
         }
-        const totalAmount = this.pos.models["pos.order"]
-            .filter((order) => order.state === "draft" && order.table_id)
-            .reduce((sum, order) => sum + order.priceIncl, 0);
+        const totalAmount = this._getActiveDraftOrders()
+            .reduce((sum, order) => sum + (order.priceIncl ?? order.get_total_with_tax?.() ?? 0), 0);
         return totalAmount / customers;
     },
 
     get sessionTotalCustomers() {
-        // Órdenes en memoria ya pagadas de esta sesión (cargadas al entrar a Orders)
-        const sessionId = this.pos.session.id;
-        const fromMemory = this.pos.models["pos.order"]
-            .filter((order) =>
-                order.state !== "draft" &&
-                order.state !== "cancel" &&
-                order.table_id &&
-                order.session_id?.id === sessionId
-            )
+        return this._getSessionPaidOrdersList()
             .reduce((sum, order) => sum + (order.customer_count || 0), 0);
-
-        // Fallback: órdenes cargadas desde el servidor al montar (evita el 0 inicial)
-        const fromServer = this.kpiState.sessionPaidOrders
-            .reduce((sum, order) => sum + (order.customer_count || 0), 0);
-
-        // Usamos el mayor de los dos para evitar doble-conteo pero garantizar datos
-        return Math.max(fromMemory, fromServer);
     },
 
     get sessionTotalAmount() {
-        const sessionId = this.pos.session.id;
-        const fromMemory = this.pos.models["pos.order"]
-            .filter((order) =>
-                order.state !== "draft" &&
-                order.state !== "cancel" &&
-                order.table_id &&
-                order.session_id?.id === sessionId
-            )
-            .reduce((sum, order) => sum + order.priceIncl, 0);
-
-        const fromServer = this.kpiState.sessionPaidOrders
+        return this._getSessionPaidOrdersList()
             .reduce((sum, order) => sum + (order.amount_total || 0), 0);
-
-        return Math.max(fromMemory, fromServer);
     },
 
     get sessionAvgConsumption() {
@@ -95,43 +165,30 @@ patch(FloorScreen.prototype, {
     },
 
     get occupancyRate() {
-        const totalTables = this.pos.models["restaurant.table"].length;
+        const totalTables = this.pos.models["restaurant.table"]?.length || 0;
         if (!totalTables) return 0;
         const occupiedTables = new Set(
-            this.pos.models["pos.order"]
-                .filter((order) => order.state === "draft" && order.table_id)
-                .map((order) => order.table_id.id)
+            this._getActiveDraftOrders()
+                .map((order) => order.table_id?.id ?? (Array.isArray(order.table_id) ? order.table_id[0] : order.table_id))
+                .filter(Boolean)
         ).size;
         return Math.round((occupiedTables / totalTables) * 100);
     },
 
     get turnoverRate() {
-        const totalTables = this.pos.models["restaurant.table"].length;
+        const totalTables = this.pos.models["restaurant.table"]?.length || 0;
         if (!totalTables) return 0;
-
-        const sessionId = this.pos.session.id;
-        const memoryDoneOrders = this.pos.models["pos.order"]
-            .filter((order) => 
-                order.state !== "draft" && 
-                order.state !== "cancel" && 
-                order.table_id &&
-                order.session_id?.id === sessionId
-            ).length;
-
-        const serverDoneOrders = this.kpiState.sessionPaidOrders.length;
-        const doneOrders = Math.max(memoryDoneOrders, serverDoneOrders);
-
-        return parseFloat((doneOrders / totalTables).toFixed(1));
+        const doneOrdersCount = this._getSessionPaidOrdersList().length;
+        return parseFloat((doneOrdersCount / totalTables).toFixed(1));
     },
 
     get openAmount() {
-        return this.pos.models["pos.order"]
-            .filter((order) => order.state === "draft" && order.table_id)
-            .reduce((sum, order) => sum + order.priceIncl, 0);
+        return this._getActiveDraftOrders()
+            .reduce((sum, order) => sum + (order.priceIncl ?? order.get_total_with_tax?.() ?? 0), 0);
     },
 
     get avgTableTime() {
-        const activeOrders = this.pos.models["pos.order"].filter((order) => order.state === "draft" && order.table_id);
+        const activeOrders = this._getActiveDraftOrders();
         if (!activeOrders.length) return 0;
 
         const now = new Date();
@@ -165,8 +222,8 @@ patch(FloorScreen.prototype, {
 
     get singleDinerTables() {
         // Mesas activas con exactamente 1 comensal
-        return this.pos.models["pos.order"]
-            .filter((order) => order.state === "draft" && order.table_id && order.customer_count === 1)
+        return this._getActiveDraftOrders()
+            .filter((order) => (order.customer_count || 0) === 1)
             .length;
     },
 
