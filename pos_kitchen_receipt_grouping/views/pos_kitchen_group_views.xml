@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="pos_kitchen_group_view_list" model="ir.ui.view">
+        <field name="name">pos.kitchen.group.view.list</field>
+        <field name="model">pos.kitchen.group</field>
+        <field name="arch" type="xml">
+            <list string="Kitchen Groups" editable="bottom">
+                <field name="sequence" widget="handle"/>
+                <field name="name"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="pos_kitchen_group_view_form" model="ir.ui.view">
+        <field name="name">pos.kitchen.group.view.form</field>
+        <field name="model">pos.kitchen.group</field>
+        <field name="arch" type="xml">
+            <form string="Kitchen Group">
+                <sheet>
+                    <group>
+                        <field name="name"/>
+                        <field name="sequence"/>
+                    </group>
+                    <notebook>
+                        <page string="POS Categories" name="categories">
+                            <field name="category_ids">
+                                <list>
+                                    <field name="name"/>
+                                    <field name="kitchen_sequence"/>
+                                </list>
+                            </field>
+                        </page>
+                    </notebook>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="pos_kitchen_group_action" model="ir.actions.act_window">
+        <field name="name">Kitchen Groups</field>
+        <field name="res_model">pos.kitchen.group</field>
+        <field name="view_mode">list,form</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">Create a kitchen group</p>
+            <p>Kitchen groups are the blocks printed on the kitchen receipt, such as
+               Starters, Mains or Desserts. Assign each POS category to one of them.</p>
+        </field>
+    </record>
+
+    <menuitem id="menu_pos_kitchen_group"
+              name="Kitchen Groups"
+              parent="point_of_sale.menu_point_config_product"
+              action="pos_kitchen_group_action"
+              sequence="25"/>
+</odoo>

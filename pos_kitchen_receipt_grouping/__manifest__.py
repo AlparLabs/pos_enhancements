@@ -14,6 +14,8 @@
     'author': 'AlparData',
     'depends': ['point_of_sale', 'pos_restaurant'],
     'data': [
+        'security/ir.model.access.csv',
+        'views/pos_kitchen_group_views.xml',
         'views/pos_category_view.xml',
     ],
     'assets': {
