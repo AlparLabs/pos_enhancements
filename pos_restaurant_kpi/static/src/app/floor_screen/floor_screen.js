@@ -12,11 +12,42 @@ patch(FloorScreen.prototype, {
         onMounted(() => this._loadSessionPaidOrders());
     },
 
+    _getAllTables() {
+        const raw = this.pos.models?.["restaurant.table"];
+        if (!raw) return [];
+        if (typeof raw.getAll === "function") {
+            return raw.getAll();
+        }
+        if (Array.isArray(raw)) {
+            return raw;
+        }
+        if (typeof raw === "object") {
+            return Object.values(raw);
+        }
+        return [];
+    },
+
+    _getAllOrders() {
+        const raw = this.pos.models?.["pos.order"];
+        if (!raw) return [];
+        if (typeof raw.getAll === "function") {
+            return raw.getAll();
+        }
+        if (Array.isArray(raw)) {
+            return raw;
+        }
+        if (typeof raw === "object") {
+            return Object.values(raw);
+        }
+        return [];
+    },
+
     _getActiveTableOrders() {
-        const tables = this.pos.models["restaurant.table"] || [];
+        const tables = this._getAllTables();
         const activeOrders = [];
         const seenOrderIds = new Set();
         const sessionId = this.pos.session?.id || this.pos.pos_session?.id;
+        const allOrders = this._getAllOrders();
 
         for (const table of tables) {
             // 1. Obtener la orden activa de la mesa si está disponible (pos_restaurant)
@@ -24,7 +55,7 @@ patch(FloorScreen.prototype, {
 
             // 2. Fallback: buscar orden borrador de esta mesa en la sesión activa
             if (!order) {
-                order = this.pos.models["pos.order"]?.find((o) => {
+                order = allOrders.find((o) => {
                     const oTableId = o.table_id?.id ?? (Array.isArray(o.table_id) ? o.table_id[0] : o.table_id);
                     const oSessionId = o.session_id?.id ?? (typeof o.session_id === "number" ? o.session_id : (Array.isArray(o.session_id) ? o.session_id[0] : null));
                     return (
@@ -105,13 +136,13 @@ patch(FloorScreen.prototype, {
     },
 
     get occupancyRate() {
-        const totalTables = this.pos.models["restaurant.table"]?.length || 0;
+        const totalTables = this._getAllTables().length;
         if (!totalTables) return 0;
         return Math.round((this._getActiveTableOrders().length / totalTables) * 100);
     },
 
     get turnoverRate() {
-        const totalTables = this.pos.models["restaurant.table"]?.length || 0;
+        const totalTables = this._getAllTables().length;
         if (!totalTables) return 0;
         const doneOrdersCount = (this.kpiState.sessionPaidOrders || []).length;
         return parseFloat((doneOrdersCount / totalTables).toFixed(1));
