@@ -8,6 +8,4 @@ class PosSession(models.Model):
 
     @api.model
     def _load_pos_data_models(self, config: Any) -> list[str]:
-        models_to_load = super()._load_pos_data_models(config)
-        models_to_load += ['pos.kitchen.group']
-        return models_to_load
+        return super()._load_pos_data_models(config) + ['pos.kitchen.group']

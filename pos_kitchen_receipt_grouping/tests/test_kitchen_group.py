@@ -1,9 +1,11 @@
 from psycopg2 import IntegrityError
 
+from odoo.tests import tagged
 from odoo.tools import mute_logger
 from odoo.addons.point_of_sale.tests.common import TestPoSCommon
 
 
+@tagged('post_install', '-at_install')
 class TestKitchenGroup(TestPoSCommon):
 
     def setUp(self):
@@ -20,8 +22,8 @@ class TestKitchenGroup(TestPoSCommon):
 
     def test_groups_are_ordered_by_sequence(self):
         Group = self.env['pos.kitchen.group']
-        dessert = Group.create({'name': 'Postres ZZZ', 'sequence': 30})
-        starter = Group.create({'name': 'Entradas AAA', 'sequence': 10})
+        dessert = Group.create({'name': 'AAA Postres', 'sequence': 30})
+        starter = Group.create({'name': 'ZZZ Entradas', 'sequence': 10})
         ordered = Group.search([('id', 'in', (dessert + starter).ids)])
         self.assertEqual(ordered[0], starter)
         self.assertEqual(ordered[1], dessert)

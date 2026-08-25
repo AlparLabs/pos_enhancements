@@ -9,7 +9,7 @@ class PosKitchenGroup(models.Model):
     _inherit = ['pos.load.mixin']
     _order = 'sequence, id'
 
-    name = fields.Char(string='Name', required=True, translate=True)
+    name = fields.Char(string='Name', required=True)
     sequence = fields.Integer(
         string='Sequence',
         default=10,
@@ -28,9 +28,9 @@ class PosKitchenGroup(models.Model):
 
     @api.model
     def _load_pos_data_domain(self, data: Any, config: Any) -> list:
-        # Son pocos registros y el ticket puede necesitar cualquiera de ellos
-        # (un producto puede pisar el grupo de su categoría), así que se cargan
-        # todos sin filtrar por las categorías habilitadas en el POS.
+        # Few records, and the receipt may need any of them (a product can
+        # override its category's group), so they are all loaded without
+        # filtering by the categories enabled on the POS.
         return []
 
     @api.model
