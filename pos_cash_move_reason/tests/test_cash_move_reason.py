@@ -141,3 +141,37 @@ class TestCashMoveReason(TestPoSCommon):
         self.assertFalse(st_line.pos_counterpart_partner_id)
         _liquidity, _suspense, other = st_line._seek_for_lines()
         self.assertEqual(other.partner_id, self.env.user.partner_id)
+
+    def test_ask_mode_without_a_payload_contact_keeps_the_cashier(self):
+        """The cashier can cancel the contact picker; the concept still applies."""
+        self.open_new_session()
+        reason = self._make_reason(
+            account_id=self.expense_account.id,
+            partner_mode='ask',
+        )
+
+        st_line = self._cash_out(extras={'cash_move_reason_id': reason.id})
+
+        self.assertEqual(st_line.pos_cash_move_reason_id, reason)
+        self.assertFalse(st_line.pos_counterpart_partner_id)
+        _liquidity, _suspense, other = st_line._seek_for_lines()
+        self.assertEqual(other.partner_id, self.env.user.partner_id)
+
+    def test_ask_mode_rejects_a_contact_from_another_company(self):
+        other_company = self.env['res.company'].create({'name': 'Otra Compania'})
+        foreign_partner = self.env['res.partner'].create({
+            'name': 'Proveedor Ajeno',
+            'company_id': other_company.id,
+        })
+        self.open_new_session()
+        reason = self._make_reason(
+            account_id=self.expense_account.id,
+            partner_mode='ask',
+        )
+
+        st_line = self._cash_out(extras={
+            'cash_move_reason_id': reason.id,
+            'counterpart_partner_id': foreign_partner.id,
+        })
+
+        self.assertFalse(st_line.pos_counterpart_partner_id)

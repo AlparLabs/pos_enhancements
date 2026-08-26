@@ -47,7 +47,10 @@ class PosSession(models.Model):
         elif cash_reason.partner_mode == 'ask':
             counterpart_partner_id = extras.get('counterpart_partner_id')
         if counterpart_partner_id:
+            # exists() runs a bare SELECT with no record rules applied, so the id alone
+            # proves nothing about who may use it. Partners are usually company-less and
+            # shared; reject only one that is bound to a different company.
             partner = self.env['res.partner'].sudo().browse(int(counterpart_partner_id)).exists()
-            if partner:
+            if partner and partner.company_id in (False, session.company_id):
                 vals['pos_counterpart_partner_id'] = partner.id
         return vals
