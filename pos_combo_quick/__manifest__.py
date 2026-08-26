@@ -1,6 +1,6 @@
 {
     'name': 'POS Combo Quick Select',
-    'version': '19.0.1.0.0',
+    'version': '19.0.1.1.0',
     'author': 'AlparData',
     'website': 'https://www.alpardata.com.ar',
     'summary': 'Selección rápida de combos: cantidad + distribución en una sola pantalla',
