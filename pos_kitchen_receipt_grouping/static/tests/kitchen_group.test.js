@@ -81,6 +81,7 @@ describe("resolveKitchenGroup", () => {
 describe("sortChangeLines", () => {
     const PASTAS = { name: "Pastas", kitchen_sequence: 30 };
     const BURGERS = { name: "Hamburguesas", kitchen_sequence: 10 };
+    const URGENTE = { name: "Urgente", kitchen_sequence: 0 };
 
     function products(map) {
         return (change) => map[change.product_id];
@@ -98,7 +99,7 @@ describe("sortChangeLines", () => {
         expect(sorted.map((c) => c.basic_name)).toEqual(["Zeta burger", "Arroz con pollo"]);
     });
 
-    test("orders alphabetically within the same kitchen sequence", () => {
+    test("keeps the load order within the same kitchen sequence", () => {
         const changes = [
             { product_id: 1, basic_name: "Triple" },
             { product_id: 2, basic_name: "Doble cheddar" },
@@ -107,10 +108,10 @@ describe("sortChangeLines", () => {
             changes,
             products({ 1: { pos_categ_ids: [BURGERS] }, 2: { pos_categ_ids: [BURGERS] } })
         );
-        expect(sorted.map((c) => c.basic_name)).toEqual(["Doble cheddar", "Triple"]);
+        expect(sorted.map((c) => c.basic_name)).toEqual(["Triple", "Doble cheddar"]);
     });
 
-    test("is stable for lines that share the same key", () => {
+    test("keeps identical lines in their original order", () => {
         const changes = [
             { product_id: 1, basic_name: "Doble cheddar", uuid: "a" },
             { product_id: 1, basic_name: "Doble cheddar", uuid: "b" },
@@ -119,52 +120,40 @@ describe("sortChangeLines", () => {
         expect(sorted.map((c) => c.uuid)).toEqual(["a", "b"]);
     });
 
-    test("falls back to the line name when there is no basic_name", () => {
+    test("respects a kitchen sequence of 0 instead of falling back to the default", () => {
         const changes = [
-            { product_id: 1, name: "Zapallo" },
-            { product_id: 1, name: "Acelga" },
+            { product_id: 1, basic_name: "Doble cheddar" },
+            { product_id: 2, basic_name: "Pedido urgente" },
         ];
-        const sorted = sortChangeLines(changes, products({ 1: { pos_categ_ids: [BURGERS] } }));
-        expect(sorted.map((c) => c.name)).toEqual(["Acelga", "Zapallo"]);
+        const sorted = sortChangeLines(
+            changes,
+            products({ 1: { pos_categ_ids: [BURGERS] }, 2: { pos_categ_ids: [URGENTE] } })
+        );
+        expect(sorted.map((c) => c.basic_name)).toEqual(["Pedido urgente", "Doble cheddar"]);
     });
 
-    test("does not crash on a line whose product is unknown", () => {
+    test("gives a line with an unknown product the default sequence", () => {
         const changes = [
             { product_id: 9, basic_name: "Fantasma" },
             { product_id: 1, basic_name: "Doble cheddar" },
         ];
         const sorted = sortChangeLines(changes, products({ 1: { pos_categ_ids: [BURGERS] } }));
-        expect(sorted.map((c) => c.basic_name)).toEqual(["Doble cheddar", "Fantasma"]);
+        expect(sorted.map((c) => c.basic_name)).toEqual(["Fantasma", "Doble cheddar"]);
+    });
+
+    test("returns an empty array unchanged", () => {
+        expect(sortChangeLines([], () => undefined)).toEqual([]);
     });
 
     test("does not mutate the array it receives", () => {
         const changes = [
-            { product_id: 1, basic_name: "Triple" },
-            { product_id: 2, basic_name: "Doble cheddar" },
+            { product_id: 1, basic_name: "Zeta" },
+            { product_id: 2, basic_name: "Arroz" },
         ];
         sortChangeLines(
             changes,
-            products({ 1: { pos_categ_ids: [BURGERS] }, 2: { pos_categ_ids: [BURGERS] } })
+            products({ 1: { pos_categ_ids: [PASTAS] }, 2: { pos_categ_ids: [BURGERS] } })
         );
-        expect(changes.map((c) => c.basic_name)).toEqual(["Triple", "Doble cheddar"]);
-    });
-
-    test("prefers basic_name over name when both are present", () => {
-        const changes = [
-            { product_id: 1, basic_name: "Arroz", name: "Zeta" },
-            { product_id: 1, basic_name: "Zapallo", name: "Alfa" },
-        ];
-        const sorted = sortChangeLines(changes, products({ 1: { pos_categ_ids: [BURGERS] } }));
-        expect(sorted.map((c) => c.basic_name)).toEqual(["Arroz", "Zapallo"]);
-    });
-
-    test("sorts accented names the way Spanish expects", () => {
-        const changes = [
-            { product_id: 1, basic_name: "Zapallo" },
-            { product_id: 1, basic_name: "Ñoquis" },
-            { product_id: 1, basic_name: "Nuez" },
-        ];
-        const sorted = sortChangeLines(changes, products({ 1: { pos_categ_ids: [BURGERS] } }));
-        expect(sorted.map((c) => c.basic_name)).toEqual(["Nuez", "Ñoquis", "Zapallo"]);
+        expect(changes.map((c) => c.basic_name)).toEqual(["Zeta", "Arroz"]);
     });
 });
