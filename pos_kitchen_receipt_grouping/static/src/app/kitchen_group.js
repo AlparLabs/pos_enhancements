@@ -101,39 +101,3 @@ export function sortChangeLines(changes, getProduct) {
         )
         .map((entry) => entry.change);
 }
-
-/**
- * Inserta una línea sintética con el nombre del combo antes de cada corrida de
- * hijos del mismo combo, para no repetir "[NOMBRE DEL COMBO]" en cada producto.
- *
- * Se apoya en que el core arma los bloques leyendo el objeto `change.group` que
- * ya viene pegado a cada línea, sin volver a resolver el grupo: copiando ese
- * mismo objeto, el encabezado cae en el bloque de sus hijos.
- *
- * Si los hijos de un combo quedan repartidos en más de un bloque, o separados
- * dentro del mismo bloque por la secuencia de cocina, cada corrida recibe su
- * propio encabezado. Es lo que hace falta: cada estación tiene que ver de qué
- * combo es lo que le toca preparar.
- *
- * @param {Array} changes ya ordenadas
- * @returns {Array} copia con los encabezados intercalados
- */
-export function insertComboHeaders(changes) {
-    const result = [];
-    let currentCombo = null;
-    for (const change of changes) {
-        const combo = change?.combo_parent_uuid || null;
-        if (combo && combo !== currentCombo && change.combo_name) {
-            result.push({
-                isComboHeader: true,
-                basic_name: change.combo_name,
-                group: change.group,
-                uuid: `combo-header-${combo}-${result.length}`,
-                quantity: 0,
-            });
-        }
-        currentCombo = combo;
-        result.push(change);
-    }
-    return result;
-}

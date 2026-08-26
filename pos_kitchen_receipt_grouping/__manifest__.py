@@ -13,8 +13,8 @@
         Categories without a group keep printing under their own name, so the ticket
         looks exactly as before until groups are assigned.
         Combos are decomposed so the sub-products are printed under their respective
-        groups, with the combo name printed once as a sub-header above them instead
-        of tagged on every single line.
+        groups, tagged with the combo name in a smaller type so the product name
+        keeps the line. Children of the same combo are kept together.
     """,
     'author': 'AlparData',
     'depends': ['point_of_sale', 'pos_restaurant'],

@@ -105,11 +105,7 @@
        t-inherit="point_of_sale.OrderChangeReceiptLine"
        t-inherit-mode="extension">
         <xpath expr="//div[@t-attf-class]" position="replace">
-            <div t-if="line.isComboHeader" class="orderline mx-1 fw-bold"
-                 style="font-size: 95%; line-height: 1.2; padding-left: 0.4em;">
-                &#187; <t t-esc="line.basic_name"/>
-            </div>
-            <div t-else="" class="orderline mx-1" style="font-size: 110%; line-height: 1.2;">
+            <div class="orderline mx-1" style="font-size: 110%; line-height: 1.2;">
                 <div class="medium">
                     <span class="fw-bolder me-2" t-esc="line.quantity"/>
                     <span class="product-name">
@@ -119,6 +115,9 @@
                                 <strong> (<t t-esc="attr"/>)</strong>
                             </t>
                         </t>
+                        <span t-if="line.combo_name" style="font-size: 75%;">
+                            [<t t-esc="line.combo_name"/>]
+                        </span>
                     </span>
                 </div>
                 <div t-if="line.note" class="fst-italic"

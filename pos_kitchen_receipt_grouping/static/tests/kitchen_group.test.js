@@ -1,6 +1,5 @@
 import { describe, expect, test } from "@odoo/hoot";
 import {
-    insertComboHeaders,
     resolveKitchenGroup,
     sortChangeLines,
 } from "@pos_kitchen_receipt_grouping/app/kitchen_group";
@@ -182,60 +181,5 @@ describe("sortChangeLines with combos", () => {
         ];
         const sorted = sortChangeLines(changes, products(all));
         expect(sorted.map((c) => c.basic_name)).toEqual(["A1", "A2", "B1"]);
-    });
-});
-
-describe("insertComboHeaders", () => {
-    const G = { name: "Principales", index: 20 };
-
-    test("adds one header per run of children of the same combo", () => {
-        const changes = [
-            { basic_name: "Milanesa", combo_parent_uuid: "c1", combo_name: "Menu", group: G },
-            { basic_name: "Papas", combo_parent_uuid: "c1", combo_name: "Menu", group: G },
-            { basic_name: "Suelto", group: G },
-        ];
-        const out = insertComboHeaders(changes);
-        expect(out.map((c) => c.basic_name)).toEqual(["Menu", "Milanesa", "Papas", "Suelto"]);
-        expect(out[0].isComboHeader).toBe(true);
-        expect(out[0].group).toBe(G);
-    });
-
-    test("adds a header for each of two different combos", () => {
-        const changes = [
-            { basic_name: "A", combo_parent_uuid: "c1", combo_name: "Menu 1", group: G },
-            { basic_name: "B", combo_parent_uuid: "c2", combo_name: "Menu 2", group: G },
-        ];
-        expect(insertComboHeaders(changes).map((c) => c.basic_name)).toEqual([
-            "Menu 1", "A", "Menu 2", "B",
-        ]);
-    });
-
-    test("adds a header again when the run is interrupted", () => {
-        const changes = [
-            { basic_name: "A", combo_parent_uuid: "c1", combo_name: "Menu", group: G },
-            { basic_name: "Suelto", group: G },
-            { basic_name: "B", combo_parent_uuid: "c1", combo_name: "Menu", group: G },
-        ];
-        expect(insertComboHeaders(changes).map((c) => c.basic_name)).toEqual([
-            "Menu", "A", "Suelto", "Menu", "B",
-        ]);
-    });
-
-    test("leaves lines without a combo untouched", () => {
-        const changes = [{ basic_name: "Suelto", group: G }];
-        expect(insertComboHeaders(changes)).toEqual(changes);
-    });
-
-    test("adds no header when the combo name is unknown", () => {
-        const changes = [{ basic_name: "A", combo_parent_uuid: "c1", combo_name: "", group: G }];
-        expect(insertComboHeaders(changes).map((c) => c.basic_name)).toEqual(["A"]);
-    });
-
-    test("does not mutate the array it receives", () => {
-        const changes = [
-            { basic_name: "A", combo_parent_uuid: "c1", combo_name: "Menu", group: G },
-        ];
-        insertComboHeaders(changes);
-        expect(changes.length).toBe(1);
     });
 });

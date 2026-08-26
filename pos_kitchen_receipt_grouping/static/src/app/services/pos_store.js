@@ -3,11 +3,7 @@
 import { PosStore } from "@point_of_sale/app/services/pos_store";
 import { receiptLineGrouper } from "@point_of_sale/app/models/utils/order_change";
 import { patch } from "@web/core/utils/patch";
-import {
-    insertComboHeaders,
-    resolveKitchenGroup,
-    sortChangeLines,
-} from "@pos_kitchen_receipt_grouping/app/kitchen_group";
+import { resolveKitchenGroup, sortChangeLines } from "@pos_kitchen_receipt_grouping/app/kitchen_group";
 
 // Traducción de títulos de recibos de cocina al español.
 // El core arma los títulos con _t() en inglés al generar los datos.
@@ -88,11 +84,10 @@ patch(PosStore.prototype, {
      * Pre-process the change lines before the core groups them by category:
      *  - Skip combo parents whose children are also printed on this receipt
      *    (the children already carry the [Parent] tag, the parent is redundant).
-     *  - Guardar el nombre del combo padre en `combo_name` (sin tocar el nombre
-     *    del producto) y, después de ordenar, insertar un encabezado sintético
-     *    por corrida de hijos del mismo combo. Antes se etiquetaba cada hijo
-     *    como "Producto [Combo]", lo que en un ticket de 266px partía la línea
-     *    en tres renglones.
+     *  - Guardar el nombre del combo padre en `combo_name`, sin tocar el nombre
+     *    del producto. El template lo imprime como "[COMBO]" en cuerpo chico
+     *    detrás del producto: así el nombre del plato sigue dominando la línea
+     *    y el combo no se lleva el ancho del ticket.
      *  - Merge identical lines (same product, name, notes and variants) by
      *    summing quantities.
      *  - Ordenar las líneas por la secuencia de cocina de su categoría, para
@@ -144,10 +139,9 @@ patch(PosStore.prototype, {
                 byKey[key] = entry;
                 processed.push(entry);
             }
-            const sorted = sortChangeLines(processed, (change) =>
+            data.changes.data = sortChangeLines(processed, (change) =>
                 this.models["product.product"]?.get(change.product_id)
             );
-            data.changes.data = insertComboHeaders(sorted);
         }
         if (data.changes?.title) {
             data.changes.title = RECEIPT_LABELS[data.changes.title] || data.changes.title;
