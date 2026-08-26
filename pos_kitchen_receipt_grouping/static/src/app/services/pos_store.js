@@ -3,6 +3,7 @@
 import { PosStore } from "@point_of_sale/app/services/pos_store";
 import { receiptLineGrouper } from "@point_of_sale/app/models/utils/order_change";
 import { patch } from "@web/core/utils/patch";
+import { resolveKitchenGroup, sortChangeLines } from "@pos_kitchen_receipt_grouping/app/kitchen_group";
 
 // Traducción de títulos de recibos de cocina al español.
 // El core arma los títulos con _t() en inglés al generar los datos.
@@ -18,21 +19,14 @@ function isComboParent(product) {
 }
 
 /**
- * v19 extension hook: assign each order line a receipt group based on its POS
- * category. The core groups the change lines by `group.name` and sorts the
- * groups by `group.index` (see PosStore.prepareReceiptGroupedData), so
- * `kitchen_sequence` drives the order of the category blocks on the ticket.
+ * v19 extension hook: asigna a cada línea el bloque del ticket de cocina. El
+ * core agrupa por `group.name` y ordena los bloques por `group.index` (ver
+ * PosStore.prepareReceiptGroupedData), así que la secuencia del grupo de cocina
+ * define el orden de los bloques. La resolución vive en kitchen_group.js.
  */
 receiptLineGrouper.getGroup = function (orderline) {
     const product = orderline.getProduct?.() || orderline.product_id;
-    const categ = product?.pos_categ_ids?.[0];
-    if (!categ) {
-        return { name: "Sin Categoría", index: 9999 };
-    }
-    return {
-        name: categ.name,
-        index: typeof categ.kitchen_sequence === "number" ? categ.kitchen_sequence : 10,
-    };
+    return resolveKitchenGroup(product);
 };
 
 patch(PosStore.prototype, {
@@ -78,6 +72,9 @@ patch(PosStore.prototype, {
      *    can appear as a child in multiple different combos.
      *  - Merge identical lines (same product, name, notes and variants) by
      *    summing quantities.
+     *  - Ordenar las líneas por la secuencia de cocina de su categoría, para
+     *    controlar el orden dentro de cada bloque (el core respeta el orden del
+     *    array). Las líneas que comparten secuencia conservan el orden de carga.
      * Also translate the receipt title to Spanish.
      */
     async prepareReceiptGroupedData(data) {
@@ -126,7 +123,9 @@ patch(PosStore.prototype, {
                 byKey[key] = entry;
                 processed.push(entry);
             }
-            data.changes.data = processed;
+            data.changes.data = sortChangeLines(processed, (change) =>
+                this.models["product.product"]?.get(change.product_id)
+            );
         }
         if (data.changes?.title) {
             data.changes.title = RECEIPT_LABELS[data.changes.title] || data.changes.title;
