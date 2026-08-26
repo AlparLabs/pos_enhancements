@@ -1,4 +1,5 @@
-from odoo import api, fields, models
+from odoo import _, api, fields, models
+from odoo.exceptions import ValidationError
 
 
 class PosCashMoveReason(models.Model):
@@ -52,6 +53,15 @@ class PosCashMoveReason(models.Model):
         required=True,
         default=lambda self: self.env.company,
     )
+
+    @api.constrains('partner_mode', 'partner_id')
+    def _check_partner_id_required(self):
+        for reason in self:
+            if reason.partner_mode == 'fixed' and not reason.partner_id:
+                raise ValidationError(_(
+                    'The concept "%s" is set to use a fixed contact, so a contact must be selected.',
+                    reason.name,
+                ))
 
     @api.model
     def _load_pos_data_domain(self, data, config):
