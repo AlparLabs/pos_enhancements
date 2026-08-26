@@ -40,27 +40,44 @@ patch(PosStore.prototype, {
     },
 
     /**
-     * The core keeps a combo parent line only when at least one of its
-     * children is routed to the printer's categories. When the parent's own
-     * category matches the printer but all children are routed elsewhere,
-     * the parent must still be printed so that station gets the information.
+     * Filters changes by printer categories with strict per-item category routing:
+     *  - Combo children (e.g. Drinks inside a Food combo) are strictly filtered by their
+     *    own product category, ensuring each station only receives items it prepares.
+     *  - Combo parents are kept if at least one child is routed to this printer OR if
+     *    the parent's own category matches (fallback when children are routed elsewhere).
+     *  - Standalone lines are filtered by their own category.
      */
     filterChangeByCategories(categories, currentOrderChange) {
-        const result = super.filterChangeByCategories(...arguments);
+        if (!categories || !categories.length) {
+            return currentOrderChange;
+        }
         const matchesCategories = (change) => {
-            const product = this.models["product.product"].get(change.product_id);
+            const product = this.models["product.product"]?.get(change.product_id);
             return (product?.parentPosCategIds || []).some((id) => categories.includes(id));
         };
-        for (const key of ["new", "cancelled", "noteUpdate"]) {
-            const kept = result[key] || [];
-            const keptUuids = new Set(kept.map((c) => c.uuid));
-            for (const change of currentOrderChange[key] || []) {
-                if (change.isCombo && !keptUuids.has(change.uuid) && matchesCategories(change)) {
-                    kept.push(change);
+
+        const filterChanges = (changes = []) => {
+            const validComboUuids = new Set(
+                changes
+                    .filter((change) => change.combo_parent_uuid && matchesCategories(change))
+                    .map((change) => change.combo_parent_uuid)
+            );
+            return changes.filter((change) => {
+                if (change.combo_parent_uuid) {
+                    return matchesCategories(change);
                 }
-            }
-        }
-        return result;
+                if (change.isCombo) {
+                    return validComboUuids.has(change.uuid) || matchesCategories(change);
+                }
+                return matchesCategories(change);
+            });
+        };
+
+        return {
+            new: filterChanges(currentOrderChange.new),
+            cancelled: filterChanges(currentOrderChange.cancelled),
+            noteUpdate: filterChanges(currentOrderChange.noteUpdate),
+        };
     },
 
     /**

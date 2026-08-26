@@ -21,7 +21,7 @@ class PosSession(models.Model):
         """
         for session in self:
             try:
-                session.payment_ids._mp_fetch_reconciliation_info()
+                session.order_ids.payment_ids._mp_fetch_reconciliation_info()
             except Exception:
                 _logger.exception(
                     "Mercado Pago: failed to fetch reconciliation info for session %s",

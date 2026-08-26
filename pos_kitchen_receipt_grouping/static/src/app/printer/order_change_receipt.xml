@@ -21,9 +21,14 @@
         Sobre los tamaños: al imprimir, el core fuerza el recibo a 266px de ancho
         con fuente base de 14px (receipt_screen.scss). La línea del core viene a
         150% (21px), lo que deja unos 15 caracteres por renglón y parte casi
-        cualquier nombre de producto. Acá baja a 130% y, sobre todo, se saca el
+        cualquier nombre de producto. Acá baja a 110% y, sobre todo, se saca el
         d-flex del core: con flex, el nombre se comprimía contra la cantidad y
         terminaba cayendo entero al renglón de abajo.
+
+        El 110% y el reemplazo del d-flex vienen de 19.0 (commits 2430b68 y
+        95e6458), donde ya se probaron en papel. Acá se conservan tal cual; lo
+        único que cambia es que la línea se arma dentro del reemplazo completo
+        del template en vez de con dos xpath sueltos.
     -->
     <t t-name="pos_kitchen_receipt_grouping.OrderChangeReceipt"
        t-inherit="point_of_sale.OrderChangeReceipt"
@@ -100,15 +105,17 @@
        t-inherit="point_of_sale.OrderChangeReceiptLine"
        t-inherit-mode="extension">
         <xpath expr="//div[@t-attf-class]" position="replace">
-            <div class="orderline mx-1" style="font-size: 130%; line-height: 1.2;">
-                <div>
-                    <span class="fw-bolder me-1" t-esc="line.quantity"/>
-                    <span class="product-name" t-esc="line.basic_name"/>
-                    <t t-if="line.attribute_value_names?.length">
-                        <t t-foreach="line.attribute_value_names" t-as="attr" t-key="attr_index">
-                            <strong> (<t t-esc="attr"/>)</strong>
+            <div class="orderline mx-1" style="font-size: 110%; line-height: 1.2;">
+                <div class="medium">
+                    <span class="fw-bolder me-2" t-esc="line.quantity"/>
+                    <span class="product-name">
+                        <t t-esc="line.basic_name"/>
+                        <t t-if="line.attribute_value_names?.length">
+                            <t t-foreach="line.attribute_value_names" t-as="attr" t-key="attr_index">
+                                <strong> (<t t-esc="attr"/>)</strong>
+                            </t>
                         </t>
-                    </t>
+                    </span>
                 </div>
                 <div t-if="line.note" class="fst-italic"
                      style="font-size: 80%; padding-left: 1.2em;">

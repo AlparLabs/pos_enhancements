@@ -1,6 +1,6 @@
 {
     'name': 'POS Mercado Pago (Alpy)',
-    'version': '19.0.3.1',
+    'version': '19.0.3.2',
     'author': 'AlparData',
     'website': 'https://www.alpardata.com.ar',
     'category': 'Sales/Point of Sale',
