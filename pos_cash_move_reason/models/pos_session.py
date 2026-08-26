@@ -1,6 +1,19 @@
 from odoo import api, models
 
 
+def _as_record_id(value):
+    """Coerce a browser-supplied id to an int, or None when it is not one.
+
+    Every other invalid-input branch in this file degrades gracefully; without
+    this, a non-numeric payload value would raise ValueError and surface as a
+    server error instead.
+    """
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return None
+
+
 class PosSession(models.Model):
     _inherit = 'pos.session'
 
@@ -19,9 +32,10 @@ class PosSession(models.Model):
         cashier on a button that is still drawn on screen.
         """
         empty = self.env['pos.cash.move.reason']
-        if not reason_id:
+        record_id = _as_record_id(reason_id)
+        if not record_id:
             return empty
-        reason = empty.sudo().browse(int(reason_id)).exists()
+        reason = empty.sudo().browse(record_id).exists()
         if not reason or not reason.active or reason.company_id != session.company_id:
             return empty
         return reason
@@ -46,11 +60,12 @@ class PosSession(models.Model):
             counterpart_partner_id = cash_reason.partner_id.id
         elif cash_reason.partner_mode == 'ask':
             counterpart_partner_id = extras.get('counterpart_partner_id')
-        if counterpart_partner_id:
+        partner_record_id = _as_record_id(counterpart_partner_id)
+        if partner_record_id:
             # exists() runs a bare SELECT with no record rules applied, so the id alone
             # proves nothing about who may use it. Partners are usually company-less and
             # shared; reject only one that is bound to a different company.
-            partner = self.env['res.partner'].sudo().browse(int(counterpart_partner_id)).exists()
+            partner = self.env['res.partner'].sudo().browse(partner_record_id).exists()
             if partner and partner.company_id.id in (False, session.company_id.id):
                 vals['pos_counterpart_partner_id'] = partner.id
         return vals

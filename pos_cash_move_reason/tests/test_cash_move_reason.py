@@ -213,3 +213,47 @@ class TestCashMoveReason(TestPoSCommon):
 
         with self.assertRaises(UserError):
             self._make_reason(partner_mode='fixed', partner_id=foreign_partner.id)
+
+    def test_an_archived_concept_is_ignored(self):
+        """The POS caches its catalogue; an archived concept must not still impute."""
+        self.open_new_session()
+        reason = self._make_reason(account_id=self.expense_account.id)
+        reason.active = False
+
+        st_line = self._cash_out(extras={'cash_move_reason_id': reason.id})
+
+        self.assertFalse(st_line.pos_cash_move_reason_id)
+        _liquidity, suspense, _other = st_line._seek_for_lines()
+        self.assertEqual(
+            suspense.account_id,
+            self.pos_session.cash_journal_id.suspense_account_id,
+        )
+
+    def test_a_malformed_concept_id_is_ignored(self):
+        """A tampered payload must degrade to the free-text flow, not raise."""
+        self.open_new_session()
+
+        st_line = self._cash_out(extras={'cash_move_reason_id': 'not-a-number'})
+
+        self.assertFalse(st_line.pos_cash_move_reason_id)
+        _liquidity, suspense, _other = st_line._seek_for_lines()
+        self.assertEqual(
+            suspense.account_id,
+            self.pos_session.cash_journal_id.suspense_account_id,
+        )
+
+    def test_a_concept_scoped_to_another_terminal_still_works(self):
+        """config_ids is a UI filter, not a security boundary: the POS caches its
+        catalogue at session open, so a mid-shift rescope must not block the cashier."""
+        self.open_new_session()
+        reason = self._make_reason(
+            account_id=self.expense_account.id,
+            config_ids=[(6, 0, [self.other_currency_config.id])],
+        )
+
+        st_line = self._cash_out(extras={'cash_move_reason_id': reason.id})
+
+        self.assertEqual(st_line.pos_cash_move_reason_id, reason)
+        _liquidity, suspense, other = st_line._seek_for_lines()
+        self.assertFalse(suspense)
+        self.assertEqual(other.account_id, self.expense_account)
