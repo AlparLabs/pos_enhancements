@@ -22,3 +22,20 @@ class TestCashMoveReason(TestPoSCommon):
     def test_fixed_contact_mode_requires_a_contact(self):
         with self.assertRaises(ValidationError):
             self._make_reason(partner_mode='fixed')
+
+    def test_concepts_are_scoped_by_point_of_sale(self):
+        shared = self._make_reason(name='VARIOS')
+        scoped = self._make_reason(
+            name='DELIVERY',
+            config_ids=[(6, 0, [self.other_currency_config.id])],
+        )
+
+        domain = self.env['pos.cash.move.reason']._load_pos_data_domain({}, self.config)
+        loaded = self.env['pos.cash.move.reason'].search(domain)
+
+        self.assertIn(shared, loaded, 'an empty config_ids must load on every terminal')
+        self.assertNotIn(scoped, loaded, 'a concept scoped to another terminal must not load')
+
+    def test_the_model_is_registered_for_pos_loading(self):
+        models = self.env['pos.session']._load_pos_data_models(self.config)
+        self.assertIn('pos.cash.move.reason', models)
