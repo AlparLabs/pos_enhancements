@@ -2,12 +2,12 @@
 <templates id="template" xml:space="preserve">
     <!--
         Hereda de point_of_sale.OrderChangeReceipt (template base de Odoo 19).
-        El agrupamiento por categoría lo hace el core vía change.group
+        El agrupamiento por grupo de cocina lo hace el core vía change.group
         (ver receiptLineGrouper.getGroup en services/pos_store.js);
         acá sólo se ajusta la presentación:
         - Encabezado en español, con el mozo asignado si existe.
         - "Mesa X" en lugar de la referencia de la orden cuando hay mesa.
-        - Encabezado de categoría estilo "► CATEGORÍA".
+        - Encabezado de bloque estilo "► GRUPO DE COCINA".
         - Las variantes de producto se muestran en negrita, en la misma línea.
     -->
     <t t-name="pos_kitchen_receipt_grouping.OrderChangeReceipt"
@@ -35,7 +35,7 @@
         </xpath>
         <xpath expr="//div[@t-foreach='data.changes.groupedData']/div[1]" position="replace">
             <div class="pos-receipt-title text-center mb-1"
-                 style="font-size: 130%; border-bottom: 2px solid black; font-weight: bold; padding: 2px 0; letter-spacing: 0.05rem;">
+                 style="font-size: 150%; border-bottom: 2px solid black; font-weight: bold; padding: 2px 0; letter-spacing: 0.05rem;">
                 &#9658; <t t-esc="group.name"/>
             </div>
         </xpath>
