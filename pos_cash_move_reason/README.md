@@ -25,6 +25,10 @@ already imputed.
 | Contact Mode | No contact / Fixed contact / Ask the cashier |
 | Points of Sale | Terminals that show the button. **Leave empty for all terminals** |
 
+In a multi-company database, Counterpart Account and Fixed Contact must belong to the
+concept's own company (a company-less contact, the usual case, is always accepted).
+Saving a concept that breaks that rule is rejected with an error.
+
 ## Behaviour
 
 - The free-text reason field keeps working exactly as before. Concepts are shortcuts,
@@ -39,8 +43,9 @@ already imputed.
 
 ## Notes
 
-Concepts are archived, never deleted: statement lines reference them with
-`ondelete='restrict'` to protect history.
+Archive concepts instead of deleting them. Once a concept has been used, the statement
+lines that reference it (`ondelete='restrict'`) block its deletion, so history cannot be
+erased by accident. A concept that was never used can still be deleted outright.
 
 The Points of Sale scoping is a **UI filter, not a security boundary**. The POS caches
 its data when the session opens, so a concept unlinked from a terminal mid-shift still
