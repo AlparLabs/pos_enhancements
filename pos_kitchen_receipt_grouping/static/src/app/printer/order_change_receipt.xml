@@ -1,57 +1,124 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <templates id="template" xml:space="preserve">
     <!--
-        Hereda de point_of_sale.OrderChangeReceipt (template base de Odoo 19).
-        El agrupamiento por grupo de cocina lo hace el core vía change.group
-        (ver receiptLineGrouper.getGroup en services/pos_store.js);
-        acá sólo se ajusta la presentación:
-        - Encabezado en español, con el mozo asignado si existe.
-        - "Mesa X" en lugar de la referencia de la orden cuando hay mesa.
-        - Encabezado de bloque estilo "► GRUPO DE COCINA".
-        - Las variantes de producto se muestran en negrita, en la misma línea.
+        Reemplaza el cuerpo de point_of_sale.OrderChangeReceipt (template base de
+        Odoo 19) por una comanda mínima. Se reemplaza entero en vez de parchear
+        con xpath sueltos porque casi no queda nada del original: el core imprime
+        preset, nombre del POS, hora, empleado, número de seguimiento y
+        referencia del pedido, y en cocina la mayor parte de eso es papel.
+
+        La comanda queda en:
+            Mozo · hora
+            Mesa X   #042
+            ► GRUPO DE COCINA
+              2 Producto (Variante)
+                  nota
+            ► OTRO GRUPO
+
+        El agrupamiento lo hace el core vía change.group (ver
+        receiptLineGrouper.getGroup en services/pos_store.js).
+
+        Sobre los tamaños: al imprimir, el core fuerza el recibo a 266px de ancho
+        con fuente base de 14px (receipt_screen.scss). La línea del core viene a
+        150% (21px), lo que deja unos 15 caracteres por renglón y parte casi
+        cualquier nombre de producto. Acá baja a 130% y, sobre todo, se saca el
+        d-flex del core: con flex, el nombre se comprimía contra la cantidad y
+        terminaba cayendo entero al renglón de abajo.
     -->
     <t t-name="pos_kitchen_receipt_grouping.OrderChangeReceipt"
        t-inherit="point_of_sale.OrderChangeReceipt"
        t-inherit-mode="extension">
-        <xpath expr="//div[hasclass('o-employee-name')]" position="replace">
-            <div class="o-employee-name" style="font-size: 78%;">
-                <span><t t-esc="data.config_name"/> : <t t-esc="data.time"/></span><br/>
-                <span>Por: <t t-esc="data.employee_name"/></span>
-                <t t-if="data.waiter_name">
-                    <br/><span>Mozo: <strong><t t-esc="data.waiter_name"/></strong></span>
-                </t>
-            </div>
-        </xpath>
-        <xpath expr="//span[hasclass('my-4')]" position="replace">
-            <span class="my-4" style="font-size: 150%;">
-                <t t-if="data.table_name">Mesa <strong><t t-esc="data.table_name"/></strong></t>
-                <t t-else="">
-                    <span class="order-ref-prefix">Orden </span><strong><t t-esc="data.pos_reference"/></strong>
-                </t>
-                <strong t-if="data.tracking_number" class="fw-light my-3">
-                    # <t t-esc="data.tracking_number"/>
-                </strong>
-            </span>
-        </xpath>
-        <xpath expr="//div[@t-foreach='data.changes.groupedData']/div[1]" position="replace">
-            <div class="pos-receipt-title text-center mb-1"
-                 style="font-size: 150%; border-bottom: 2px solid black; font-weight: bold; padding: 2px 0; letter-spacing: 0.05rem;">
-                &#9658; <t t-esc="group.name"/>
+        <xpath expr="//div[hasclass('pos-receipt')]" position="replace">
+            <div class="pos-receipt m-0 p-0 pt-3 pb-3">
+                <div class="receipt-header text-center">
+                    <div style="font-size: 78%;">
+                        <span>Mozo: <t t-esc="data.waiter_name or data.employee_name"/></span>
+                        <t t-if="data.time"> · <t t-esc="data.time"/></t>
+                    </div>
+                    <div class="fw-bolder" style="font-size: 165%; line-height: 1.15;">
+                        <t t-if="data.table_name">
+                            Mesa <t t-esc="data.table_name"/>
+                        </t>
+                        <t t-elif="data.preset_name">
+                            <t t-esc="data.preset_name"/>
+                        </t>
+                        <t t-if="data.tracking_number">
+                            <span class="ms-2">#<t t-esc="data.tracking_number"/></span>
+                        </t>
+                    </div>
+                    <div t-if="data.reprint" class="fw-bolder" style="font-size: 115%;">
+                        (DUPLICADO)
+                    </div>
+                    <div t-if="data.changes.title and data.changes.title != 'NUEVO'"
+                         class="fw-bolder"
+                         style="font-size: 140%; letter-spacing: 0.05rem;">
+                        ** <t t-esc="data.changes.title"/> **
+                    </div>
+                </div>
+                <hr style="border: none; border-top: 3px solid black; margin: 4px 0;"/>
+
+                <div class="pos-receipt-body">
+                    <t t-set="hasDataChanges"
+                       t-value="data.changes.data?.length or data.changes.groupedData or data.changes.title"/>
+                    <div t-if="hasDataChanges" class="w-100">
+                        <t t-if="data.changes.groupedData">
+                            <div t-foreach="data.changes.groupedData" t-as="group" t-key="group_index">
+                                <div class="text-center fw-bold"
+                                     t-att-class="{'mt-2': !group_first}"
+                                     style="font-size: 125%; border-bottom: 2px solid black; letter-spacing: 0.05rem;">
+                                    &#9658; <t t-esc="group.name"/>
+                                </div>
+                                <div t-foreach="group.data" t-as="line" t-key="change_index">
+                                    <t t-call="point_of_sale.OrderChangeReceiptLine"/>
+                                </div>
+                            </div>
+                        </t>
+                        <t t-else="">
+                            <div t-foreach="data.changes.data" t-as="line" t-key="change_index">
+                                <t t-call="point_of_sale.OrderChangeReceiptLine"/>
+                            </div>
+                        </t>
+                    </div>
+                    <div t-if="data.internal_note and !hasDataChanges" class="w-100 text-center">
+                        <div class="fw-bold">NOTA INTERNA</div>
+                        <div t-esc="data.internal_note"/>
+                    </div>
+                    <div t-if="data.general_customer_note and !hasDataChanges" class="w-100 text-center">
+                        <div class="fw-bold">NOTA DEL CLIENTE</div>
+                        <div t-esc="data.general_customer_note"/>
+                    </div>
+                </div>
             </div>
         </xpath>
     </t>
 
+    <!--
+        El div raíz del core usa t-attf-class (no class), así que hasclass() no
+        lo matchea: el xpath tiene que ir contra el atributo literal.
+    -->
     <t t-name="pos_kitchen_receipt_grouping.OrderChangeReceiptLine"
        t-inherit="point_of_sale.OrderChangeReceiptLine"
        t-inherit-mode="extension">
-        <!-- Variantes en negrita al lado del nombre, en vez de la lista debajo -->
-        <xpath expr="//span[hasclass('product-name')]" position="after">
-            <t t-if="line.attribute_value_names?.length">
-                <t t-foreach="line.attribute_value_names" t-as="attr" t-key="attr_index">
-                    <strong> (<t t-esc="attr"/>)</strong>
-                </t>
-            </t>
+        <xpath expr="//div[@t-attf-class]" position="replace">
+            <div class="orderline mx-1" style="font-size: 130%; line-height: 1.2;">
+                <div>
+                    <span class="fw-bolder me-1" t-esc="line.quantity"/>
+                    <span class="product-name" t-esc="line.basic_name"/>
+                    <t t-if="line.attribute_value_names?.length">
+                        <t t-foreach="line.attribute_value_names" t-as="attr" t-key="attr_index">
+                            <strong> (<t t-esc="attr"/>)</strong>
+                        </t>
+                    </t>
+                </div>
+                <div t-if="line.note" class="fst-italic"
+                     style="font-size: 80%; padding-left: 1.2em;">
+                    <t t-esc="line.note.split('\n').join(', ')"/>
+                </div>
+                <div t-if="line.customer_note" class="fst-italic"
+                     style="font-size: 80%; padding-left: 1.2em;">
+                    <t t-esc="line.customer_note"/>
+                </div>
+            </div>
         </xpath>
-        <xpath expr="//div[hasclass('ms-5')]" position="replace"/>
     </t>
 </templates>
