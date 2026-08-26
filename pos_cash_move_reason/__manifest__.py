@@ -24,6 +24,11 @@ before every account is decided.
         'security/ir.model.access.csv',
         'views/pos_cash_move_reason_views.xml',
     ],
+    'assets': {
+        'point_of_sale._assets_pos': [
+            'pos_cash_move_reason/static/src/app/**/*',
+        ],
+    },
     'installable': True,
     'application': False,
     'auto_install': False,

@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates id="template" xml:space="preserve">
+
+    <!--
+        Inserts the concept button grid just above the free-text reason field.
+        The anchor is the native <div class="form-floating"> that wraps the textarea;
+        the xpath must match that class verbatim or OWL fails to render the popup.
+    -->
+    <t t-inherit="point_of_sale.CashMovePopup" t-inherit-mode="extension" owl="1">
+        <xpath expr="//div[@class='form-floating']" position="before">
+            <div t-if="cashMoveReasons.length"
+                 class="cash-move-reasons d-flex flex-wrap gap-1 mb-2 overflow-auto"
+                 style="max-height: 8rem;">
+                <button t-foreach="cashMoveReasons" t-as="reason" t-key="reason.id"
+                        type="button"
+                        t-on-click="() => this.selectCashMoveReason(reason)"
+                        t-attf-class="btn btn-sm #{isReasonSelected(reason) ? 'btn-primary' : 'btn-outline-secondary'}">
+                    <t t-esc="reason.name"/>
+                </button>
+            </div>
+        </xpath>
+    </t>
+
+</templates>
