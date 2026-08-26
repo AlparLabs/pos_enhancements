@@ -256,6 +256,14 @@ El campo `account_id` en la vista filtra por `deprecated = False` y
 
 ## Pruebas
 
+> **Actualización tras la implementación:** el módulo terminó con **17 pruebas**, no
+> siete. Las diez adicionales cubren la restricción de contacto fijo, el registro del
+> modelo para la carga en el POS, la consistencia de compañía sobre la cuenta y el
+> contacto (que exigió activar `_check_company_auto`, sin el cual `check_company` no
+> valida nada del lado del servidor), y la frontera de confianza del servidor:
+> concepto archivado, id malformado, y un concepto desvinculado del terminal que debe
+> seguir funcionando a mitad de turno. La lista de abajo es el núcleo original.
+
 Siete pruebas Python (`TransactionCase`), llamando a `try_cash_in_out` como lo
 hace el POS:
 
