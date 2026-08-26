@@ -51,6 +51,6 @@ class PosSession(models.Model):
             # proves nothing about who may use it. Partners are usually company-less and
             # shared; reject only one that is bound to a different company.
             partner = self.env['res.partner'].sudo().browse(int(counterpart_partner_id)).exists()
-            if partner and partner.company_id in (False, session.company_id):
+            if partner and partner.company_id.id in (False, session.company_id.id):
                 vals['pos_counterpart_partner_id'] = partner.id
         return vals

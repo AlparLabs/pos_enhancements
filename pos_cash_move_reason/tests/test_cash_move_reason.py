@@ -175,3 +175,19 @@ class TestCashMoveReason(TestPoSCommon):
         })
 
         self.assertFalse(st_line.pos_counterpart_partner_id)
+
+    def test_ask_mode_accepts_a_company_less_contact(self):
+        """Partners are normally shared across companies; those must not be rejected."""
+        self.open_new_session()
+        self.assertFalse(self.supplier.company_id, 'this test needs a company-less partner')
+        reason = self._make_reason(
+            account_id=self.expense_account.id,
+            partner_mode='ask',
+        )
+
+        st_line = self._cash_out(extras={
+            'cash_move_reason_id': reason.id,
+            'counterpart_partner_id': self.supplier.id,
+        })
+
+        self.assertEqual(st_line.pos_counterpart_partner_id, self.supplier)
