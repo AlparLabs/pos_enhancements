@@ -7,6 +7,8 @@
             <list string="Kitchen Groups" editable="bottom">
                 <field name="sequence" widget="handle"/>
                 <field name="name"/>
+                <field name="company_id" groups="base.group_multi_company" optional="show"/>
+                <field name="active" column_invisible="True"/>
             </list>
         </field>
     </record>
@@ -17,9 +19,13 @@
         <field name="arch" type="xml">
             <form string="Kitchen Group">
                 <sheet>
+                    <widget name="web_ribbon" title="Archived" bg_color="text-bg-danger"
+                            invisible="active"/>
                     <group>
+                        <field name="active" invisible="1"/>
                         <field name="name"/>
                         <field name="sequence"/>
+                        <field name="company_id" groups="base.group_multi_company"/>
                     </group>
                     <notebook>
                         <page string="POS Categories" name="categories">

@@ -67,3 +67,43 @@ class TestKitchenGroup(TestPoSCommon):
         })
         self.assertEqual(product.kitchen_group_id, starters)
         self.assertEqual(product.pos_categ_ids.kitchen_group_id, mains)
+
+    def test_groups_default_to_the_current_company(self):
+        group = self.env['pos.kitchen.group'].create({'name': 'Guarniciones'})
+        self.assertEqual(group.company_id, self.env.company)
+
+    def test_the_same_name_is_allowed_in_another_company(self):
+        other = self.env['res.company'].create({'name': 'Otra Compania'})
+        self.env['pos.kitchen.group'].create({'name': 'Principales de la casa'})
+        twin = self.env['pos.kitchen.group'].create({
+            'name': 'Principales de la casa',
+            'company_id': other.id,
+        })
+        self.assertEqual(twin.company_id, other)
+
+    def test_only_own_and_shared_groups_are_loaded(self):
+        Group = self.env['pos.kitchen.group']
+        other = self.env['res.company'].create({'name': 'Otra Compania'})
+        shared = Group.create({'name': 'Compartido', 'company_id': False})
+        mine = Group.create({'name': 'Propio', 'company_id': self.config.company_id.id})
+        theirs = Group.create({'name': 'Ajeno', 'company_id': other.id})
+        loaded = Group.search(Group._load_pos_data_domain({}, self.config))
+        self.assertIn(shared, loaded)
+        self.assertIn(mine, loaded)
+        self.assertNotIn(theirs, loaded)
+
+    def test_archived_groups_are_hidden_from_the_default_search(self):
+        Group = self.env['pos.kitchen.group']
+        group = Group.create({'name': 'Temporada'})
+        group.active = False
+        self.assertNotIn(group, Group.search([]))
+        self.assertIn(group, Group.with_context(active_test=False).search([]))
+
+    def test_archiving_a_group_keeps_the_category_assignment(self):
+        group = self.env['pos.kitchen.group'].create({'name': 'Temporada alta'})
+        category = self.env['pos.category'].create({
+            'name': 'Estacionales',
+            'kitchen_group_id': group.id,
+        })
+        group.active = False
+        self.assertEqual(category.kitchen_group_id, group)
