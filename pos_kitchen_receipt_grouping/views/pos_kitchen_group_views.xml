@@ -32,7 +32,6 @@
                             <field name="category_ids">
                                 <list>
                                     <field name="name"/>
-                                    <field name="kitchen_sequence"/>
                                 </list>
                             </field>
                         </page>

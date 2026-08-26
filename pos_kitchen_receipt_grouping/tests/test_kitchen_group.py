@@ -38,7 +38,6 @@ class TestKitchenGroup(TestPoSCommon):
     def test_category_kitchen_group_travels_to_the_pos(self):
         fields = self.env['pos.category']._load_pos_data_fields(self.config)
         self.assertIn('kitchen_group_id', fields)
-        self.assertIn('kitchen_sequence', fields)
 
     def test_category_ids_is_the_inverse_of_kitchen_group_id(self):
         group = self.env['pos.kitchen.group'].create({'name': 'Entradas', 'sequence': 10})

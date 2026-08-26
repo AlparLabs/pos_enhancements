@@ -90,9 +90,9 @@ patch(PosStore.prototype, {
      *    y el combo no se lleva el ancho del ticket.
      *  - Merge identical lines (same product, name, notes and variants) by
      *    summing quantities.
-     *  - Ordenar las líneas por la secuencia de cocina de su categoría, para
-     *    controlar el orden dentro de cada bloque (el core respeta el orden del
-     *    array). Las líneas que comparten secuencia conservan el orden de carga.
+     *  - Mantener juntos los hijos de un mismo combo. Dentro del bloque las
+     *    líneas salen en el orden en que se cargaron; lo único que se reordena
+     *    es lo que quedó separado de su combo.
      * Also translate the receipt title to Spanish.
      */
     async prepareReceiptGroupedData(data) {
@@ -139,9 +139,7 @@ patch(PosStore.prototype, {
                 byKey[key] = entry;
                 processed.push(entry);
             }
-            data.changes.data = sortChangeLines(processed, (change) =>
-                this.models["product.product"]?.get(change.product_id)
-            );
+            data.changes.data = sortChangeLines(processed);
         }
         if (data.changes?.title) {
             data.changes.title = RECEIPT_LABELS[data.changes.title] || data.changes.title;

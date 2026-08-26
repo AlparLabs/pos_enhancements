@@ -229,3 +229,37 @@ solo tiene `order_id`, `line_ids`, `index`, `fired` y `fired_date`, y
 entre categorías POS y courses en el core**, ni asignación automática. El modelo
 `pos.course` con `category_ids` es de `pos_restaurant_courses`, un backport 18.0
 de este repo, no del core.
+
+---
+
+## Anexo 2 (2026-08-26): se elimina `kitchen_sequence`
+
+El diseño original conservaba `pos.category.kitchen_sequence` para ordenar las
+líneas dentro de cada bloque. Al usarlo apareció el problema: es un campo de la
+categoría POS decidiendo un orden que el cocinero **no puede ver**, porque el
+ticket imprime el grupo y no la categoría. Un orden invisible no se explica, y
+además partía los combos — dos hijos de un mismo menú en categorías con
+secuencias distintas salían separados sin motivo aparente.
+
+El único eje de orden pasa a ser el grupo de cocina:
+
+- La secuencia del grupo ordena los bloques.
+- Dentro del bloque, las líneas salen en el orden en que el mozo las cargó.
+- Lo único que se reordena es la contigüidad de los combos: los hijos se anclan
+  a la posición del primero para que no se intercalen con productos sueltos.
+
+Consecuencias:
+
+- `kitchen_sequence` se elimina del modelo, de las vistas y de los tests.
+  `migrations/19.0.3.0.0/post-migration.py` borra la columna, porque Odoo no la
+  saca sola cuando desaparece el campo.
+- `sortChangeLines` deja de necesitar el producto: su firma pasa de
+  `(changes, getProduct)` a `(changes)`.
+- El fallback de una categoría sin grupo pasa a ordenarse por el `sequence`
+  propio de la categoría, que es un campo del core y ya viaja al POS.
+- Se pierde la posibilidad de decir "dentro de Principales, las hamburguesas
+  antes que las pastas". Es deliberado: para eso están los grupos.
+
+Se descartó mostrar la categoría como subtítulo dentro del bloque
+(`Grupo > Categoría > productos`). El objetivo de los grupos es justamente que
+la categoría POS no aparezca en la comanda.

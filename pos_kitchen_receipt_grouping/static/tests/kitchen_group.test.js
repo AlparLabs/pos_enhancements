@@ -11,7 +11,7 @@ describe("resolveKitchenGroup", () => {
     test("uses the group of the product when it has one", () => {
         const product = {
             kitchen_group_id: STARTERS,
-            pos_categ_ids: [{ name: "Minutas", kitchen_group_id: MAINS, kitchen_sequence: 5 }],
+            pos_categ_ids: [{ name: "Minutas", kitchen_group_id: MAINS, sequence: 5 }],
         };
         expect(resolveKitchenGroup(product)).toEqual({ name: "Entradas", index: 10 });
     });
@@ -19,21 +19,21 @@ describe("resolveKitchenGroup", () => {
     test("reads the product group through product_tmpl_id when not on the variant", () => {
         const product = {
             product_tmpl_id: { kitchen_group_id: STARTERS },
-            pos_categ_ids: [{ name: "Minutas", kitchen_group_id: MAINS, kitchen_sequence: 5 }],
+            pos_categ_ids: [{ name: "Minutas", kitchen_group_id: MAINS, sequence: 5 }],
         };
         expect(resolveKitchenGroup(product)).toEqual({ name: "Entradas", index: 10 });
     });
 
     test("falls back to the group of the first POS category", () => {
         const product = {
-            pos_categ_ids: [{ name: "Minutas", kitchen_group_id: MAINS, kitchen_sequence: 5 }],
+            pos_categ_ids: [{ name: "Minutas", kitchen_group_id: MAINS, sequence: 5 }],
         };
         expect(resolveKitchenGroup(product)).toEqual({ name: "Principales", index: 20 });
     });
 
     test("falls back to the category itself when it has no group", () => {
         const product = {
-            pos_categ_ids: [{ name: "Bebidas", kitchen_sequence: 40 }],
+            pos_categ_ids: [{ name: "Bebidas", sequence: 40 }],
         };
         expect(resolveKitchenGroup(product)).toEqual({ name: "Bebidas", index: 40 });
     });
@@ -62,7 +62,7 @@ describe("resolveKitchenGroup", () => {
     test("ignores a group record that has no name", () => {
         const product = {
             kitchen_group_id: { sequence: 3 },
-            pos_categ_ids: [{ name: "Bebidas", kitchen_sequence: 40 }],
+            pos_categ_ids: [{ name: "Bebidas", sequence: 40 }],
         };
         expect(resolveKitchenGroup(product)).toEqual({ name: "Bebidas", index: 40 });
     });
@@ -70,8 +70,8 @@ describe("resolveKitchenGroup", () => {
     test("uses only the first POS category, ignoring the rest", () => {
         const product = {
             pos_categ_ids: [
-                { name: "Bebidas", kitchen_sequence: 40 },
-                { name: "Minutas", kitchen_group_id: MAINS, kitchen_sequence: 5 },
+                { name: "Bebidas", sequence: 40 },
+                { name: "Minutas", kitchen_group_id: MAINS, sequence: 5 },
             ],
         };
         expect(resolveKitchenGroup(product)).toEqual({ name: "Bebidas", index: 40 });
@@ -79,107 +79,49 @@ describe("resolveKitchenGroup", () => {
 });
 
 describe("sortChangeLines", () => {
-    const PASTAS = { name: "Pastas", kitchen_sequence: 30 };
-    const BURGERS = { name: "Hamburguesas", kitchen_sequence: 10 };
-    const URGENTE = { name: "Urgente", kitchen_sequence: 0 };
-
-    function products(map) {
-        return (change) => map[change.product_id];
-    }
-
-    test("orders lines by the kitchen sequence of their category", () => {
-        const changes = [
-            { product_id: 1, basic_name: "Arroz con pollo" },
-            { product_id: 2, basic_name: "Zeta burger" },
-        ];
-        const sorted = sortChangeLines(
-            changes,
-            products({ 1: { pos_categ_ids: [PASTAS] }, 2: { pos_categ_ids: [BURGERS] } })
-        );
-        expect(sorted.map((c) => c.basic_name)).toEqual(["Zeta burger", "Arroz con pollo"]);
+    test("keeps the load order", () => {
+        const changes = [{ basic_name: "Zeta" }, { basic_name: "Arroz" }, { basic_name: "Medio" }];
+        expect(sortChangeLines(changes).map((c) => c.basic_name)).toEqual([
+            "Zeta", "Arroz", "Medio",
+        ]);
     });
 
-    test("keeps the load order within the same kitchen sequence", () => {
+    test("pulls the children of a combo next to the first one", () => {
         const changes = [
-            { product_id: 1, basic_name: "Triple" },
-            { product_id: 2, basic_name: "Doble cheddar" },
+            { basic_name: "Milanesa", combo_parent_uuid: "c1" },
+            { basic_name: "Suelto" },
+            { basic_name: "Papas", combo_parent_uuid: "c1" },
         ];
-        const sorted = sortChangeLines(
-            changes,
-            products({ 1: { pos_categ_ids: [BURGERS] }, 2: { pos_categ_ids: [BURGERS] } })
-        );
-        expect(sorted.map((c) => c.basic_name)).toEqual(["Triple", "Doble cheddar"]);
-    });
-
-    test("keeps identical lines in their original order", () => {
-        const changes = [
-            { product_id: 1, basic_name: "Doble cheddar", uuid: "a" },
-            { product_id: 1, basic_name: "Doble cheddar", uuid: "b" },
-        ];
-        const sorted = sortChangeLines(changes, products({ 1: { pos_categ_ids: [BURGERS] } }));
-        expect(sorted.map((c) => c.uuid)).toEqual(["a", "b"]);
-    });
-
-    test("respects a kitchen sequence of 0 instead of falling back to the default", () => {
-        const changes = [
-            { product_id: 1, basic_name: "Doble cheddar" },
-            { product_id: 2, basic_name: "Pedido urgente" },
-        ];
-        const sorted = sortChangeLines(
-            changes,
-            products({ 1: { pos_categ_ids: [BURGERS] }, 2: { pos_categ_ids: [URGENTE] } })
-        );
-        expect(sorted.map((c) => c.basic_name)).toEqual(["Pedido urgente", "Doble cheddar"]);
-    });
-
-    test("gives a line with an unknown product the default sequence", () => {
-        const changes = [
-            { product_id: 9, basic_name: "Fantasma" },
-            { product_id: 1, basic_name: "Doble cheddar" },
-        ];
-        const sorted = sortChangeLines(changes, products({ 1: { pos_categ_ids: [BURGERS] } }));
-        expect(sorted.map((c) => c.basic_name)).toEqual(["Fantasma", "Doble cheddar"]);
-    });
-
-    test("returns an empty array unchanged", () => {
-        expect(sortChangeLines([], () => undefined)).toEqual([]);
-    });
-
-    test("does not mutate the array it receives", () => {
-        const changes = [
-            { product_id: 1, basic_name: "Zeta" },
-            { product_id: 2, basic_name: "Arroz" },
-        ];
-        sortChangeLines(
-            changes,
-            products({ 1: { pos_categ_ids: [PASTAS] }, 2: { pos_categ_ids: [BURGERS] } })
-        );
-        expect(changes.map((c) => c.basic_name)).toEqual(["Zeta", "Arroz"]);
-    });
-});
-
-describe("sortChangeLines with combos", () => {
-    const BURGERS = { name: "Hamburguesas", kitchen_sequence: 10 };
-    const products = (map) => (change) => map[change.product_id];
-    const all = { 1: { pos_categ_ids: [BURGERS] } };
-
-    test("keeps the children of a combo together", () => {
-        const changes = [
-            { product_id: 1, basic_name: "Milanesa", combo_parent_uuid: "c1" },
-            { product_id: 1, basic_name: "Suelto" },
-            { product_id: 1, basic_name: "Papas", combo_parent_uuid: "c1" },
-        ];
-        const sorted = sortChangeLines(changes, products(all));
-        expect(sorted.map((c) => c.basic_name)).toEqual(["Milanesa", "Papas", "Suelto"]);
+        expect(sortChangeLines(changes).map((c) => c.basic_name)).toEqual([
+            "Milanesa", "Papas", "Suelto",
+        ]);
     });
 
     test("keeps two different combos apart", () => {
         const changes = [
-            { product_id: 1, basic_name: "A1", combo_parent_uuid: "c1" },
-            { product_id: 1, basic_name: "B1", combo_parent_uuid: "c2" },
-            { product_id: 1, basic_name: "A2", combo_parent_uuid: "c1" },
+            { basic_name: "A1", combo_parent_uuid: "c1" },
+            { basic_name: "B1", combo_parent_uuid: "c2" },
+            { basic_name: "A2", combo_parent_uuid: "c1" },
         ];
-        const sorted = sortChangeLines(changes, products(all));
-        expect(sorted.map((c) => c.basic_name)).toEqual(["A1", "A2", "B1"]);
+        expect(sortChangeLines(changes).map((c) => c.basic_name)).toEqual(["A1", "A2", "B1"]);
+    });
+
+    test("keeps identical lines in their original order", () => {
+        const changes = [{ uuid: "a" }, { uuid: "b" }];
+        expect(sortChangeLines(changes).map((c) => c.uuid)).toEqual(["a", "b"]);
+    });
+
+    test("returns an empty array unchanged", () => {
+        expect(sortChangeLines([])).toEqual([]);
+    });
+
+    test("does not mutate the array it receives", () => {
+        const changes = [
+            { basic_name: "Milanesa", combo_parent_uuid: "c1" },
+            { basic_name: "Suelto" },
+            { basic_name: "Papas", combo_parent_uuid: "c1" },
+        ];
+        sortChangeLines(changes);
+        expect(changes.map((c) => c.basic_name)).toEqual(["Milanesa", "Suelto", "Papas"]);
     });
 });

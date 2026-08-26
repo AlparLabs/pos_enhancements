@@ -54,32 +54,30 @@ export function resolveKitchenGroup(product) {
     if (fromCateg) {
         return fromCateg;
     }
-    return { name: categ.name, index: toIndex(categ.kitchen_sequence) };
+    // Categoría sin grupo asignado: se imprime bajo su propio nombre, ordenada
+    // por el `sequence` de la categoría, que es un campo del core y ya viaja al
+    // POS. Es lo que hace que el ticket salga igual que antes hasta que se
+    // asignen los grupos.
+    return { name: categ.name, index: toIndex(categ.sequence) };
 }
 
 /**
- * Secuencia de cocina de un producto: la de su primera categoría POS.
- */
-export function kitchenSequenceOf(product) {
-    return toIndex(firstCategoryOf(product)?.kitchen_sequence);
-}
-
-/**
- * Ordena las líneas por la secuencia de cocina de su categoría, conservando el
- * orden de carga entre las que comparten secuencia. El core respeta el orden del
- * array dentro de cada bloque, así que ordenar acá alcanza para controlar el
- * orden de las líneas impresas.
+ * Ordena las líneas dentro de cada bloque.
  *
- * Los hijos de un mismo combo se mantienen juntos: todos se anclan a la posición
- * del primero, así no se intercalan con productos sueltos que se cargaron en el
- * medio. La secuencia de cocina manda igual, así que si dos hijos del mismo
- * combo pertenecen a categorías con secuencia distinta, siguen separándose.
+ * El único eje de orden del ticket es el grupo de cocina: la secuencia del grupo
+ * ordena los bloques y, adentro, las líneas salen en el orden en que el mozo las
+ * cargó. La categoría POS no ordena nada, porque no se imprime y un orden que no
+ * se ve no se puede explicar.
+ *
+ * Lo único que se corrige es la contigüidad de los combos: los hijos de un mismo
+ * combo se anclan a la posición del primero, así no se intercalan con productos
+ * sueltos cargados en el medio. El core respeta el orden del array dentro de
+ * cada bloque, así que ordenar acá alcanza.
  *
  * @param {Array} changes
- * @param {(change: object) => object | undefined} getProduct
  * @returns {Array} copia ordenada; no muta el array recibido
  */
-export function sortChangeLines(changes, getProduct) {
+export function sortChangeLines(changes) {
     const comboAnchor = new Map();
     changes.forEach((change, position) => {
         const combo = change?.combo_parent_uuid;
@@ -91,13 +89,10 @@ export function sortChangeLines(changes, getProduct) {
         .map((change, position) => ({
             change,
             position,
-            sequence: kitchenSequenceOf(getProduct(change)),
             anchor: change?.combo_parent_uuid
                 ? comboAnchor.get(change.combo_parent_uuid)
                 : position,
         }))
-        .sort(
-            (a, b) => a.sequence - b.sequence || a.anchor - b.anchor || a.position - b.position
-        )
+        .sort((a, b) => a.anchor - b.anchor || a.position - b.position)
         .map((entry) => entry.change);
 }

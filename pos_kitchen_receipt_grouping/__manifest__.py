@@ -7,9 +7,8 @@
     'description': """
         This module groups the POS kitchen receipt by Kitchen Group, a configurable
         concept (Starters, Mains, Desserts, Extras) assigned on the POS Category and
-        optionally overridden per product. Blocks are ordered by the group sequence.
-        Inside a block, lines are ordered by the category's Kitchen Sequence, and the
-        ones sharing a sequence keep the order they were entered in.
+        optionally overridden per product. Blocks are ordered by the group sequence,
+        and inside a block the lines keep the order they were entered in.
         Categories without a group keep printing under their own name, so the ticket
         looks exactly as before until groups are assigned.
         Combos are decomposed so the sub-products are printed under their respective

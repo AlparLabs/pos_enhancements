@@ -7,7 +7,6 @@
         <field name="arch" type="xml">
             <xpath expr="//field[@name='name']" position="after">
                 <field name="kitchen_group_id"/>
-                <field name="kitchen_sequence"/>
             </xpath>
         </field>
     </record>
@@ -19,7 +18,6 @@
         <field name="arch" type="xml">
             <xpath expr="//field[@name='sequence']" position="after">
                 <field name="kitchen_group_id" optional="show"/>
-                <field name="kitchen_sequence" optional="show"/>
             </xpath>
         </field>
     </record>
