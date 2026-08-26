@@ -22,6 +22,7 @@ before every account is decided.
     'depends': ['point_of_sale'],
     'data': [
         'security/ir.model.access.csv',
+        'views/pos_cash_move_reason_views.xml',
     ],
     'installable': True,
     'application': False,
