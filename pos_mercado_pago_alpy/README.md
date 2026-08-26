@@ -38,3 +38,16 @@ Add the new payment method to your POS configuration.
 
 ## Dependencies
 - `point_of_sale`
+
+## Not included: bank reconciliation
+
+This module charges payments. It does **not** fetch settlement data (net amount,
+fees, release date) from the Mercado Pago API.
+
+That used to live here and ran during POS session closing, where it added a
+serial HTTP call per payment to the close. It now lives in the separate
+`pos_mercado_pago_reconciliation` add-on, which fetches the same data from a
+scheduled job instead, off the closing path.
+
+Payments still record `mp_payment_id` and `mp_external_reference` -- the add-on
+needs both to look a payment up.

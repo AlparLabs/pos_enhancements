@@ -82,8 +82,13 @@ from . import pos_payment
 
 - [ ] **Step 3: Verify no dangling reference**
 
-Run: `grep -rn "pos_session" pos_mercado_pago_alpy/`
-Expected: **no matches at all.** If anything matches, stop and report it — something else referenced that module and this plan did not account for it.
+Run: `grep -rnE "import pos_session|models\.pos_session|action_pos_session_closing_control" pos_mercado_pago_alpy/`
+Expected: **no matches.** If anything matches, stop and report it — something else referenced that module and this plan did not account for it.
+
+Do **not** grep for the bare string `pos_session`: the webhook controller uses a local
+variable named `pos_session_sudo` and the payment JS reads `this.pos.pos_session`,
+neither of which has anything to do with the deleted module. A bare grep returns 13
+false positives and tells you nothing.
 
 Then: `C:\Python314\python.exe -m py_compile pos_mercado_pago_alpy/models/__init__.py`
 Expected: no output, exit 0.
