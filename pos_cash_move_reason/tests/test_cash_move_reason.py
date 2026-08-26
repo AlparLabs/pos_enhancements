@@ -92,3 +92,52 @@ class TestCashMoveReason(TestPoSCommon):
         )
         self.assertFalse(st_line.pos_cash_move_reason_id)
         self.assertFalse(st_line.pos_counterpart_partner_id)
+
+    def test_fixed_contact_lands_only_on_the_counterpart_line(self):
+        self.open_new_session()
+        reason = self._make_reason(
+            account_id=self.expense_account.id,
+            partner_mode='fixed',
+            partner_id=self.supplier.id,
+        )
+
+        st_line = self._cash_out(extras={'cash_move_reason_id': reason.id})
+
+        liquidity, _suspense, other = st_line._seek_for_lines()
+        self.assertEqual(other.partner_id, self.supplier)
+        self.assertEqual(liquidity.partner_id, self.env.user.partner_id,
+                         'the cashier must stay on the cash line')
+        self.assertEqual(st_line.partner_id, self.env.user.partner_id,
+                         'the cashier must stay on the statement line')
+
+    def test_ask_mode_takes_the_contact_from_the_payload(self):
+        self.open_new_session()
+        reason = self._make_reason(
+            account_id=self.expense_account.id,
+            partner_mode='ask',
+        )
+
+        st_line = self._cash_out(extras={
+            'cash_move_reason_id': reason.id,
+            'counterpart_partner_id': self.supplier.id,
+        })
+
+        _liquidity, _suspense, other = st_line._seek_for_lines()
+        self.assertEqual(other.partner_id, self.supplier)
+
+    def test_none_mode_ignores_an_injected_contact(self):
+        """The payload comes from the browser; only 'ask' mode may supply a contact."""
+        self.open_new_session()
+        reason = self._make_reason(
+            account_id=self.expense_account.id,
+            partner_mode='none',
+        )
+
+        st_line = self._cash_out(extras={
+            'cash_move_reason_id': reason.id,
+            'counterpart_partner_id': self.supplier.id,
+        })
+
+        self.assertFalse(st_line.pos_counterpart_partner_id)
+        _liquidity, _suspense, other = st_line._seek_for_lines()
+        self.assertEqual(other.partner_id, self.env.user.partner_id)

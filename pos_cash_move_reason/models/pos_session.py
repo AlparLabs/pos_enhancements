@@ -40,4 +40,14 @@ class PosSession(models.Model):
             # Not a stored field: account.bank.statement.line.create() pops this key and
             # uses it in place of the journal's suspense account.
             vals['counterpart_account_id'] = cash_reason.account_id.id
+
+        counterpart_partner_id = False
+        if cash_reason.partner_mode == 'fixed':
+            counterpart_partner_id = cash_reason.partner_id.id
+        elif cash_reason.partner_mode == 'ask':
+            counterpart_partner_id = extras.get('counterpart_partner_id')
+        if counterpart_partner_id:
+            partner = self.env['res.partner'].sudo().browse(int(counterpart_partner_id)).exists()
+            if partner:
+                vals['pos_counterpart_partner_id'] = partner.id
         return vals

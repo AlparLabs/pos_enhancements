@@ -21,3 +21,13 @@ class AccountBankStatementLine(models.Model):
         help="Contact written on the counterpart journal item. Distinct from the statement "
              "line's partner, which POS uses for the cashier.",
     )
+
+    def _prepare_move_line_default_vals(self, counterpart_account_id=None):
+        vals_list = super()._prepare_move_line_default_vals(counterpart_account_id)
+        # vals_list[0] is the liquidity (cash) line, vals_list[1] the counterpart.
+        # Core copies the statement line's partner to both, and in POS that partner is
+        # the cashier. Overwriting only the counterpart keeps both traces: who took the
+        # money out, and who it was paid to.
+        if self.pos_counterpart_partner_id and len(vals_list) > 1:
+            vals_list[1]['partner_id'] = self.pos_counterpart_partner_id.id
+        return vals_list
