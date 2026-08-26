@@ -1,6 +1,6 @@
 {
     'name': 'POS Concept Invoice',
-    'version': '19.0.2.0.0',
+    'version': '19.0.2.0.1',
     'category': 'Sales/Point of Sale',
     'summary': 'Generate a single-line concept invoice from the POS Ticket Screen',
     'description': """

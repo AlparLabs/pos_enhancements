@@ -1,6 +1,6 @@
 {
     'name': 'POS Session Control Report',
-    'version': '19.0.1.0.1',
+    'version': '19.0.1.1.0',
     'category': 'Sales/Point of Sale',
     'summary': 'Customised POS closing receipt and slim session-control PDF.',
     'description': """
@@ -27,6 +27,7 @@
         'point_of_sale._assets_pos': [
             'pos_session_control_report/static/src/app/closing_popup/closing_popup_patch.js',
             'pos_session_control_report/static/src/app/closing_popup/closing_popup_patch.xml',
+            'pos_session_control_report/static/src/app/sale_details_report/sales_detail_report_patch.xml',
         ],
     },
     'installable': True,

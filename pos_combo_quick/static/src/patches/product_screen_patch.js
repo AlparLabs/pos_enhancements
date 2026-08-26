@@ -74,35 +74,47 @@ patch(ProductScreen.prototype, {
             .map((combo) => ({
                 id: combo.id,
                 name: combo.name,
-                combo_item_ids: (combo.combo_item_ids || []).map((item) => {
-                    const attribute_lines = (item.product_id.attribute_line_ids || [])
-                        .filter((line) => {
-                            const vals = line.product_template_value_ids || [];
-                            return (
-                                line.attribute_id?.create_variant !== "always" &&
-                                vals.length > 1 &&
-                                vals.some((v) => !v.is_custom)
-                            );
-                        })
-                        .map((line) => ({
-                            id: line.id,
-                            name: line.attribute_id?.name || "",
-                            values: (line.product_template_value_ids || [])
-                                .filter((v) => !v.is_custom)
-                                .map((v) => ({
-                                    id: v.id,
-                                    name: v.name,
-                                    price_extra: v.price_extra || 0,
-                                })),
-                        }));
-                    return {
-                        id: item.id,
-                        name: item.product_id.display_name,
-                        extra_price: item.extra_price || 0,
-                        _record: item,
-                        attribute_lines,
-                    };
-                }),
+                // Items are displayed A-Z by product name. product.combo.item has no
+                // sequence field (nor _order), so the backend always hands them over in
+                // creation order. Copy the array before sorting: sorting the relational
+                // x2many in place would also reorder it for the native combo flow.
+                combo_item_ids: [...(combo.combo_item_ids || [])]
+                    .sort((a, b) =>
+                        (a.product_id.display_name || "").localeCompare(
+                            b.product_id.display_name || "",
+                            undefined,
+                            { numeric: true, sensitivity: "base" }
+                        )
+                    )
+                    .map((item) => {
+                        const attribute_lines = (item.product_id.attribute_line_ids || [])
+                            .filter((line) => {
+                                const vals = line.product_template_value_ids || [];
+                                return (
+                                    line.attribute_id?.create_variant !== "always" &&
+                                    vals.length > 1 &&
+                                    vals.some((v) => !v.is_custom)
+                                );
+                            })
+                            .map((line) => ({
+                                id: line.id,
+                                name: line.attribute_id?.name || "",
+                                values: (line.product_template_value_ids || [])
+                                    .filter((v) => !v.is_custom)
+                                    .map((v) => ({
+                                        id: v.id,
+                                        name: v.name,
+                                        price_extra: v.price_extra || 0,
+                                    })),
+                            }));
+                        return {
+                            id: item.id,
+                            name: item.product_id.display_name,
+                            extra_price: item.extra_price || 0,
+                            _record: item,
+                            attribute_lines,
+                        };
+                    }),
             }));
 
         if (!comboGroups.length) {
