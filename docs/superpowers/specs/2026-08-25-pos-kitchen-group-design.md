@@ -166,3 +166,66 @@ Siguiendo el patrón de `pos_product_list_view`.
   solo afectan cómo se imprime, no adónde.
 - No se toca `pos_restaurant_courses` ni el firing de tandas.
 - No se agrega el grupo a la interfaz de venta ni al KDS.
+
+---
+
+## Anexo (2026-08-26): comanda mínima
+
+El ticket de cocina se rediseñó entero. El core imprime preset, nombre del POS,
+hora, empleado, número de seguimiento y referencia del pedido; en cocina la mayor
+parte de eso es papel. La comanda queda en:
+
+```
+Mozo: Juan · 20:45          78%
+Mesa 12   #042              165%, negrita
+────────────────────────
+► PRINCIPALES              125%, negrita
+ 2 Doble cheddar (Sin cebolla)
+     sin sal                80%, itálica
+► POSTRES
+ 1 Flan
+```
+
+Decisiones:
+
+- El título del cambio (`NUEVO` / `CANCELADO` / `CAMBIO DE NOTA`) se imprime solo
+  cuando **no** es `NUEVO`. El ticket normal ahorra la línea; una cancelación
+  sigue gritando.
+- El número es el `tracking_number` (el corto, el que se canta), no el
+  `pos_reference`.
+- La hora va en la misma línea que el mozo, sin renglón propio.
+- Cuando no hay mesa se muestra el `preset_name` en su lugar, que es lo que
+  distingue un mostrador o un delivery.
+- Las notas de línea y las variantes se conservan: son instrucciones de cocina,
+  no ruido.
+
+### Por qué se cortaba la línea del producto
+
+Al imprimir, el core fuerza el recibo a **266px de ancho con fuente base de
+14px** (`point_of_sale/static/src/app/screens/receipt_screen/receipt_screen.scss`).
+La línea del core viene a `font-size: 150%`, o sea 21px: entran unos 15
+caracteres. Encima, `point_of_sale.OrderChangeReceiptLine` arma la línea con
+`div.d-flex`, y este módulo insertaba las variantes en negrita como hermanas
+dentro de ese mismo flex. El `span` del nombre se comprimía y su texto caía al
+renglón siguiente, dejando la cantidad sola arriba.
+
+La comanda nueva baja la línea a `130%` y arma el renglón con flujo de texto
+normal, sin flex, así el nombre envuelve debajo de sí mismo en vez de ser
+empujado entero.
+
+### Nota sobre los xpath
+
+El div raíz de `OrderChangeReceiptLine` usa `t-attf-class`, no `class`, así que
+`hasclass('orderline')` **no** lo matchea: hay que ir contra el atributo literal
+con `//div[@t-attf-class]`. El de `OrderChangeReceipt` sí usa `class`, así que
+`hasclass('pos-receipt')` funciona. Ambos matchean exactamente un nodo del core
+19; verificado parseando el template del fuente local.
+
+### Courses en Odoo 19
+
+Se verificó contra `D:\Repositorios Odoo\odoo-19.0`: `restaurant.order.course`
+solo tiene `order_id`, `line_ids`, `index`, `fired` y `fired_date`, y
+`pos.order.line.course_id` se asigna a mano por pedido. **No hay ninguna relación
+entre categorías POS y courses en el core**, ni asignación automática. El modelo
+`pos.course` con `category_ids` es de `pos_restaurant_courses`, un backport 18.0
+de este repo, no del core.
