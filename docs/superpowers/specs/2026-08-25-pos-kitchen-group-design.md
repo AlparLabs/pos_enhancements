@@ -105,12 +105,16 @@ El core ordena los bloques por `group.index` y respeta el orden del array dentro
 de cada bloque. Se agrega al mismo archivo:
 
 ```js
-sortChangeLines(changes, getSortKey) -> changes ordenadas
+sortChangeLines(changes, getProduct) -> changes ordenadas
 ```
 
-Sort estable por `(kitchen_sequence de la categoría, nombre de la línea)`,
-aplicado sobre `data.changes.data` en `prepareReceiptGroupedData` antes de
-llamar a `super`.
+Sort por `kitchen_sequence` de la categoría, conservando el orden de carga entre
+las líneas que comparten secuencia. Se aplica sobre `data.changes.data` en
+`prepareReceiptGroupedData` antes de llamar a `super`.
+
+El orden de carga se eligió por sobre un desempate alfabético: es el que la
+cocina ya ve hoy, y evita que el resultado dependa del idioma del navegador de
+cada terminal, como pasaría con `localeCompare`.
 
 Ambas funciones salen de `pos_store.js` a propósito: ese archivo ya concentra
 cinco responsabilidades (descomposición de combos, fusión de líneas, traducción,

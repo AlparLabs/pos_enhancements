@@ -1132,3 +1132,34 @@ git commit -m "feat(pos_kitchen_receipt_grouping): grupos por defecto y bump a 1
 - El ruteo a impresoras sigue basándose en la categoría POS (comportamiento del core). Los grupos afectan cómo se imprime, no adónde.
 - No se toca `pos_restaurant_courses` ni el firing de tandas.
 - El grupo no se expone en la interfaz de venta ni en el KDS.
+
+---
+
+## Cambios respecto de este plan durante la ejecución
+
+El plan se ejecutó completo. Tres desvíos, todos deliberados:
+
+1. **Orden dentro del bloque.** El plan ordenaba por `(kitchen_sequence, nombre)`
+   con `localeCompare`. Se cambió a `(kitchen_sequence, orden de carga)`: es el
+   orden que la cocina ya ve hoy y elimina la dependencia del locale del
+   navegador de cada terminal. `kitchenSortKey` se reemplazó por
+   `kitchenSequenceOf`. Ver commit `fefcc31`.
+2. **Tests que no discriminaban.** Una revisión con mutation testing encontró que
+   seis de nueve mutantes sobrevivían al suite original. Se reescribieron los
+   fixtures del test de orden, se agregó el caso de "solo la primera categoría" y
+   los tests de fallback pasaron a afirmar contra los literales `"Otros"`/`999999`
+   en vez de contra las constantes importadas. Ver commit `b239367`.
+3. **`@tagged('post_install', '-at_install')`** en la clase de test, que el plan
+   omitía; sin él la clase corre durante la instalación del módulo, cuando el
+   fixture contable de `TestPoSCommon` puede no estar listo. También se sacó
+   `translate=True` de `pos.kitchen.group.name`, porque un campo traducible se
+   guarda como jsonb y el índice `unique (name)` no habría funcionado como
+   promete su mensaje de error. Ver commit `3bda3ff`.
+
+Se agregó `firstCategoryOf` como helper compartida entre `resolveKitchenGroup` y
+`kitchenSequenceOf`, para explicitar el fallback vía `product_tmpl_id` en vez de
+depender de la delegación implícita de `product.product`.
+
+**Nada se ejecutó contra Odoo.** El entorno de desarrollo no tenía Odoo
+instalado. La lógica pura de `kitchen_group.js` sí se verificó con Node (17 casos
+más dos mutantes), pero los tests Python y Hoot quedan pendientes de correr.
