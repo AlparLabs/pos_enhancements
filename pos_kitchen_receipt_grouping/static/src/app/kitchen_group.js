@@ -70,17 +70,70 @@ export function kitchenSequenceOf(product) {
  * array dentro de cada bloque, así que ordenar acá alcanza para controlar el
  * orden de las líneas impresas.
  *
+ * Los hijos de un mismo combo se mantienen juntos: todos se anclan a la posición
+ * del primero, así no se intercalan con productos sueltos que se cargaron en el
+ * medio. La secuencia de cocina manda igual, así que si dos hijos del mismo
+ * combo pertenecen a categorías con secuencia distinta, siguen separándose.
+ *
  * @param {Array} changes
  * @param {(change: object) => object | undefined} getProduct
  * @returns {Array} copia ordenada; no muta el array recibido
  */
 export function sortChangeLines(changes, getProduct) {
+    const comboAnchor = new Map();
+    changes.forEach((change, position) => {
+        const combo = change?.combo_parent_uuid;
+        if (combo && !comboAnchor.has(combo)) {
+            comboAnchor.set(combo, position);
+        }
+    });
     return changes
         .map((change, position) => ({
             change,
             position,
             sequence: kitchenSequenceOf(getProduct(change)),
+            anchor: change?.combo_parent_uuid
+                ? comboAnchor.get(change.combo_parent_uuid)
+                : position,
         }))
-        .sort((a, b) => a.sequence - b.sequence || a.position - b.position)
+        .sort(
+            (a, b) => a.sequence - b.sequence || a.anchor - b.anchor || a.position - b.position
+        )
         .map((entry) => entry.change);
+}
+
+/**
+ * Inserta una línea sintética con el nombre del combo antes de cada corrida de
+ * hijos del mismo combo, para no repetir "[NOMBRE DEL COMBO]" en cada producto.
+ *
+ * Se apoya en que el core arma los bloques leyendo el objeto `change.group` que
+ * ya viene pegado a cada línea, sin volver a resolver el grupo: copiando ese
+ * mismo objeto, el encabezado cae en el bloque de sus hijos.
+ *
+ * Si los hijos de un combo quedan repartidos en más de un bloque, o separados
+ * dentro del mismo bloque por la secuencia de cocina, cada corrida recibe su
+ * propio encabezado. Es lo que hace falta: cada estación tiene que ver de qué
+ * combo es lo que le toca preparar.
+ *
+ * @param {Array} changes ya ordenadas
+ * @returns {Array} copia con los encabezados intercalados
+ */
+export function insertComboHeaders(changes) {
+    const result = [];
+    let currentCombo = null;
+    for (const change of changes) {
+        const combo = change?.combo_parent_uuid || null;
+        if (combo && combo !== currentCombo && change.combo_name) {
+            result.push({
+                isComboHeader: true,
+                basic_name: change.combo_name,
+                group: change.group,
+                uuid: `combo-header-${combo}-${result.length}`,
+                quantity: 0,
+            });
+        }
+        currentCombo = combo;
+        result.push(change);
+    }
+    return result;
 }

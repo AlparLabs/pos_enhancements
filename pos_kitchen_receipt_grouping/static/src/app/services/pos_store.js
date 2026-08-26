@@ -3,7 +3,11 @@
 import { PosStore } from "@point_of_sale/app/services/pos_store";
 import { receiptLineGrouper } from "@point_of_sale/app/models/utils/order_change";
 import { patch } from "@web/core/utils/patch";
-import { resolveKitchenGroup, sortChangeLines } from "@pos_kitchen_receipt_grouping/app/kitchen_group";
+import {
+    insertComboHeaders,
+    resolveKitchenGroup,
+    sortChangeLines,
+} from "@pos_kitchen_receipt_grouping/app/kitchen_group";
 
 // Traducción de títulos de recibos de cocina al español.
 // El core arma los títulos con _t() en inglés al generar los datos.
@@ -84,9 +88,11 @@ patch(PosStore.prototype, {
      * Pre-process the change lines before the core groups them by category:
      *  - Skip combo parents whose children are also printed on this receipt
      *    (the children already carry the [Parent] tag, the parent is redundant).
-     *  - Tag combo children with the parent combo name: "Product [Combo]".
-     *    Use the line's own uuid to find the exact orderline — the same product
-     *    can appear as a child in multiple different combos.
+     *  - Guardar el nombre del combo padre en `combo_name` (sin tocar el nombre
+     *    del producto) y, después de ordenar, insertar un encabezado sintético
+     *    por corrida de hijos del mismo combo. Antes se etiquetaba cada hijo
+     *    como "Producto [Combo]", lo que en un ticket de 266px partía la línea
+     *    en tres renglones.
      *  - Merge identical lines (same product, name, notes and variants) by
      *    summing quantities.
      *  - Ordenar las líneas por la secuencia de cocina de su categoría, para
@@ -110,22 +116,22 @@ patch(PosStore.prototype, {
                 ) {
                     continue;
                 }
-                let name = change.basic_name || change.name;
+                const name = change.basic_name || change.name;
+                let comboName = "";
                 if (change.combo_parent_uuid) {
                     const parentLine = this.models["pos.order.line"].getBy(
                         "uuid",
                         change.combo_parent_uuid
                     );
-                    const parentName =
+                    comboName =
                         parentLine?.getProduct?.()?.display_name ||
-                        changes.find((c) => c.uuid === change.combo_parent_uuid)?.basic_name;
-                    if (parentName && !name.includes(`[${parentName}]`)) {
-                        name = `${name} [${parentName}]`;
-                    }
+                        changes.find((c) => c.uuid === change.combo_parent_uuid)?.basic_name ||
+                        "";
                 }
                 const key = [
                     change.product_id,
                     name,
+                    change.combo_parent_uuid || "",
                     change.note || "",
                     change.customer_note || "",
                     (change.attribute_value_names || []).join(","),
@@ -134,15 +140,14 @@ patch(PosStore.prototype, {
                     byKey[key].quantity += change.quantity;
                     continue;
                 }
-                // Drop combo_parent_uuid so the core template does not indent the
-                // line — children are shown as normal lines under their category.
-                const entry = { ...change, basic_name: name, combo_parent_uuid: undefined };
+                const entry = { ...change, basic_name: name, combo_name: comboName };
                 byKey[key] = entry;
                 processed.push(entry);
             }
-            data.changes.data = sortChangeLines(processed, (change) =>
+            const sorted = sortChangeLines(processed, (change) =>
                 this.models["product.product"]?.get(change.product_id)
             );
+            data.changes.data = insertComboHeaders(sorted);
         }
         if (data.changes?.title) {
             data.changes.title = RECEIPT_LABELS[data.changes.title] || data.changes.title;
