@@ -7,6 +7,7 @@ class PosCashMoveReason(models.Model):
     _description = 'POS Cash Move Reason'
     _inherit = ['pos.load.mixin']
     _order = 'sequence, name'
+    _check_company_auto = True
 
     name = fields.Char(
         string='Concept',
@@ -39,6 +40,7 @@ class PosCashMoveReason(models.Model):
     partner_id = fields.Many2one(
         'res.partner',
         string='Fixed Contact',
+        check_company=True,
         ondelete='restrict',
         help='Used only when Contact Mode is "Fixed contact".',
     )

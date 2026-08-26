@@ -1,5 +1,5 @@
 from odoo.addons.point_of_sale.tests.common import TestPoSCommon
-from odoo.exceptions import ValidationError
+from odoo.exceptions import UserError, ValidationError
 from odoo.tests import tagged
 
 
@@ -191,3 +191,25 @@ class TestCashMoveReason(TestPoSCommon):
         })
 
         self.assertEqual(st_line.pos_counterpart_partner_id, self.supplier)
+
+    def test_a_cross_company_account_is_rejected_at_save_time(self):
+        other_company = self.env['res.company'].create({'name': 'Otra Compania Cuentas'})
+        foreign_account = self.env['account.account'].create({
+            'name': 'Gastos Ajenos',
+            'code': 'XCOMP1',
+            'account_type': 'expense',
+            'company_ids': [(6, 0, [other_company.id])],
+        })
+
+        with self.assertRaises(UserError):
+            self._make_reason(account_id=foreign_account.id)
+
+    def test_a_cross_company_fixed_contact_is_rejected_at_save_time(self):
+        other_company = self.env['res.company'].create({'name': 'Otra Compania Contactos'})
+        foreign_partner = self.env['res.partner'].create({
+            'name': 'Contacto Ajeno',
+            'company_id': other_company.id,
+        })
+
+        with self.assertRaises(UserError):
+            self._make_reason(partner_mode='fixed', partner_id=foreign_partner.id)
