@@ -122,13 +122,49 @@ class PosOrder(models.Model):
         sign the quantities, so it must be forwarded to super() untouched.
         """
         ctx = self.env.context.get('concept_invoice_data')
-        if ctx:
-            return [(0, 0, {
-                'name': ctx['concept'],
-                'product_id': ctx['product_id'],
-                'account_id': ctx['account_id'],
-                'quantity': 1.0,
-                'price_unit': ctx.get('price_unit', self.amount_total),
-                'tax_ids': ctx['tax_ids'],
-            })]
+        concept = ctx['concept'] if ctx else self.concept_invoice_name
+        if concept:
+            concept_product = self.env.ref('pos_concept_invoice.product_concept', raise_if_not_found=False)
+            if not concept_product and ctx:
+                concept_product = self.env['product.product'].browse(ctx.get('product_id'))
+
+            if concept_product:
+                tax = self.env['account.tax'].search([
+                    ('type_tax_use', '=', 'sale'),
+                    ('amount', '=', 21.0),
+                    ('price_include', '=', True),
+                    ('company_id', '=', self.env.company.id),
+                ], limit=1)
+                if not tax:
+                    tax = self.env['account.tax'].search([
+                        ('type_tax_use', '=', 'sale'),
+                        ('amount', '=', 21.0),
+                        ('company_id', '=', self.env.company.id),
+                    ], limit=1)
+
+                price_unit = self.amount_total
+                if tax and not tax.price_include:
+                    price_unit = self.amount_total / (1 + tax.amount / 100.0)
+
+                account = (
+                    concept_product.property_account_income_id
+                    or concept_product.categ_id.property_account_income_categ_id
+                )
+                if not account and ctx:
+                    account = self.env['account.account'].browse(ctx.get('account_id'))
+                if not account:
+                    account = self.env['account.account'].search([
+                        ('account_type', '=', 'income'),
+                        ('company_ids', 'in', self.env.company.id),
+                        ('deprecated', '=', False),
+                    ], limit=1)
+
+                return [(0, 0, {
+                    'name': concept.strip(),
+                    'product_id': concept_product.id,
+                    'account_id': account.id if account else False,
+                    'quantity': 1.0,
+                    'price_unit': ctx.get('price_unit', price_unit) if ctx else price_unit,
+                    'tax_ids': ctx.get('tax_ids', [(6, 0, tax.ids)] if tax else [(5,)]) if ctx else ([(6, 0, tax.ids)] if tax else [(5,)]),
+                })]
         return super()._prepare_invoice_lines(move_type)

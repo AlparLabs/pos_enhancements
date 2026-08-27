@@ -39,7 +39,7 @@ export class ConceptInvoicePopup extends Component {
         const orderPartner = this.props.order?.partner_id;
         /** @type {ConceptInvoicePopupState} */
         this.state = useState({
-            concept: "",
+            concept: this.props.order?.concept_invoice_name || "",
             partnerQuery: orderPartner?.name || "",
             partnerId: orderPartner?.id || false,
             partnerName: orderPartner?.name || "",

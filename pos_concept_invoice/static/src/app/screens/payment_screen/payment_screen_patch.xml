@@ -1,0 +1,22 @@
+﻿<?xml version="1.0" encoding="UTF-8"?>
+<templates id="template" xml:space="preserve">
+
+    <t t-name="pos_concept_invoice.PaymentScreen" t-inherit="point_of_sale.PaymentScreen" t-inherit-mode="extension">
+        <xpath expr="//button[hasclass('js_invoice')]" position="replace">
+            <button class="button js_invoice btn btn-secondary btn-lg d-flex justify-content-between align-items-baseline w-100 w-md-50 lh-lg"
+                t-att-class="{ 'highlight active': currentOrder.isToInvoice(), 'opacity-50': !pos.config.canInvoice }"
+                t-on-click="toggleIsToInvoice"
+                t-att-disabled="currentOrder.lines[0]?.refunded_orderline_id?.order_id?.isToInvoice()">
+                <span class="text-truncate">
+                    <i class="fa fa-file-text-o me-2" />
+                    <t t-if="!pos.config.canInvoice">No disponible</t>
+                    <t t-elif="currentOrder.concept_invoice_name">Concepto: <t t-esc="currentOrder.concept_invoice_name"/></t>
+                    <t t-elif="currentOrder.isToInvoice()">Factura Estándar</t>
+                    <t t-else="">Factura</t>
+                </span>
+                <i class="fa ms-1 me-2" t-attf-class="{{ currentOrder.isToInvoice() ? 'fa-check-square text-action' : 'fa-square-o' }}" /> 
+            </button>
+        </xpath>
+    </t>
+
+</templates>
