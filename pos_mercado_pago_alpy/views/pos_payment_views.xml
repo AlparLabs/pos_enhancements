@@ -7,10 +7,6 @@
         <field name="arch" type="xml">
             <xpath expr="//field[@name='payment_method_id']" position="after">
                 <field name="mp_payment_id" optional="hide"/>
-                <field name="mp_net_amount" optional="show"/>
-                <field name="mp_fee_amount" optional="show"/>
-                <field name="mp_release_date" optional="show"/>
-                <field name="mp_status_detail" optional="hide"/>
             </xpath>
         </field>
     </record>
@@ -23,11 +19,6 @@
             <xpath expr="//field[@name='payment_method_id']" position="after">
                 <field name="mp_payment_id"/>
                 <field name="mp_external_reference"/>
-                <field name="mp_net_amount"/>
-                <field name="mp_fee_amount"/>
-                <field name="mp_release_date"/>
-                <field name="mp_status_detail"/>
-                <field name="mp_info_fetched"/>
             </xpath>
         </field>
     </record>
