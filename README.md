@@ -8,6 +8,7 @@ This repository contains multiple Odoo modules, each addressing a specific need 
 
 ### 💳 Payment & Finance
 - **[POS Mercado Pago (Alpy)](./pos_mercado_pago_alpy/README.md)**: Seamless integration with Mercado Pago Point Smart terminals using the Orders API.
+- **[POS Mercado Pago Reconciliation](./pos_mercado_pago_reconciliation/README.md)**: Fetches net amount, fees and release date for Mercado Pago POS payments from a scheduled job.
 - **[POS Payment Interest Margin](./pos_payment_interest_margin/README.md)**: Automated surcharges for specific payment methods (financing fees).
 - **[POS Payment Category](./pos_payment_category/README.md)**: Hierarchical grouping of payment methods for a cleaner UI.
 - **[POS Payment Card Details](./pos_payment_card_details/README.md)**: Tracking of terminal lot and coupon numbers for banking conciliation.
