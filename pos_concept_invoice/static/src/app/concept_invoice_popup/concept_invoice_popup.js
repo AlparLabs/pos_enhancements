@@ -28,7 +28,8 @@ export class ConceptInvoicePopup extends Component {
     static components = { Dialog };
     static props = {
         order: Object,
-        onConfirm: Function,
+        onConfirm: { type: Function, optional: true },
+        getPayload: { type: Function, optional: true },
         close: Function,
     };
 
@@ -39,7 +40,7 @@ export class ConceptInvoicePopup extends Component {
         const orderPartner = this.props.order?.partner_id;
         /** @type {ConceptInvoicePopupState} */
         this.state = useState({
-            concept: "",
+            concept: this.props.order?.concept_invoice_name || "",
             partnerQuery: orderPartner?.name || "",
             partnerId: orderPartner?.id || false,
             partnerName: orderPartner?.name || "",
@@ -123,11 +124,17 @@ export class ConceptInvoicePopup extends Component {
     async confirm() {
         if (!this.canConfirm) return;
         this.state.loading = true;
+        const payload = {
+            concept: this.state.concept.trim(),
+            partnerId: this.state.partnerId,
+        };
         try {
-            await this.props.onConfirm({
-                concept: this.state.concept.trim(),
-                partnerId: this.state.partnerId,
-            });
+            if (this.props.onConfirm) {
+                await this.props.onConfirm(payload);
+            }
+            if (this.props.getPayload) {
+                this.props.getPayload(payload);
+            }
         } finally {
             this.state.loading = false;
         }
