@@ -1,11 +1,11 @@
 # -*- coding: utf-8 -*-
 {
     'name': 'POS Restaurant Pre-Cuenta',
-    'version': '19.0.1.0.2',
+    'version': '19.0.1.0.3',
     'category': 'Sales/Point of Sale',
-    'summary': 'Prints a "Pre-cuenta" for restaurant tables directly from the POS actions menu.',
+    'summary': 'Prints a "Pre-cuenta" for restaurant tables directly from the POS actionpad.',
     'description': """
-        Adds a "Pre-cuenta" button to the POS restaurant actions menu.
+        Adds a "Pre-cuenta" button to the POS restaurant actionpad next to "Order" and "Payment".
         Prints a clean, Argentine-style pre-bill showing:
           - Company header
           - Table number and guest count

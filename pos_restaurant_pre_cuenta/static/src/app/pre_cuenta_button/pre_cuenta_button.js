@@ -3,7 +3,7 @@
 import { Component } from "@odoo/owl";
 import { usePos } from "@point_of_sale/app/hooks/pos_hook";
 import { useService } from "@web/core/utils/hooks";
-import { ControlButtons } from "@point_of_sale/app/screens/product_screen/control_buttons/control_buttons";
+import { ActionpadWidget } from "@point_of_sale/app/screens/product_screen/action_pad/action_pad";
 import { PreCuentaReceipt } from "@pos_restaurant_pre_cuenta/app/receipt/pre_cuenta_receipt";
 
 export class PreCuentaButton extends Component {
@@ -12,7 +12,7 @@ export class PreCuentaButton extends Component {
         buttonClass: { type: String, optional: true },
     };
     static defaultProps = {
-        buttonClass: "btn btn-secondary btn-lg py-5",
+        buttonClass: "btn btn-secondary btn-lg flex-fill d-flex align-items-center justify-content-center",
     };
 
     setup() {
@@ -37,7 +37,7 @@ export class PreCuentaButton extends Component {
      */
     async click() {
         const order = this.currentOrder;
-        if (!order || order.getOrderlines().length === 0) {
+        if (!order || order.isEmpty()) {
             return;
         }
         await this.printer.print(PreCuentaReceipt, { order }, { webPrintFallback: true });
@@ -53,4 +53,4 @@ export class PreCuentaButton extends Component {
     }
 }
 
-Object.assign(ControlButtons.components, { PreCuentaButton });
+Object.assign(ActionpadWidget.components, { PreCuentaButton });
