@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 {
     'name': 'POS Restaurant Pre-Cuenta',
-    'version': '19.0.1.0.3',
+    'version': '19.0.1.0.4',
     'category': 'Sales/Point of Sale',
     'summary': 'Prints a "Pre-cuenta" for restaurant tables directly from the POS actionpad.',
     'description': """

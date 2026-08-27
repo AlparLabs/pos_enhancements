@@ -50,9 +50,17 @@
                 </div>
             </t>
 
-            <!-- Orderlines -->
+            <!--
+                Orderlines. Los hijos de un combo se filtran: en la pre-cuenta
+                el mozo solo necesita ver el nombre del combo con su importe.
+                El core los imprimiria indentados y sin precio (OrderDisplay
+                .comboSortedLines + Orderline, que pone price: false cuando hay
+                combo_parent_id). Filtrar aca alcanza porque Orderline no es
+                recursivo, y la linea padre ya muestra el total agregado del
+                combo via displayPrice.
+            -->
             <div class="orderlines">
-                <t t-foreach="order.lines" t-as="line" t-key="line.uuid">
+                <t t-foreach="order.lines.filter((l) => !l.combo_parent_id)" t-as="line" t-key="line.uuid">
                     <Orderline line="line" mode="'receipt'"/>
                 </t>
             </div>
