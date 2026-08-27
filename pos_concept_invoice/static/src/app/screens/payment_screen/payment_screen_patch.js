@@ -1,4 +1,4 @@
-﻿/** @odoo-module **/
+/** @odoo-module **/
 
 import { PaymentScreen } from "@point_of_sale/app/screens/payment_screen/payment_screen";
 import { patch } from "@web/core/utils/patch";
@@ -58,20 +58,20 @@ patch(PaymentScreen.prototype, {
                 await this.pos.selectPartner();
             }
         } else if (selected === "concept") {
-            await makeAwaitable(this.dialog, ConceptInvoicePopup, {
+            const payload = await makeAwaitable(this.dialog, ConceptInvoicePopup, {
                 order: this.currentOrder,
-                onConfirm: async ({ concept, partnerId }) => {
-                    this.currentOrder.setToInvoice(true);
-                    this.currentOrder.concept_invoice_name = concept;
-                    if (partnerId) {
-                        const partner = this.pos.models["res.partner"]?.get(partnerId);
-                        if (partner) {
-                            this.currentOrder.partner_id = partner;
-                            this.currentOrder.updatePricelistAndFiscalPosition?.(partner);
-                        }
-                    }
-                },
             });
+            if (payload && payload.concept) {
+                this.currentOrder.setToInvoice(true);
+                this.currentOrder.concept_invoice_name = payload.concept;
+                if (payload.partnerId) {
+                    const partner = this.pos.models["res.partner"]?.get(payload.partnerId);
+                    if (partner) {
+                        this.currentOrder.partner_id = partner;
+                        this.currentOrder.updatePricelistAndFiscalPosition?.(partner);
+                    }
+                }
+            }
         } else if (selected === "none") {
             this.currentOrder.setToInvoice(false);
             this.currentOrder.concept_invoice_name = "";
