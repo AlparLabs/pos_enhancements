@@ -21,27 +21,28 @@ export function canCreateConceptInvoice(order, generatedUuids) {
     if (!order?.finalized) {
         return false;
     }
-    if (order.is_invoiced || order.to_invoice) {
+    if (order.is_invoiced || order.to_invoice || order.concept_invoice_name) {
         return false;
     }
     return !generatedUuids?.has(order.uuid);
 }
 
 /**
- * Opens the concept popup and, on confirm, creates the invoice server-side
- * and downloads its PDF. Shared by the ReceiptScreen (right after payment)
- * and the TicketScreen (later, from the order list).
+ * Opens the concept popup and, on confirm, creates the invoice server-side,
+ * updates the order reactively to reflect the concept invoice on the receipt,
+ * and sends the receipt directly to the POS printer. Shared by the ReceiptScreen
+ * (right after payment) and the TicketScreen (later, from the order list).
  *
  * @param {object} params
  * @param {object} params.order
- * @param {object} params.services – { orm, dialog, notification, report }
+ * @param {object} params.services – { orm, dialog, notification, pos }
  * @param {(order: object) => void} [params.onGenerated]
  */
 export function openConceptInvoiceDialog({ order, services, onGenerated }) {
     if (!order) {
         return;
     }
-    const { orm, dialog, notification, report } = services;
+    const { orm, dialog, notification, pos } = services;
 
     dialog.add(ConceptInvoicePopup, {
         order,
@@ -61,10 +62,45 @@ export function openConceptInvoiceDialog({ order, services, onGenerated }) {
                 return;
             }
 
+            // 1. Update reactive order model so the receipt screen immediately displays the concept invoice
+            order.is_invoiced = true;
+            order.to_invoice = true;
+            order.account_move = result.invoice_id;
+            order.concept_invoice_name = result.concept;
+
+            if (result.partner_id) {
+                const partnerObj = order.models?.["res.partner"]?.get(result.partner_id);
+                if (partnerObj) {
+                    order.partner_id = partnerObj;
+                } else if (result.partner) {
+                    order.partner_id = result.partner;
+                }
+            }
+
+            order.l10n_latam_document_number = result.l10n_latam_document_number;
+            order.l10n_ar_document_type_name = result.l10n_ar_document_type_name;
+            order.l10n_ar_document_type_code = result.l10n_ar_document_type_code;
+            order.l10n_ar_letter = result.l10n_ar_letter;
+            order.l10n_ar_afip_auth_code = result.l10n_ar_afip_auth_code;
+            order.l10n_ar_afip_auth_code_due = result.l10n_ar_afip_auth_code_due;
+            order.l10n_ar_afip_qr_code = result.l10n_ar_afip_qr_code;
+            order.l10n_ar_company_cuit = result.l10n_ar_company_cuit;
+            order.l10n_ar_company_responsibility = result.l10n_ar_company_responsibility;
+            order.l10n_ar_tax_details = result.l10n_ar_tax_details;
+            order.l10n_ar_custom_tax_summary = result.l10n_ar_custom_tax_summary;
+
             notification.add(`✓ Factura ${result.invoice_name} generada`, { type: "success" });
             onGenerated?.(order);
 
-            await report.doAction("account.account_invoices", [result.invoice_id]);
+            // 2. Automatically print the concept invoice receipt directly through POS printer
+            const posStore = pos || order.pos;
+            if (posStore) {
+                try {
+                    await posStore.printReceipt({ order });
+                } catch (e) {
+                    console.warn("[concept_invoice] Direct print failed:", e);
+                }
+            }
         },
     });
 }

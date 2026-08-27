@@ -1,15 +1,16 @@
 {
     'name': 'POS Concept Invoice',
-    'version': '19.0.2.0.1',
+    'version': '19.0.2.1.0',
     'category': 'Sales/Point of Sale',
-    'summary': 'Generate a single-line concept invoice from the POS Ticket Screen',
+    'summary': 'Generate a single-line concept invoice, display on receipt screen, and print directly to POS printer',
     'description': """
-        Adds a "Factura Concepto" button to the POS Ticket Screen for finalized orders
+        Adds a "Factura Concepto" button to the POS Receipt Screen and Ticket Screen for finalized orders
         that don't have an invoice yet. When clicked, the cashier enters a concept
         description and selects a customer. The backend creates an account.move with a
         single invoice line for the full order total, with IVA 21% ventas (price-included)
-        applied so the tax breakdown is correctly computed. The invoice PDF is downloaded
-        immediately after creation.
+        applied so the tax breakdown is correctly computed. The POS receipt preview reactively
+        updates to display the Argentine fiscal receipt with the concept line, and prints directly
+        to the POS thermal printer.
     """,
     'author': 'AlparData',
     'website': 'https://www.alpardata.com.ar',

@@ -1,16 +1,21 @@
-from odoo import api, models, _
+from odoo import api, fields, models, _
 from odoo.exceptions import UserError
 
 
 class PosOrder(models.Model):
     _inherit = 'pos.order'
 
+    concept_invoice_name = fields.Char(
+        string="Concept Invoice Name",
+        help="Description used when a single-line concept invoice was generated for this order.",
+    )
+
     @api.model
     def create_concept_invoice(self, order_uuid: str, concept: str, partner_id: int | bool = False) -> dict:
         """
         Generates a concept invoice using Odoo's native _generate_pos_order_invoice flow.
         This ensures the invoice is linked to the order, payments are reconciled,
-        and the PDF can be downloaded.
+        and the AFIP fiscal receipt is generated and returned to the POS frontend.
         """
         if not concept or not concept.strip():
             raise UserError(_("Please enter a concept description for the invoice."))
@@ -60,7 +65,10 @@ class PosOrder(models.Model):
         if not account:
             raise UserError(_("No income account found."))
 
-        order.write({'to_invoice': True})
+        order.write({
+            'to_invoice': True,
+            'concept_invoice_name': concept.strip(),
+        })
 
         ctx = {
             'concept_invoice_data': {
@@ -73,9 +81,36 @@ class PosOrder(models.Model):
         }
         order.with_context(**ctx)._generate_pos_order_invoice()
 
+        move = order.account_move
+        auth_code_due = False
+        if getattr(move, 'l10n_ar_afip_auth_code_due', False):
+            auth_code_due = move.l10n_ar_afip_auth_code_due.strftime('%d/%m/%Y')
+
+        partner_data = False
+        if order.partner_id:
+            partner_data = {
+                'id': order.partner_id.id,
+                'name': order.partner_id.name,
+                'vat': order.partner_id.vat or False,
+            }
+
         return {
-            'invoice_id': order.account_move.id,
-            'invoice_name': order.account_move.name,
+            'invoice_id': move.id,
+            'invoice_name': move.name,
+            'concept': concept.strip(),
+            'partner_id': order.partner_id.id if order.partner_id else False,
+            'partner': partner_data,
+            'l10n_ar_afip_auth_code': getattr(move, 'l10n_ar_afip_auth_code', False) or False,
+            'l10n_ar_afip_auth_code_due': auth_code_due,
+            'l10n_ar_afip_qr_code': getattr(move, 'l10n_ar_afip_qr_code', False) or False,
+            'l10n_latam_document_number': getattr(move, 'l10n_latam_document_number', False) or False,
+            'l10n_ar_document_type_name': move.l10n_latam_document_type_id.name if move.l10n_latam_document_type_id else False,
+            'l10n_ar_document_type_code': move.l10n_latam_document_type_id.code if move.l10n_latam_document_type_id else False,
+            'l10n_ar_letter': getattr(move, 'l10n_ar_letter', False) or (move.l10n_latam_document_type_id.l10n_ar_letter if move.l10n_latam_document_type_id else False),
+            'l10n_ar_company_cuit': order.company_id.vat or False,
+            'l10n_ar_company_responsibility': order.company_id.l10n_ar_afip_responsibility_type_id.name if order.company_id.l10n_ar_afip_responsibility_type_id else False,
+            'l10n_ar_tax_details': getattr(order, 'l10n_ar_tax_details', []) or [],
+            'l10n_ar_custom_tax_summary': getattr(order, 'l10n_ar_custom_tax_summary', []) or [],
         }
 
     def _prepare_invoice_lines(self, move_type) -> list:
