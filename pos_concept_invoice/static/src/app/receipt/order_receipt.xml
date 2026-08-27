@@ -1,0 +1,31 @@
+﻿<?xml version="1.0" encoding="UTF-8"?>
+<templates id="template" xml:space="preserve">
+
+    <t t-name="pos_concept_invoice.OrderReceipt" t-inherit="point_of_sale.OrderReceipt" t-inherit-mode="extension">
+        <xpath expr="//div[hasclass('orderlines')]" position="replace">
+            <div class="orderlines">
+                <t t-if="props.order.concept_invoice_name">
+                    <div class="orderline">
+                        <div class="d-flex justify-content-between">
+                            <span class="text-wrap d-inline fw-bolder">
+                                <t t-esc="props.order.concept_invoice_name"/>
+                            </span>
+                            <span class="pos-receipt-right-align">
+                                <t t-esc="formatCurrency(props.order.priceIncl)"/>
+                            </span>
+                        </div>
+                        <div class="pos-receipt-left-padding text-muted" style="font-size: 0.85em;">
+                            1.00 x <t t-esc="formatCurrency(props.order.priceIncl)"/>
+                        </div>
+                    </div>
+                </t>
+                <t t-else="">
+                    <t t-foreach="props.order.lines" t-as="line" t-key="line.uuid">
+                        <Orderline line="line" mode="'receipt'"/>
+                    </t>
+                </t>
+            </div>
+        </xpath>
+    </t>
+
+</templates>
