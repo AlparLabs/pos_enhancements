@@ -20,7 +20,10 @@ added later without touching the data or the existing records.
     'website': 'https://www.alpardata.com.ar',
     'license': 'LGPL-3',
     'depends': ['pos_mercado_pago_alpy'],
-    'data': [],
+    'data': [
+        'data/ir_cron.xml',
+        'views/pos_payment_views.xml',
+    ],
     'installable': True,
     'application': False,
     'auto_install': False,
