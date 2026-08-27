@@ -215,8 +215,14 @@ procesador nuevo. Ningún campo se renombra y ningún dato se migra.
 
 ## El cron
 
-`ir.cron` cada hora, `numbercall = -1`, apuntando a
-`pos.payment._cron_fetch_settlements()`.
+`ir.cron` cada hora (`interval_number = 1`, `interval_type = 'hours'`), apuntando a
+`pos.payment._cron_fetch_settlements()` vía `state = 'code'`.
+
+**Sin `numbercall`.** Ese campo ya no existe en `ir.cron` en Odoo 19 — se verificó
+contra `odoo/addons/base/models/ir_cron.py`, donde el modelo declara `active`,
+`interval_number`, `interval_type`, `nextcall`, `priority` y `failure_count`, pero no
+`numbercall`. Incluirlo daría `ParseError` al instalar. Un cron sin `numbercall` se
+repite indefinidamente, que es lo que queremos.
 
 - **Tope de 200 pagos por corrida.** Sin tope, la primera ejecución sobre una base con
   historial dispara miles de llamadas HTTP secuenciales. Con tope, se pone al día en
