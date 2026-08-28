@@ -71,12 +71,14 @@ Prueba manual en `pruebas02` antes de escribir código:
    transitoria? Si quedó en la transitoria, ¿en cuánto tiempo se imputa sola,
    o hace falta abrir el widget?
 
-**Si la imputación no es automática y razonablemente inmediata, este diseño se
-descarta** y se vuelve al módulo original con el fix del dominio.
+**Criterio de aceptación**: la imputación tiene que quedar hecha sin que nadie
+abra el widget de conciliación, y antes del cierre de la sesión de caja del día.
+Si no lo cumple, **este diseño se descarta** y se vuelve al módulo original con el fix del dominio.
 
 ## Arquitectura
 
-El módulo queda con tres piezas y ningún override contable:
+El módulo queda como catálogo, carga POS y patch de UI, sin ningún
+override contable:
 
 | Archivo | Rol después del rediseño |
 |---|---|
