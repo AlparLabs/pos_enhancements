@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates id="template" xml:space="preserve">
+
+    <!--
+        Core 19.0 (point_of_sale/static/src/app/components/popups/cash_move_popup/
+        cash_move_receipt/cash_move_receipt.xml) renders:
+
+            <div class="pt-3">
+                AMOUNT
+                <span t-esc="props.formattedAmount" class="pos-receipt-right-align" />
+            </div>
+            <div>
+                REASON
+                <span t-esc="props.reason" class="pos-receipt-right-align" />
+            </div>
+
+        `.pos-receipt .pos-receipt-right-align` is `float: right; display: flex;`
+        (point_of_sale/static/src/css/pos_receipts.css), so a long reason makes the
+        floated span several lines tall and the company footer that follows — a
+        `d-flex`, which cannot overlap a float — shrinks to the leftover width.
+
+        We match the rows through their value span (their own class attributes are
+        not unique: `pt-3` is also on the footer, and the REASON div has no class),
+        and turn them into flex rows, which is what upstream did.
+    -->
+    <t t-name="pos_cash_move_receipt_fix.CashMoveReceipt"
+       t-inherit="point_of_sale.CashMoveReceipt" t-inherit-mode="extension">
+
+        <xpath expr="//div[span[@t-esc='props.formattedAmount']]" position="attributes">
+            <attribute name="class" add="d-flex justify-content-between gap-2" separator=" "/>
+        </xpath>
+        <xpath expr="//span[@t-esc='props.formattedAmount']" position="attributes">
+            <attribute name="class" add="text-end" separator=" "/>
+        </xpath>
+
+        <xpath expr="//div[span[@t-esc='props.reason']]" position="attributes">
+            <attribute name="class" add="d-flex justify-content-between gap-2" separator=" "/>
+        </xpath>
+        <xpath expr="//span[@t-esc='props.reason']" position="attributes">
+            <attribute name="class" add="text-end text-break" separator=" "/>
+        </xpath>
+
+    </t>
+
+</templates>
