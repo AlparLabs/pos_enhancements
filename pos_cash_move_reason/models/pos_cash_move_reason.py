@@ -27,7 +27,6 @@ class PosCashMoveReason(models.Model):
         string='Counterpart Account',
         check_company=True,
         ondelete='restrict',
-        domain="[('deprecated', '=', False)]",
         help='Account the cash move is posted against. Leave empty to fall back to the '
              "cash journal's suspense account, which is the standard Odoo behaviour.",
     )

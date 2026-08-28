@@ -238,8 +238,10 @@ Permisos (`ir.model.access.csv`):
   botones.
 - `group_pos_manager`: lectura y escritura.
 
-El campo `account_id` en la vista filtra por `deprecated = False` y
-`check_company`, para que no se pueda configurar una cuenta dada de baja.
+El campo `account_id` usa `check_company`, para que no se pueda configurar una
+cuenta de otra compañía. No lleva dominio por `deprecated`: ese campo dejó de
+existir en `account.account` en Odoo 19 (lo reemplaza `active`, que el ORM ya
+filtra solo en los many2one).
 
 ## Casos borde
 
