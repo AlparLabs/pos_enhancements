@@ -1,5 +1,10 @@
+import re
+import unicodedata
+
 from odoo import _, api, fields, models
 from odoo.exceptions import ValidationError
+
+VALID_CODE = re.compile(r'[A-Z0-9][A-Z0-9_.\-]*')
 
 
 class PosCashMoveReason(models.Model):
@@ -7,12 +12,24 @@ class PosCashMoveReason(models.Model):
     _description = 'POS Cash Move Reason'
     _inherit = ['pos.load.mixin']
     _order = 'sequence, name'
-    _check_company_auto = True
+
+    _code_company_uniq = models.Constraint(
+        'unique (company_id, code)',
+        'A cash move concept code must be unique per company.',
+    )
 
     name = fields.Char(
         string='Concept',
         required=True,
-        help='Label shown on the button in the cash in/out popup, e.g. "PROVEEDORES".',
+        help='Label shown on the button in the cash in/out popup, e.g. "Proveedores".',
+    )
+    code = fields.Char(
+        string='Code',
+        required=True,
+        help='Short, stable identifier written into the movement label between square '
+             'brackets, e.g. "[PROVEEDORES] factura 0001-00034". Reconciliation models in '
+             'Accounting match on it, so renaming the concept never breaks them — changing '
+             'the code does.',
     )
     sequence = fields.Integer(string='Sequence', default=10)
     active = fields.Boolean(string='Active', default=True)
@@ -21,27 +38,6 @@ class PosCashMoveReason(models.Model):
         string='Applies To',
         required=True,
         default='out',
-    )
-    account_id = fields.Many2one(
-        'account.account',
-        string='Counterpart Account',
-        check_company=True,
-        ondelete='restrict',
-        help='Account the cash move is posted against. Leave empty to fall back to the '
-             "cash journal's suspense account, which is the standard Odoo behaviour.",
-    )
-    partner_mode = fields.Selection(
-        [('none', 'No contact'), ('fixed', 'Fixed contact'), ('ask', 'Ask the cashier')],
-        string='Contact Mode',
-        required=True,
-        default='none',
-    )
-    partner_id = fields.Many2one(
-        'res.partner',
-        string='Fixed Contact',
-        check_company=True,
-        ondelete='restrict',
-        help='Used only when Contact Mode is "Fixed contact".',
     )
     config_ids = fields.Many2many(
         'pos.config',
@@ -55,14 +51,41 @@ class PosCashMoveReason(models.Model):
         default=lambda self: self.env.company,
     )
 
-    @api.constrains('partner_mode', 'partner_id')
-    def _check_partner_id_required(self):
+    @api.model
+    def _normalize_code(self, code):
+        """Uppercase, strip accents and turn whitespace into underscores.
+
+        The code travels inside a free-text field a cashier can edit, so the fewer
+        characters that need typing care, the better.
+        """
+        code = unicodedata.normalize('NFKD', (code or '').strip())
+        code = code.encode('ascii', 'ignore').decode()
+        return re.sub(r'\s+', '_', code).upper()
+
+    @api.constrains('code')
+    def _check_code(self):
         for reason in self:
-            if reason.partner_mode == 'fixed' and not reason.partner_id:
+            if not VALID_CODE.fullmatch(reason.code or ''):
                 raise ValidationError(_(
-                    'The concept "%s" is set to use a fixed contact, so a contact must be selected.',
-                    reason.name,
+                    'The code "%(code)s" of concept "%(name)s" is not valid. Use letters, '
+                    'digits, "_", "." and "-" only, starting with a letter or a digit. '
+                    'Square brackets are reserved: they delimit the code inside the '
+                    'movement label.',
+                    code=reason.code or '',
+                    name=reason.name,
                 ))
+
+    @api.model_create_multi
+    def create(self, vals_list):
+        for vals in vals_list:
+            if vals.get('code'):
+                vals['code'] = self._normalize_code(vals['code'])
+        return super().create(vals_list)
+
+    def write(self, vals):
+        if vals.get('code'):
+            vals['code'] = self._normalize_code(vals['code'])
+        return super().write(vals)
 
     @api.model
     def _load_pos_data_domain(self, data, config):
@@ -74,9 +97,4 @@ class PosCashMoveReason(models.Model):
 
     @api.model
     def _load_pos_data_fields(self, config):
-        # account_id is deliberately NOT sent to the browser: the client has no business
-        # knowing the chart of accounts, and the server re-reads it anyway.
-        # partner_id is left out too — POS only loads a subset of res.partner, so a fixed
-        # contact outside that subset would arrive as a dangling relation. The server
-        # resolves the fixed contact itself.
-        return ['id', 'name', 'sequence', 'move_type', 'partner_mode']
+        return ['id', 'name', 'code', 'sequence', 'move_type']

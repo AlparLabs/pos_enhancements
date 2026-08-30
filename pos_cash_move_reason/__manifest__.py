@@ -2,19 +2,19 @@
     'name': 'POS Cash Move Reason',
     'version': '19.0.1.0.0',
     'category': 'Sales/Point of Sale',
-    'summary': 'Configurable concept buttons for POS cash in/out, with preset counterpart account.',
+    'summary': 'Concept buttons for POS cash in/out, to standardise the movement label.',
     'description': """
-Adds configurable concept buttons to the POS cash in/out popup, in the spirit of
-the reconciliation model buttons of the bank reconciliation widget.
+Adds configurable concept buttons to the POS cash in/out popup. Tapping one writes
+the concept's code between square brackets at the front of the reason:
 
-Each concept carries a preset counterpart account and, optionally, a contact.
-When the cashier picks one, the resulting journal entry is posted straight against
-that account instead of the cash journal's suspense account — no manual
-reconciliation afterwards, and no free-text typos in the movement reason.
+    [PROVEEDORES] Distribuidora Lopez, factura 0001-00034
 
-Concepts without an account behave exactly like today (they land in the suspense
-account) and only serve as label shortcuts, so the catalogue can be rolled out
-before every account is decided.
+The cashier keeps typing whatever detail they want after the code.
+
+The module writes nothing accounting: the movement still posts against the cash
+journal's suspense account, like stock Odoo. The imputation is configured in
+Accounting with native reconciliation models that match on the [CODE] prefix, which
+is the accountant's territory and deliberately out of this module.
     """,
     'author': 'AlparData',
     'website': 'https://www.alpardata.com.ar',
