@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates id="template" xml:space="preserve">
+    <t t-name="pos_clover_alpy.OrderReceipt" t-inherit="point_of_sale.OrderReceipt" t-inherit-mode="extension">
+        <xpath expr="//div[hasclass('paymentlines')]" position="after">
+            <t t-foreach="props.data.paymentlines || []" t-as="line" t-key="line_index">
+                <div t-if="line.clover_auth_code or line.clover_card_brand" class="pos-receipt-clover-voucher mt-2 p-1 border-top border-bottom" style="font-size: 0.85em; text-align: left;">
+                    <div style="font-weight: bold; text-align: center;">--- COMPROBANTE CLOVER / FISERV ---</div>
+                    <div t-if="line.clover_card_brand">
+                        <span>Tarjeta: </span><t t-esc="line.clover_card_brand"/> <span t-if="line.clover_card_last4"> (**** <t t-esc="line.clover_card_last4"/>)</span>
+                    </div>
+                    <div t-if="line.clover_auth_code">
+                        <span>Cód. Autorización: </span><t t-esc="line.clover_auth_code"/>
+                    </div>
+                    <div t-if="line.clover_transaction_no">
+                        <span>Nº Cupón / Operación: </span><t t-esc="line.clover_transaction_no"/>
+                    </div>
+                    <div t-if="line.clover_reference_id">
+                        <span>Nº Referencia / Lote: </span><t t-esc="line.clover_reference_id"/>
+                    </div>
+                    <div t-if="line.clover_installments and line.clover_installments > 1">
+                        <span>Cuotas: </span><t t-esc="line.clover_installments"/>
+                    </div>
+                    <div style="text-align: center;">---------------------------------------</div>
+                </div>
+            </t>
+        </xpath>
+    </t>
+</templates>
