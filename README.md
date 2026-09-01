@@ -11,6 +11,7 @@ This repository contains multiple Odoo modules, each addressing a specific need 
 - **[POS Payment Interest Margin](./pos_payment_interest_margin/README.md)**: Automated surcharges for specific payment methods (financing fees).
 - **[POS Payment Category](./pos_payment_category/README.md)**: Hierarchical grouping of payment methods for a cleaner UI.
 - **[POS Payment Card Details](./pos_payment_card_details/README.md)**: Tracking of terminal lot and coupon numbers for banking conciliation.
+- **[POS Cash Move Reason](./pos_cash_move_reason/README.md)**: Configurable concept buttons for cash in/out, posting each movement against a preset counterpart account.
 
 ### 🧾 Printing & Workflow
 - **[POS Retail Pre-Ticket](./pos_retail_pre_ticket/README.md)**: Adds draft receipt printing to standard retail POS without restaurant overhead.
