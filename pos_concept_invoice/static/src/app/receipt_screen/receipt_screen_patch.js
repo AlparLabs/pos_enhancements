@@ -31,8 +31,8 @@ patch(ReceiptScreen.prototype, {
         return canCreateConceptInvoice(this.currentOrder, this._conceptInvoiced.uuids);
     },
 
-    clickConceptInvoice() {
-        openConceptInvoiceDialog({
+    async clickConceptInvoice() {
+        await openConceptInvoiceDialog({
             order: this.currentOrder,
             services: {
                 orm: this._conceptOrm,

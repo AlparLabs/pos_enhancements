@@ -38,11 +38,29 @@ export function canCreateConceptInvoice(order, generatedUuids) {
  * @param {object} params.services – { orm, dialog, notification, pos }
  * @param {(order: object) => void} [params.onGenerated]
  */
-export function openConceptInvoiceDialog({ order, services, onGenerated }) {
+export async function openConceptInvoiceDialog({ order, services, onGenerated }) {
     if (!order) {
         return;
     }
     const { orm, dialog, notification, pos } = services;
+
+    // Pre-flight: the concept line needs exactly one VAT tax and an income
+    // account resolvable from the order's own company. Checking here means a
+    // misconfigured company is reported before the cashier types the concept,
+    // instead of surfacing as an opaque ARCA error once the payment is done.
+    try {
+        const check = await orm.call("pos.order", "check_concept_invoice_config", [order.uuid]);
+        if (!check.ok) {
+            notification.add(check.message, { type: "danger", sticky: true });
+            return;
+        }
+    } catch (error) {
+        notification.add(
+            error?.data?.message || "No se pudo validar la configuración de la factura concepto.",
+            { type: "danger", sticky: true }
+        );
+        return;
+    }
 
     dialog.add(ConceptInvoicePopup, {
         order,
