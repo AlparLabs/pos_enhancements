@@ -1,6 +1,6 @@
 {
     'name': 'POS Concept Invoice',
-    'version': '19.0.3.0.0',
+    'version': '19.0.3.1.0',
     'category': 'Sales/Point of Sale',
     'summary': 'Pre-payment invoice choice (Standard / Concept / Receipt), on-screen fiscal receipt, and direct POS printer output',
     'description': """

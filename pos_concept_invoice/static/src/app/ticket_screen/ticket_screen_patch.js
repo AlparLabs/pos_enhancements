@@ -36,8 +36,8 @@ patch(TicketScreen.prototype, {
     /**
      * @param {object} order – the selected synced (finalized) POS order
      */
-    clickConceptInvoice(order) {
-        openConceptInvoiceDialog({
+    async clickConceptInvoice(order) {
+        await openConceptInvoiceDialog({
             order,
             services: {
                 orm: this._conceptOrm,

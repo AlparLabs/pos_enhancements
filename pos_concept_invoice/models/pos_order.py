@@ -10,6 +10,129 @@ class PosOrder(models.Model):
         help="Description used when a single-line concept invoice was generated for this order.",
     )
 
+    # ------------------------------------------------------------------
+    # Concept line resolution
+    #
+    # Everything below resolves against `order.company_id.parent_ids`, never
+    # against `self.env.company`: `_generate_pos_order_invoice` runs the whole
+    # flow under `with_company(order.company_id)`, so inside a branch POS
+    # `env.company` is the branch, which owns no taxes and no chart of its own.
+    # A search with `company_id = env.company.id` returns nothing there, and the
+    # line used to be built with no tax at all -- which only surfaces later as
+    # ARCA's "there should be a single tax from the VAT tax group per line".
+    # ------------------------------------------------------------------
+
+    def _concept_invoice_product(self):
+        product = self.env.ref('pos_concept_invoice.product_concept', raise_if_not_found=False)
+        if not product:
+            raise UserError(_("Concept product not found. Please reinstall the pos_concept_invoice module."))
+        return product
+
+    def _concept_invoice_company(self):
+        self.ensure_one()
+        return self.company_id or self.env.company
+
+    def _is_vat_tax(self, tax):
+        """True when the tax belongs to a tax group ARCA recognises as VAT."""
+        group = tax.tax_group_id
+        if 'l10n_ar_vat_afip_code' in group._fields:
+            return bool(group.l10n_ar_vat_afip_code)
+        return True
+
+    def _resolve_concept_tax(self):
+        """Return the single VAT tax to apply on the concept line.
+
+        Raises a descriptive UserError instead of silently producing a line
+        without taxes, which is what ARCA rejects further down the flow.
+        """
+        self.ensure_one()
+        company = self._concept_invoice_company()
+        product = self._concept_invoice_product()
+
+        # Branches own no taxes: the chart lives on the root company and the
+        # branch inherits it. `_check_company_domain` is what Odoo itself uses
+        # to express that (`parent_of`, not `=`), so it keeps working whatever
+        # the company tree looks like.
+        taxes = product.taxes_id.filtered(lambda t: t.company_id in company.parent_ids)
+        if not taxes:
+            taxes = self.env['account.tax'].search(
+                self.env['account.tax']._check_company_domain(company) + [
+                    ('type_tax_use', '=', 'sale'),
+                    ('amount', '=', 21.0),
+                ]
+            )
+
+        vat_taxes = taxes.filtered(self._is_vat_tax)
+        # A branch may redefine the parent's tax; the most specific one wins.
+        own_taxes = vat_taxes.filtered(lambda t: t.company_id == company)
+        if own_taxes:
+            vat_taxes = own_taxes
+
+        if len(vat_taxes) != 1:
+            raise UserError(_(
+                'The "%(product)s" product resolves to %(count)s VAT tax(es) for %(company)s '
+                '(%(taxes)s), but exactly one is required.\n\n'
+                'Set a single sale VAT tax on that product for %(company)s or for its parent company.',
+                product=product.display_name,
+                count=len(vat_taxes),
+                company=company.display_name,
+                taxes=', '.join(vat_taxes.mapped('name')) or _('none'),
+            ))
+        return vat_taxes
+
+    def _resolve_concept_account(self):
+        """Return the income account for the concept line."""
+        self.ensure_one()
+        company = self._concept_invoice_company()
+        product = self._concept_invoice_product().with_company(company)
+
+        account = (
+            product.property_account_income_id
+            or product.categ_id.property_account_income_categ_id
+        )
+        if not account:
+            # Same inheritance rule as the taxes: the branch reads the root
+            # company's chart of accounts.
+            account = self.env['account.account'].search(
+                self.env['account.account']._check_company_domain(company) + [
+                    ('account_type', '=', 'income'),
+                    ('deprecated', '=', False),
+                ], limit=1
+            )
+        if not account:
+            raise UserError(_(
+                'No income account found for %(company)s. Set one on the "%(product)s" product '
+                'or on its product category.',
+                company=company.display_name,
+                product=product.display_name,
+            ))
+        return account
+
+    def _concept_invoice_price_unit(self, tax):
+        """Untax the order total when the resolved tax is not price-included."""
+        self.ensure_one()
+        if tax and not tax.price_include:
+            return self.amount_total / (1 + tax.amount / 100.0)
+        return self.amount_total
+
+    @api.model
+    def check_concept_invoice_config(self, order_uuid=False) -> dict:
+        """Read-only pre-flight check for the POS frontend.
+
+        Resolves exactly what the invoice line would carry, without creating or
+        posting anything, so the cashier is warned before entering the concept
+        rather than after, when the only remaining error comes from ARCA.
+        """
+        order = self.search([('uuid', '=', order_uuid)], limit=1) if order_uuid else self.browse()
+        if not order:
+            return {'ok': False, 'message': _("POS Order not found (uuid: %s).") % order_uuid}
+        try:
+            order._resolve_concept_tax()
+            order._resolve_concept_account()
+        except UserError as error:
+            return {'ok': False, 'message': str(error)}
+        return {'ok': True, 'message': ''}
+
     @api.model
     def create_concept_invoice(self, order_uuid: str, concept: str, partner_id: int | bool = False) -> dict:
         """
@@ -29,57 +152,19 @@ class PosOrder(models.Model):
         elif not order.partner_id:
             raise UserError(_("Please select a customer to generate the concept invoice."))
 
-        concept_product = self.env.ref('pos_concept_invoice.product_concept', raise_if_not_found=False)
-        if not concept_product:
-            raise UserError(_("Concept product not found. Please reinstall the pos_concept_invoice module."))
-
-        tax = self.env['account.tax'].search([
-            ('type_tax_use', '=', 'sale'),
-            ('amount', '=', 21.0),
-            ('price_include', '=', True),
-            ('company_id', '=', self.env.company.id),
-        ], limit=1)
-
-        # Fallback to a non-included 21% tax (common in l10n_ar)
-        if not tax:
-            tax = self.env['account.tax'].search([
-                ('type_tax_use', '=', 'sale'),
-                ('amount', '=', 21.0),
-                ('company_id', '=', self.env.company.id),
-            ], limit=1)
-
-        price_unit = order.amount_total
-        if tax and not tax.price_include:
-            price_unit = order.amount_total / (1 + tax.amount / 100.0)
-
-        account = (
-            concept_product.property_account_income_id
-            or concept_product.categ_id.property_account_income_categ_id
-        )
-        if not account:
-            account = self.env['account.account'].search([
-                ('account_type', '=', 'income'),
-                ('company_ids', 'in', self.env.company.id),
-                ('deprecated', '=', False),
-            ], limit=1)
-        if not account:
-            raise UserError(_("No income account found."))
+        # Fail here, before any write, with a message the cashier can act on.
+        order._resolve_concept_tax()
+        order._resolve_concept_account()
 
         order.write({
             'to_invoice': True,
             'concept_invoice_name': concept.strip(),
         })
 
-        ctx = {
-            'concept_invoice_data': {
-                'concept': concept.strip(),
-                'product_id': concept_product.id,
-                'account_id': account.id,
-                'tax_ids': [(6, 0, tax.ids)] if tax else [(5,)],
-                'price_unit': price_unit,
-            }
-        }
-        order.with_context(**ctx)._generate_pos_order_invoice()
+        # The line itself is built in _prepare_invoice_lines, which resolves the
+        # tax and the account again from the order's own company. Only the text
+        # travels in the context, so nothing can diverge between both sides.
+        order.with_context(concept_invoice_data={'concept': concept.strip()})._generate_pos_order_invoice()
 
         move = order.account_move
         auth_code_due = False
@@ -123,48 +208,18 @@ class PosOrder(models.Model):
         """
         ctx = self.env.context.get('concept_invoice_data')
         concept = ctx['concept'] if ctx else self.concept_invoice_name
-        if concept:
-            concept_product = self.env.ref('pos_concept_invoice.product_concept', raise_if_not_found=False)
-            if not concept_product and ctx:
-                concept_product = self.env['product.product'].browse(ctx.get('product_id'))
+        if not concept:
+            return super()._prepare_invoice_lines(move_type)
 
-            if concept_product:
-                tax = self.env['account.tax'].search([
-                    ('type_tax_use', '=', 'sale'),
-                    ('amount', '=', 21.0),
-                    ('price_include', '=', True),
-                    ('company_id', '=', self.env.company.id),
-                ], limit=1)
-                if not tax:
-                    tax = self.env['account.tax'].search([
-                        ('type_tax_use', '=', 'sale'),
-                        ('amount', '=', 21.0),
-                        ('company_id', '=', self.env.company.id),
-                    ], limit=1)
+        product = self._concept_invoice_product()
+        tax = self._resolve_concept_tax()
+        account = self._resolve_concept_account()
 
-                price_unit = self.amount_total
-                if tax and not tax.price_include:
-                    price_unit = self.amount_total / (1 + tax.amount / 100.0)
-
-                account = (
-                    concept_product.property_account_income_id
-                    or concept_product.categ_id.property_account_income_categ_id
-                )
-                if not account and ctx:
-                    account = self.env['account.account'].browse(ctx.get('account_id'))
-                if not account:
-                    account = self.env['account.account'].search([
-                        ('account_type', '=', 'income'),
-                        ('company_ids', 'in', self.env.company.id),
-                        ('deprecated', '=', False),
-                    ], limit=1)
-
-                return [(0, 0, {
-                    'name': concept.strip(),
-                    'product_id': concept_product.id,
-                    'account_id': account.id if account else False,
-                    'quantity': 1.0,
-                    'price_unit': ctx.get('price_unit', price_unit) if ctx else price_unit,
-                    'tax_ids': ctx.get('tax_ids', [(6, 0, tax.ids)] if tax else [(5,)]) if ctx else ([(6, 0, tax.ids)] if tax else [(5,)]),
-                })]
-        return super()._prepare_invoice_lines(move_type)
+        return [(0, 0, {
+            'name': concept.strip(),
+            'product_id': product.id,
+            'account_id': account.id,
+            'quantity': 1.0,
+            'price_unit': self._concept_invoice_price_unit(tax),
+            'tax_ids': [(6, 0, tax.ids)],
+        })]
