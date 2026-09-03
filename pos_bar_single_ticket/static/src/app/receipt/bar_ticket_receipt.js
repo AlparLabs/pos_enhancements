@@ -36,10 +36,10 @@ export class BarTicketReceipt extends Component {
      *
      * The server assigns pos_reference in _complete_values_from_session when
      * the order record is created, so it only exists after the order has been
-     * synced; that is why bar tickets are printed once the order is validated
-     * (see payment_screen.js). It stays empty when the order was validated
-     * offline, and then the line is simply omitted rather than showing a
-     * different number that would not match the sale.
+     * synced; that is why bar tickets are printed from afterOrderValidation
+     * (see utils/order_payment_validation.js). It stays empty when the order
+     * was validated offline, and then the line is simply omitted rather than
+     * showing a different number that would not match the sale.
      */
     get orderReference() {
         return this.props.order.pos_reference || "";

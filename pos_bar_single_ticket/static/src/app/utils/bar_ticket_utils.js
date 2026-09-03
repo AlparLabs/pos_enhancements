@@ -137,17 +137,6 @@ function linesByUuid(order, uuids) {
 }
 
 /**
- * True once the payment flow actually went through (finalizeValidation ran).
- * A cancelled or invalid validation returns early and leaves the order in
- * draft, in which case its bar tickets must not be printed.
- * @param {import("@point_of_sale/app/models/pos_order").PosOrder} order
- * @returns {boolean}
- */
-export function isOrderValidated(order) {
-    return Boolean(order?.finalized) || ["paid", "done", "invoiced"].includes(order?.state);
-}
-
-/**
  * Lines that still owe their individual bar tickets: bar-category lines of a
  * direct sale that have not been paid-and-printed yet.
  *
@@ -194,10 +183,10 @@ export function setBarTicketPrinted(order, uuids, printed) {
 /**
  * Prints the individual bar tickets of the given lines.
  *
- * Called ONLY from validateOrder (payment screen), right after the order has
- * been validated: tickets must never be printed before the client actually
- * pays, and the receipt number they carry (pos.order.pos_reference) is only
- * assigned by the server once the order is synced.
+ * Called ONLY from the patched OrderPaymentValidation.afterOrderValidation:
+ * tickets must never be printed before the client actually pays, and the
+ * receipt number they carry (pos.order.pos_reference) is only assigned by the
+ * server once the order is synced.
  *
  * @param {import("@point_of_sale/app/models/pos_order").PosOrder} order
  * @param {string[]} uuids – uuids of the lines to print, from getPendingBarTicketLines

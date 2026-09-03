@@ -1,6 +1,6 @@
 {
     'name': 'POS Bar Single Ticket',
-    'version': '19.0.2.2.0',
+    'version': '19.0.2.2.1',
     'category': 'Sales/Point of Sale',
     'summary': 'Print bar tickets only at payment time; supervisor PIN required for reprints.',
     'description': """
@@ -17,8 +17,10 @@ table are served through the regular kitchen/bar flow and never emit them.
 
 Each ticket shows the Odoo receipt number of the sale (pos.order.pos_reference,
 e.g. 260-16-000002) under the date, so the bar ticket can be traced back to the
-order. That number is assigned by the server when the order is synced, which is
-why tickets are printed right after the order is validated.
+order. That number is assigned by the server when the order is synced, so the
+tickets are printed from OrderPaymentValidation.afterOrderValidation: right
+after the sync and before the customer receipt, on both the online and the
+offline (ConnectionLostError) paths.
 
 Example: 3 Mojitos → 3 separate bar tickets printed at checkout.
     """,
@@ -36,7 +38,7 @@ Example: 3 Mojitos → 3 separate bar tickets printed at checkout.
             'pos_bar_single_ticket/static/src/app/utils/bar_ticket_utils.js',
             'pos_bar_single_ticket/static/src/app/control_buttons/bar_ticket_button.js',
             'pos_bar_single_ticket/static/src/app/control_buttons/bar_ticket_button.xml',
-            'pos_bar_single_ticket/static/src/app/screens/payment_screen.js',
+            'pos_bar_single_ticket/static/src/app/utils/order_payment_validation.js',
             'pos_bar_single_ticket/static/src/app/screens/ticket_screen/ticket_screen.js',
             'pos_bar_single_ticket/static/src/app/screens/ticket_screen/ticket_screen.xml',
         ],
