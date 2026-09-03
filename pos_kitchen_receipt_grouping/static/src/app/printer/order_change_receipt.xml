@@ -47,11 +47,21 @@
         <xpath expr="//div[1]" position="attributes">
             <attribute name="style">font-size: 110%;</attribute>
         </xpath>
-        <!-- Reemplaza el contenedor d-flex para que el texto y variantes fluyan como texto corrido normal sin dividirse en columnas estrechas -->
+        <!--
+            Las variantes van DENTRO del span product-name (antes eran items flex
+            hermanos, y cada una se comprimia en su propia columna angosta).
+            El contenedor sigue siendo d-flex a proposito: core declara
+            `.product-name { display: -webkit-box; -webkit-box-orient: vertical; }`
+            (product_card.scss), que es un display de nivel bloque. Fuera de un
+            contenedor flex ese span arranca en su propia linea y la cantidad
+            queda impresa arriba del nombre. El d-flex lo convierte en item flex
+            y los deja en la misma linea; min-width:0 evita que un nombre largo
+            desborde los 512px del render de impresion.
+        -->
         <xpath expr="//div[hasclass('d-flex')]" position="replace">
-            <div class="medium">
-                <span class="me-2" t-esc="line.quantity"/>
-                <span class="product-name">
+            <div class="d-flex medium">
+                <span class="me-2" style="flex: 0 0 auto;" t-esc="line.quantity"/>
+                <span class="product-name" style="flex: 1 1 auto; min-width: 0;">
                     <t t-esc="line.basic_name"/>
                     <t t-if="line.attribute_value_names?.length">
                         <t t-foreach="line.attribute_value_names" t-as="attr" t-key="attr_index">
