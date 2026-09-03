@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="pos_config_form_view_inherit_bar_watermark" model="ir.ui.view">
+        <field name="name">pos.config.form.inherit.bar_watermark</field>
+        <field name="model">pos.config</field>
+        <field name="inherit_id" ref="point_of_sale.pos_config_view_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//setting[@id='other_devices']" position="after">
+                <setting string="Bar Ticket Watermark"
+                         help="Characters printed on the four corners of the bar ticket. Leave empty for none.">
+                    <field name="bar_ticket_watermark" placeholder="e.g. M"/>
+                </setting>
+            </xpath>
+        </field>
+    </record>
+</odoo>

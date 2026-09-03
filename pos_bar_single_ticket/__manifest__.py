@@ -1,6 +1,6 @@
 {
     'name': 'POS Bar Single Ticket',
-    'version': '19.0.2.2.1',
+    'version': '19.0.2.3.0',
     'category': 'Sales/Point of Sale',
     'summary': 'Print bar tickets only at payment time; supervisor PIN required for reprints.',
     'description': """
@@ -30,6 +30,7 @@ Example: 3 Mojitos → 3 separate bar tickets printed at checkout.
     'depends': ['point_of_sale', 'pos_restaurant'],
     'data': [
         'views/pos_category_view.xml',
+        'views/pos_config_view.xml',
     ],
     'assets': {
         'point_of_sale._assets_pos': [

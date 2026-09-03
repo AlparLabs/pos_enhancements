@@ -1,7 +1,28 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <templates id="template" xml:space="preserve">
     <t t-name="pos_bar_single_ticket.BarTicketReceipt">
-        <div class="pos-receipt">
+        <div class="pos-receipt" style="position: relative;">
+            <!--
+                Marca de agua en las cuatro esquinas. Va como <svg><text> con
+                fill="none" y stroke, y no con -webkit-text-stroke, porque la
+                impresion serializa el DOM a un <foreignObject> via html-to-image:
+                el stroke de SVG sobrevive esa conversion, la propiedad -webkit-
+                no esta garantizada y la letra saldria rellena en negro.
+            -->
+            <t t-if="watermark">
+                <svg width="110" height="78" viewBox="0 0 110 78" style="position: absolute; top: 6px; left: 8px; overflow: visible;">
+                    <text x="0" y="62" text-anchor="start" font-size="72" font-weight="bold" fill="none" stroke="black" stroke-width="3" t-esc="watermark"/>
+                </svg>
+                <svg width="110" height="78" viewBox="0 0 110 78" style="position: absolute; top: 6px; right: 8px; overflow: visible;">
+                    <text x="110" y="62" text-anchor="end" font-size="72" font-weight="bold" fill="none" stroke="black" stroke-width="3" t-esc="watermark"/>
+                </svg>
+                <svg width="110" height="78" viewBox="0 0 110 78" style="position: absolute; bottom: 6px; left: 8px; overflow: visible;">
+                    <text x="0" y="62" text-anchor="start" font-size="72" font-weight="bold" fill="none" stroke="black" stroke-width="3" t-esc="watermark"/>
+                </svg>
+                <svg width="110" height="78" viewBox="0 0 110 78" style="position: absolute; bottom: 6px; right: 8px; overflow: visible;">
+                    <text x="110" y="62" text-anchor="end" font-size="72" font-weight="bold" fill="none" stroke="black" stroke-width="3" t-esc="watermark"/>
+                </svg>
+            </t>
             <div class="pos-receipt-title text-center my-2" style="font-size: 115%; font-weight: bold;">
                 <t t-esc="posName" />
             </div>

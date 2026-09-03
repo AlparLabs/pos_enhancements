@@ -18,7 +18,16 @@ Go to **Point of Sale > Configuration > POS Product Categories** and edit a cate
 - **Print Single Ticket**: Check this box. 
 - *Note*: Any product belonging to this category will now be split during bar printing.
 
-### 2. Printer Setup
+### 2. Bar Ticket Watermark (optional)
+Go to **Point of Sale > Configuration > Point of Sale** and edit a POS:
+- **Bar Ticket Watermark**: one or two characters, e.g. `M`. They are printed as an
+  outlined watermark on the four corners of every bar ticket.
+- Leave it empty to print no watermark. Existing setups are unaffected until it is filled in.
+- It is drawn with `<svg><text stroke=...>` rather than CSS `-webkit-text-stroke`, because
+  printing serializes the DOM through `html-to-image`: the SVG stroke survives that
+  conversion, the CSS property is not guaranteed to and the letter would print solid black.
+
+### 3. Printer Setup
 Ensure you have a kitchen/bar printer configured in your POS settings.
 
 ## Technical Details

@@ -45,6 +45,16 @@ export class BarTicketReceipt extends Component {
         return this.props.order.pos_reference || "";
     }
 
+    /**
+     * One or two characters configured on the POS (pos.config.bar_ticket_watermark),
+     * printed as an outlined watermark on the four corners. Empty disables it.
+     */
+    get watermark() {
+        const order = this.props.order;
+        const config = order.config_id || order.config;
+        return (config?.bar_ticket_watermark || "").trim();
+    }
+
     get dateStr() {
         return DateTime.now().toFormat("dd/MM/yyyy HH:mm");
     }
