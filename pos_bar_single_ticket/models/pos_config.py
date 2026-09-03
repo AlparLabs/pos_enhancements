@@ -8,12 +8,10 @@ class PosConfig(models.Model):
     # devuelve [] y read([]) trae todos los campos, asi que este llega solo al POS.
     bar_ticket_watermark = fields.Char(
         string='Bar Ticket Watermark',
-        size=5,
+        size=2,
         help=(
-            'Up to five characters printed as an outlined watermark on the four '
-            'corners of the bar ticket, e.g. the initial of the venue. The type '
-            'size shrinks as you add characters so the watermark never collides '
-            'with the POS name. '
+            'One or two characters printed as an outlined watermark on the four '
+            'corners of the bar ticket, e.g. the initial of the venue. '
             'Leave empty to print no watermark.'
         ),
     )
