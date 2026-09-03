@@ -2,7 +2,7 @@
 <templates id="template" xml:space="preserve">
     <t t-name="pos_bar_single_ticket.BarTicketReceipt">
         <div class="pos-receipt">
-            <div class="pos-receipt-title text-center my-3" style="font-size: 150%; font-weight: bold;">
+            <div class="pos-receipt-title text-center my-3" style="font-size: 130%; font-weight: bold;">
                 <t t-esc="posName" />
             </div>
 
@@ -10,8 +10,8 @@
 
             <!-- Single isolated unit of the order line -->
             <div class="pos-receipt-title my-4 text-center">
-                <span style="font-size: 130%; font-weight: bold;">1 x <t t-esc="productName"/></span>
-                <div t-foreach="lotNames" t-as="lot" t-key="lot_index" style="font-size: 80%;">
+                <span style="font-size: 115%; font-weight: bold;">1 x <t t-esc="productName"/></span>
+                <div t-foreach="lotNames" t-as="lot" t-key="lot_index" style="font-size: 75%;">
                     Lot: <t t-esc="lot"/>
                 </div>
             </div>
