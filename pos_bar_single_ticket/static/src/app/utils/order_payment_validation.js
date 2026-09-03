@@ -1,6 +1,8 @@
 /** @odoo-module **/
 
-import { OrderPaymentValidation } from "@point_of_sale/app/utils/order_payment_validation";
+// Core la exporta como default (export default class OrderPaymentValidation), no
+// como named: con llaves llega undefined y patch() revienta al leer .prototype.
+import OrderPaymentValidation from "@point_of_sale/app/utils/order_payment_validation";
 import { patch } from "@web/core/utils/patch";
 import { _t } from "@web/core/l10n/translation";
 import {
