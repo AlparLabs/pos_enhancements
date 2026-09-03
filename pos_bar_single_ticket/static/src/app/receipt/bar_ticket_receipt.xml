@@ -2,23 +2,23 @@
 <templates id="template" xml:space="preserve">
     <t t-name="pos_bar_single_ticket.BarTicketReceipt">
         <div class="pos-receipt">
-            <div class="pos-receipt-title text-center my-3" style="font-size: 130%; font-weight: bold;">
+            <div class="pos-receipt-title text-center my-2" style="font-size: 115%; font-weight: bold;">
                 <t t-esc="posName" />
             </div>
 
-            <hr style="border-top: 2px dashed black;"/>
+            <hr class="my-2" style="border-top: 2px dashed black;"/>
 
             <!-- Single isolated unit of the order line -->
-            <div class="pos-receipt-title my-4 text-center">
-                <span style="font-size: 115%; font-weight: bold;">1 x <t t-esc="productName"/></span>
-                <div t-foreach="lotNames" t-as="lot" t-key="lot_index" style="font-size: 75%;">
+            <div class="pos-receipt-title my-2 text-center">
+                <span style="font-size: 100%; font-weight: bold;">1 x <t t-esc="productName"/></span>
+                <div t-foreach="lotNames" t-as="lot" t-key="lot_index" style="font-size: 70%;">
                     Lot: <t t-esc="lot"/>
                 </div>
             </div>
 
-            <hr style="border-top: 2px dashed black;"/>
+            <hr class="my-2" style="border-top: 2px dashed black;"/>
 
-            <div class="pos-receipt-title text-center mt-2 mb-4">
+            <div class="pos-receipt-title text-center mt-1 mb-2">
                 <div t-esc="dateStr" />
                 <div t-esc="orderName" />
             </div>
