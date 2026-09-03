@@ -30,9 +30,19 @@ export class BarTicketReceipt extends Component {
             .filter(Boolean);
     }
 
-    get orderName() {
-        const order = this.props.order;
-        return order.getName?.() || order.pos_reference || "";
+    /**
+     * Odoo receipt number of the sale, e.g. "260-16-000002" — the same value
+     * the customer receipt and the backend show for the order.
+     *
+     * The server assigns pos_reference in _complete_values_from_session when
+     * the order record is created, so it only exists after the order has been
+     * synced; that is why bar tickets are printed once the order is validated
+     * (see payment_screen.js). It stays empty when the order was validated
+     * offline, and then the line is simply omitted rather than showing a
+     * different number that would not match the sale.
+     */
+    get orderReference() {
+        return this.props.order.pos_reference || "";
     }
 
     get dateStr() {

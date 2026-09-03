@@ -122,39 +122,90 @@ async function printTicketsForLine(line, order, printer) {
 }
 
 /**
- * Prints individual bar tickets for every line that has not yet been
- * paid-and-printed. Marks `bar_ticket_paid_and_printed = true` on each line
- * after printing so they can never be auto-printed again.
- *
- * This is called ONLY from validateOrder (payment screen) to ensure tickets
- * are never printed before the client actually pays.
+ * Resolves order lines by uuid instead of holding on to the record objects:
+ * the payment flow syncs the order with the server in between marking the
+ * lines and printing them, and that round-trip may swap the local records.
+ * @param {import("@point_of_sale/app/models/pos_order").PosOrder} order
+ * @param {string[]} uuids
+ */
+function linesByUuid(order, uuids) {
+    if (!order || !uuids.length) {
+        return [];
+    }
+    const wanted = new Set(uuids);
+    return order.getOrderlines().filter((line) => wanted.has(line.uuid));
+}
+
+/**
+ * True once the payment flow actually went through (finalizeValidation ran).
+ * A cancelled or invalid validation returns early and leaves the order in
+ * draft, in which case its bar tickets must not be printed.
+ * @param {import("@point_of_sale/app/models/pos_order").PosOrder} order
+ * @returns {boolean}
+ */
+export function isOrderValidated(order) {
+    return Boolean(order?.finalized) || ["paid", "done", "invoiced"].includes(order?.state);
+}
+
+/**
+ * Lines that still owe their individual bar tickets: bar-category lines of a
+ * direct sale that have not been paid-and-printed yet.
  *
  * @param {import("@point_of_sale/app/models/pos_order").PosOrder} order
  * @param {object} pos  – result of usePos()
- * @param {object} printer – result of useService("printer")
+ * @returns {Array} the pending order lines
  */
-export async function printBarTicketsForOrder(order, pos, printer) {
+export function getPendingBarTicketLines(order, pos) {
     if (!order || order.getOrderlines().length === 0) {
-        return;
+        return [];
     }
 
     // Bar tickets are for direct sales only — never for table orders.
     if (!isDirectSaleOrder(order)) {
-        return;
+        return [];
     }
 
-    for (const line of order.getOrderlines()) {
-        // Skip if already printed at payment time
-        if (!shouldSplitLine(line, pos) || line.bar_ticket_paid_and_printed) {
-            continue;
-        }
+    return order.getOrderlines().filter(
+        (line) =>
+            shouldSplitLine(line, pos) &&
+            !line.bar_ticket_paid_and_printed &&
+            line.getQuantity() > 0
+    );
+}
 
+/**
+ * Flips the `bar_ticket_paid_and_printed` gate on the given lines.
+ *
+ * bar_ticket_paid_and_printed is a real pos.order.line field, so it is
+ * persisted with the order when it syncs to the server. It is therefore set
+ * BEFORE the order is validated — so it travels with that very sync — and
+ * rolled back when the validation does not go through.
+ *
+ * @param {import("@point_of_sale/app/models/pos_order").PosOrder} order
+ * @param {string[]} uuids – uuids of the lines to update
+ * @param {boolean} printed
+ */
+export function setBarTicketPrinted(order, uuids, printed) {
+    for (const line of linesByUuid(order, uuids)) {
+        line.update({ bar_ticket_paid_and_printed: printed });
+    }
+}
+
+/**
+ * Prints the individual bar tickets of the given lines.
+ *
+ * Called ONLY from validateOrder (payment screen), right after the order has
+ * been validated: tickets must never be printed before the client actually
+ * pays, and the receipt number they carry (pos.order.pos_reference) is only
+ * assigned by the server once the order is synced.
+ *
+ * @param {import("@point_of_sale/app/models/pos_order").PosOrder} order
+ * @param {string[]} uuids – uuids of the lines to print, from getPendingBarTicketLines
+ * @param {object} printer – result of useService("printer")
+ */
+export async function printBarTicketsForLines(order, uuids, printer) {
+    for (const line of linesByUuid(order, uuids)) {
         await printTicketsForLine(line, order, printer);
-
-        // Mark as printed — this gate is permanent for this order line.
-        // bar_ticket_paid_and_printed is a real pos.order.line field, so it is
-        // persisted with the order when it syncs to the server.
-        line.update({ bar_ticket_paid_and_printed: true });
     }
 }
 

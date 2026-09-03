@@ -1,6 +1,6 @@
 {
     'name': 'POS Bar Single Ticket',
-    'version': '19.0.2.1.2',
+    'version': '19.0.2.2.0',
     'category': 'Sales/Point of Sale',
     'summary': 'Print bar tickets only at payment time; supervisor PIN required for reprints.',
     'description': """
@@ -14,6 +14,11 @@ supervisors to force-reprint tickets after verifying their PIN.
 
 Bar tickets are issued for direct sales only. Orders attached to a restaurant
 table are served through the regular kitchen/bar flow and never emit them.
+
+Each ticket shows the Odoo receipt number of the sale (pos.order.pos_reference,
+e.g. 260-16-000002) under the date, so the bar ticket can be traced back to the
+order. That number is assigned by the server when the order is synced, which is
+why tickets are printed right after the order is validated.
 
 Example: 3 Mojitos → 3 separate bar tickets printed at checkout.
     """,
