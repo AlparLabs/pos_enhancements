@@ -43,7 +43,7 @@
             <div class="pos-receipt-title text-center mt-1 mb-2">
                 <div t-esc="dateStr" />
                 <!-- Odoo receipt number of the sale, to tie the bar ticket to the order -->
-                <div t-if="orderReference" style="font-weight: bold;">Ticket: <t t-esc="orderReference"/></div>
+                <div t-if="orderReference" style="font-weight: bold; font-size: 70%;">Ticket: <t t-esc="orderReference"/></div>
             </div>
             <!-- Extra padding to prevent the printer from cutting off the order number -->
             <br/>
