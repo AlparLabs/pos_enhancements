@@ -20,8 +20,10 @@ Go to **Point of Sale > Configuration > POS Product Categories** and edit a cate
 
 ### 2. Bar Ticket Watermark (optional)
 Go to **Point of Sale > Configuration > Point of Sale** and edit a POS:
-- **Bar Ticket Watermark**: one or two characters, e.g. `M`. They are printed as an
-  outlined watermark on the four corners of every bar ticket.
+- **Bar Ticket Watermark**: up to five characters, e.g. `M` or `BRODA`. They are printed
+  as an outlined watermark on the four corners of every bar ticket. The type size shrinks
+  as characters are added (72px for one or two, down to 34px for five) so the watermark
+  never collides with the centred POS name.
 - Leave it empty to print no watermark. Existing setups are unaffected until it is filled in.
 - It is drawn with `<svg><text stroke=...>` rather than CSS `-webkit-text-stroke`, because
   printing serializes the DOM through `html-to-image`: the SVG stroke survives that

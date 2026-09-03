@@ -1,6 +1,6 @@
 {
     'name': 'POS Bar Single Ticket',
-    'version': '19.0.2.3.1',
+    'version': '19.0.2.4.0',
     'category': 'Sales/Point of Sale',
     'summary': 'Print bar tickets only at payment time; supervisor PIN required for reprints.',
     'description': """
