@@ -7,6 +7,7 @@ A collection of professional Odoo 18 modules designed to enhance the Point of Sa
 This repository contains multiple Odoo modules, each addressing a specific need in the POS ecosystem. Below is an index of the available enhancements:
 
 ### 💳 Payment & Finance
+- **[POS Clover / Fiserv (Alpy)](./pos_clover_alpy/README.md)**: Smart terminal integration with Clover (Fiserv) via Cloud Pay Display & REST API.
 - **[POS Mercado Pago (Alpy)](./pos_mercado_pago_alpy/README.md)**: Seamless integration with Mercado Pago Point Smart terminals using the Orders API.
 - **[POS Payment Interest Margin](./pos_payment_interest_margin/README.md)**: Automated surcharges for specific payment methods (financing fees).
 - **[POS Payment Category](./pos_payment_category/README.md)**: Hierarchical grouping of payment methods for a cleaner UI.

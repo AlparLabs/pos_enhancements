@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="pos_payment_method_view_form_inherit_clover" model="ir.ui.view">
+        <field name="name">pos.payment.method.form.inherit.clover</field>
+        <field name="model">pos.payment.method</field>
+        <field name="inherit_id" ref="point_of_sale.pos_payment_method_view_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//page[@name='terminal_config']" position="inside">
+                <group invisible="use_payment_terminal != 'clover_fiserv'" string="Configuración Clover / Fiserv">
+                    <group string="Credenciales y Conexión">
+                        <field name="clover_environment" required="use_payment_terminal == 'clover_fiserv'"/>
+                        <field name="clover_connection_type" required="use_payment_terminal == 'clover_fiserv'"/>
+                        <field name="clover_bearer_token" password="True" required="use_payment_terminal == 'clover_fiserv'"/>
+                        <field name="clover_device_id" placeholder="ej. C030UQ12345678" required="use_payment_terminal == 'clover_fiserv'"/>
+                        <field name="clover_pos_id" placeholder="ej. CAJA_01" required="use_payment_terminal == 'clover_fiserv'"/>
+                        <field name="clover_merchant_id" placeholder="UUID de comercio (opcional)"/>
+                        <field name="clover_lan_url" invisible="clover_connection_type != 'lan'" placeholder="https://192.168.1.50:12346" required="use_payment_terminal == 'clover_fiserv' and clover_connection_type == 'lan'"/>
+                    </group>
+                    <group string="Parámetros Regionales (Argentina / LATAM)">
+                        <field name="clover_skip_invoice_screen"/>
+                        <field name="clover_default_installments"/>
+                        <div class="mt-3">
+                            <button name="action_clover_ping"
+                                    type="object"
+                                    string="Probar Conexión (Ping)"
+                                    class="btn btn-outline-primary"
+                                    icon="fa-signal"/>
+                        </div>
+                    </group>
+                </group>
+            </xpath>
+        </field>
+    </record>
+</odoo>
