@@ -1,6 +1,9 @@
 /** @odoo-module **/
 
-import { register_payment_method } from "@point_of_sale/app/services/pos_store";
+import { registry } from "@web/core/registry";
 import { PaymentClover } from "@pos_clover_alpy/app/utils/payment/payment_clover";
 
-register_payment_method("clover_fiserv", PaymentClover);
+if (!registry.category("pos_payment_providers").contains("clover_fiserv")) {
+    registry.category("pos_payment_providers").add("clover_fiserv", PaymentClover);
+}
+

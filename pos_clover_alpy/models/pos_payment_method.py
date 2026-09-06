@@ -67,14 +67,22 @@ class PosPaymentMethod(models.Model):
         help="Cantidad de cuotas por defecto para operaciones de tarjeta en Argentina (1 a 99).",
     )
 
-    def _get_payment_terminal_selection(self):
-        return super()._get_payment_terminal_selection() + [
+    def _get_terminal_provider_selection(self):
+        return super()._get_terminal_provider_selection() + [
             (CLOVER_TERMINAL_TYPE, 'Clover / Fiserv (Smart POS)'),
         ]
 
+    def _get_payment_terminal_selection(self):
+        try:
+            return super()._get_payment_terminal_selection() + [
+                (CLOVER_TERMINAL_TYPE, 'Clover / Fiserv (Smart POS)'),
+            ]
+        except AttributeError:
+            return [(CLOVER_TERMINAL_TYPE, 'Clover / Fiserv (Smart POS)')]
+
     @api.model
-    def _load_pos_data_fields(self, config_id):
-        params = super()._load_pos_data_fields(config_id)
+    def _load_pos_data_fields(self, config):
+        params = super()._load_pos_data_fields(config)
         params += [
             'clover_environment',
             'clover_connection_type',
@@ -87,7 +95,10 @@ class PosPaymentMethod(models.Model):
         return params
 
     def _is_clover_terminal(self):
-        return self.use_payment_terminal == CLOVER_TERMINAL_TYPE
+        return (
+            getattr(self, 'payment_provider', None) == CLOVER_TERMINAL_TYPE
+            or getattr(self, 'use_payment_terminal', None) == CLOVER_TERMINAL_TYPE
+        )
 
     def _get_clover_request_handler(self):
         self.ensure_one()
