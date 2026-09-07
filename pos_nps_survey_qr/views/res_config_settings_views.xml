@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+    <record id="res_config_settings_view_form_inherit_pos_nps_survey_qr" model="ir.ui.view">
+        <field name="name">res.config.settings.view.form.inherit.pos_nps_survey_qr</field>
+        <field name="model">res.config.settings</field>
+        <field name="inherit_id" ref="point_of_sale.res_config_settings_view_form"/>
+        <field name="arch" type="xml">
+            <setting id="auto_printing" position="after">
+                <setting
+                    id="pos_nps_survey_qr_setting"
+                    string="Encuesta NPS en Ticket"
+                    help="Imprime un código QR con enlace a la encuesta de satisfacción NPS en el comprobante del cliente.">
+                    <field name="pos_nps_survey_enabled" widget="boolean_toggle"/>
+                    <div class="content-group" invisible="not pos_nps_survey_enabled">
+                        <div class="mt16 row">
+                            <label for="pos_nps_survey_url" string="URL de Encuesta" class="col-lg-4 o_light_label"/>
+                            <field name="pos_nps_survey_url" placeholder="https://encuesta.com/..." class="col-lg-8"/>
+                        </div>
+                        <div class="mt8 row">
+                            <label for="pos_nps_receipt_title" string="Título en Ticket" class="col-lg-4 o_light_label"/>
+                            <field name="pos_nps_receipt_title" placeholder="¿Cómo fue tu experiencia?" class="col-lg-8"/>
+                        </div>
+                        <div class="mt8 row">
+                            <label for="pos_nps_receipt_subtitle" string="Subtítulo / Bajada" class="col-lg-4 o_light_label"/>
+                            <field name="pos_nps_receipt_subtitle" placeholder="Escaneá el código QR y dejanos tu opinión." class="col-lg-8"/>
+                        </div>
+                    </div>
+                </setting>
+            </setting>
+        </field>
+    </record>
+</odoo>

@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates id="template" xml:space="preserve">
+    <t t-name="pos_nps_survey_qr.OrderReceipt" t-inherit="point_of_sale.OrderReceipt" t-inherit-mode="extension">
+        <xpath expr="//div[hasclass('before-footer')]" position="before">
+            <div t-if="npsSurveyEnabled" class="pos-receipt-center-align nps-survey-qr-container" style="text-align: center; margin-top: 10px; margin-bottom: 10px; padding-top: 8px; border-top: 1px dashed black;">
+                <div t-if="npsReceiptTitle" class="nps-survey-title" style="font-weight: bold; font-size: 0.95em; margin-bottom: 5px;">
+                    <t t-esc="npsReceiptTitle"/>
+                </div>
+                <div class="nps-survey-qr-image" style="margin: 5px 0;">
+                    <img t-att-src="npsSurveyQrCodeSrc" style="width: 140px; height: 140px;" alt="NPS Survey QR"/>
+                </div>
+                <div t-if="npsReceiptSubtitle" class="nps-survey-subtitle" style="font-size: 0.8em; margin-top: 5px;">
+                    <t t-esc="npsReceiptSubtitle"/>
+                </div>
+            </div>
+        </xpath>
+    </t>
+</templates>
