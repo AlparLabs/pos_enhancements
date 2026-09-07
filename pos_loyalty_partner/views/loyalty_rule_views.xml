@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="loyalty_rule_view_form_inherit_partner" model="ir.ui.view">
+        <field name="name">loyalty.rule.view.form.inherit.partner</field>
+        <field name="model">loyalty.rule</field>
+        <field name="inherit_id" ref="loyalty.loyalty_rule_view_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='product_tag_id']" position="after">
+                <separator string="Clientes Elegibles" colspan="2"/>
+                <field name="partner_category_ids" widget="many2many_tags" placeholder="Cualquier cliente (o seleccione etiquetas ej. Dueños, Familia, Staff)"/>
+                <field name="partner_ids" widget="many2many_tags" placeholder="Cualquier cliente (o seleccione contactos específicos)"/>
+            </xpath>
+        </field>
+    </record>
+</odoo>

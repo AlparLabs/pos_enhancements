@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="loyalty_program_view_form_inherit_validity" model="ir.ui.view">
+        <field name="name">loyalty.program.view.form.inherit.validity</field>
+        <field name="model">loyalty.program</field>
+        <field name="inherit_id" ref="loyalty.loyalty_program_view_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='date_to']" position="after">
+                <separator string="Vigencia Semanal y Horaria" colspan="2"/>
+                <field name="filter_by_days"/>
+                <label for="monday" string="Días Válidos" invisible="not filter_by_days"/>
+                <div invisible="not filter_by_days" class="d-flex flex-wrap gap-2 mb-2">
+                    <div><field name="monday" class="oe_inline"/> <label for="monday" string="Lun" class="me-2"/></div>
+                    <div><field name="tuesday" class="oe_inline"/> <label for="tuesday" string="Mar" class="me-2"/></div>
+                    <div><field name="wednesday" class="oe_inline"/> <label for="wednesday" string="Mié" class="me-2"/></div>
+                    <div><field name="thursday" class="oe_inline"/> <label for="thursday" string="Jue" class="me-2"/></div>
+                    <div><field name="friday" class="oe_inline"/> <label for="friday" string="Vie" class="me-2"/></div>
+                    <div><field name="saturday" class="oe_inline"/> <label for="saturday" string="Sáb" class="me-2"/></div>
+                    <div><field name="sunday" class="oe_inline"/> <label for="sunday" string="Dom"/></div>
+                </div>
+                <field name="filter_by_hours"/>
+                <label for="hour_from" string="Franja Horaria" invisible="not filter_by_hours"/>
+                <div invisible="not filter_by_hours" class="d-flex flex-row align-items-center mb-2">
+                    <field name="hour_from" widget="float_time" class="oe_inline me-2"/>
+                    <span class="me-2">a</span>
+                    <field name="hour_to" widget="float_time" class="oe_inline"/>
+                </div>
+            </xpath>
+        </field>
+    </record>
+</odoo>
