@@ -5,7 +5,7 @@
         <field name="model">loyalty.reward</field>
         <field name="inherit_id" ref="loyalty.loyalty_reward_view_form"/>
         <field name="arch" type="xml">
-            <xpath expr="//group[@string='Discount']" position="inside">
+            <xpath expr="//field[@name='discount_product_tag_id']" position="after">
                 <separator string="Exclusiones de Retail / Margen" colspan="2"/>
                 <field name="excluded_product_category_ids" widget="many2many_tags" placeholder="Categorías excluidas (ej. Cigarrillos, Telefonía, Precios Cuidados)"/>
                 <field name="excluded_product_ids" widget="many2many_tags" placeholder="Productos específicos excluidos"/>
