@@ -3,6 +3,7 @@
 import { _t } from "@web/core/l10n/translation";
 import { PaymentInterface } from "@point_of_sale/app/utils/payment/payment_interface";
 import { AlertDialog } from "@web/core/confirmation_dialog/confirmation_dialog";
+import { registry } from "@web/core/registry";
 
 export class PaymentClover extends PaymentInterface {
     setup(pos, payment_method_id) {
@@ -14,26 +15,60 @@ export class PaymentClover extends PaymentInterface {
     // ── Helper to find the payment line ──────────────────────────────────────
 
     _findPaymentLine(cid) {
+        if (cid && typeof cid === "object") {
+            return cid;
+        }
         const order = this.pos.getOrder();
         if (!order) return undefined;
         if (cid) {
-            return order.payment_ids.find((pl) => pl.uuid === cid || pl.cid === cid);
+            return order.payment_ids?.find((pl) => pl.uuid === cid || pl.cid === cid);
         }
-        return order.getSelectedPaymentline();
+        return order.getSelectedPaymentline?.();
+    }
+
+    _setLineStatus(line, status) {
+        if (!line) return;
+        if (typeof line.setPaymentStatus === "function") {
+            line.setPaymentStatus(status);
+        } else if (typeof line.set_payment_status === "function") {
+            line.set_payment_status(status);
+        }
+    }
+
+    async _callCloverMethod(method, params) {
+        if (typeof this.callPaymentMethod === "function") {
+            return await this.callPaymentMethod(method, params);
+        }
+        const orm = this.env?.services?.orm?.silent || this.orm?.silent || this.pos?.data?.orm?.silent;
+        if (orm) {
+            return await orm.call("pos.payment.method", method, params);
+        }
+        throw new Error("No ORM service available to call " + method);
     }
 
     // ── Payment Request Workflow ─────────────────────────────────────────────
 
+    // Odoo 19 signature
+    async sendPaymentRequest(line) {
+        await super.sendPaymentRequest?.(...arguments);
+        return this._executePaymentRequest(line);
+    }
+
+    // Odoo 18 signature (backwards compatibility)
     async send_payment_request(cid) {
-        await super.send_payment_request(cid);
+        await super.send_payment_request?.(cid);
         const line = this._findPaymentLine(cid);
-        const order = this.pos.getOrder();
+        return this._executePaymentRequest(line);
+    }
+
+    async _executePaymentRequest(line) {
+        const order = line?.order || this.pos.getOrder();
 
         if (!line || !order) {
             return false;
         }
 
-        this.pending_cid = cid;
+        this.pending_cid = line.uuid || line.cid;
 
         // Ensure amount is positive
         if (line.amount <= 0) {
@@ -41,7 +76,7 @@ export class PaymentClover extends PaymentInterface {
                 _t("Monto Inválido"),
                 _t("El monto a cobrar con Clover debe ser mayor a cero.")
             );
-            line.set_payment_status("retry");
+            this._setLineStatus(line, "retry");
             return false;
         }
 
@@ -56,10 +91,14 @@ export class PaymentClover extends PaymentInterface {
         this.current_external_id = extPaymentId;
 
         // Persist external ID on line
-        line.update?.({ clover_external_payment_id: extPaymentId });
+        if (line.update) {
+            line.update({ clover_external_payment_id: extPaymentId });
+        } else {
+            line.clover_external_payment_id = extPaymentId;
+        }
 
         // Change payment status to waitingCard on the POS screen
-        line.set_payment_status("waitingCard");
+        this._setLineStatus(line, "waitingCard");
 
         try {
             const currencyCode = (this.pos.currency && this.pos.currency.name) || "ARS";
@@ -69,11 +108,10 @@ export class PaymentClover extends PaymentInterface {
                 amount: amountCents,
                 external_payment_id: extPaymentId,
                 currency_code: currencyCode,
-                invoice_number: order.name || "",
+                invoice_number: order.name || order.pos_reference || "",
             };
 
-            const response = await this.env.services.orm.silent.call(
-                "pos.payment.method",
+            const response = await this._callCloverMethod(
                 "clover_payment_create",
                 [[line.payment_method_id.id], payload]
             );
@@ -86,7 +124,7 @@ export class PaymentClover extends PaymentInterface {
                 _t("Error de Comunicación con Clover"),
                 error.message?.data?.message || error.message || _t("Ocurrió un error inesperado al conectar con el terminal Clover.")
             );
-            line.set_payment_status("retry");
+            this._setLineStatus(line, "retry");
             return false;
         }
     }
@@ -99,17 +137,18 @@ export class PaymentClover extends PaymentInterface {
                 _t("Sin Respuesta"),
                 _t("No se recibió respuesta del terminal Clover.")
             );
-            line.set_payment_status("retry");
+            this._setLineStatus(line, "retry");
             return false;
         }
 
         // Handle User Cancel on Terminal
         if (response.status === "canceled" || response.code === "user_canceled") {
-            this.pos.dialog?.add(AlertDialog, {
+            const dialog = this.dialog || this.pos.dialog || this.env?.services?.dialog;
+            dialog?.add(AlertDialog, {
                 title: _t("Operación Cancelada"),
                 body: _t("La operación fue cancelada en el terminal Clover por el cliente o cajero."),
             });
-            line.set_payment_status("retry");
+            this._setLineStatus(line, "retry");
             return false;
         }
 
@@ -117,7 +156,7 @@ export class PaymentClover extends PaymentInterface {
         if (response.status === "error" || response.type === "api_error") {
             const msg = response.message || response.code || _t("Error desconocido retornado por Clover.");
             this._showError(_t("Pago Rechazado por Clover"), msg);
-            line.set_payment_status("retry");
+            this._setLineStatus(line, "retry");
             return false;
         }
 
@@ -154,7 +193,7 @@ export class PaymentClover extends PaymentInterface {
                 Object.assign(line, updateDict);
             }
 
-            line.set_payment_status("done");
+            this._setLineStatus(line, "done");
             return true;
         }
 
@@ -163,20 +202,30 @@ export class PaymentClover extends PaymentInterface {
             _t("Estado Desconocido"),
             _t("La respuesta de Clover no pudo ser validada. Verifique la transacción en el portal de Clover.")
         );
-        line.set_payment_status("retry");
+        this._setLineStatus(line, "retry");
         return false;
     }
 
     // ── Cancel Payment Workflow ──────────────────────────────────────────────
 
+    // Odoo 19 signature
+    async sendPaymentCancel(line) {
+        await super.sendPaymentCancel?.(...arguments);
+        return this._executePaymentCancel(line);
+    }
+
+    // Odoo 18 signature (backwards compatibility)
     async send_payment_cancel(order, cid) {
-        await super.send_payment_cancel(order, cid);
+        await super.send_payment_cancel?.(order, cid);
         const line = this._findPaymentLine(cid);
+        return this._executePaymentCancel(line);
+    }
+
+    async _executePaymentCancel(line) {
         if (!line) return true;
 
         try {
-            await this.env.services.orm.silent.call(
-                "pos.payment.method",
+            await this._callCloverMethod(
                 "clover_payment_cancel",
                 [[line.payment_method_id.id]]
             );
@@ -184,23 +233,21 @@ export class PaymentClover extends PaymentInterface {
             console.warn("Could not cancel on Clover terminal:", err);
         }
 
-        line.set_payment_status("retry");
+        this._setLineStatus(line, "retry");
         return true;
     }
 
     // ── Reversal / Refund Workflow ───────────────────────────────────────────
 
     async send_payment_reversal(cid) {
-        await super.send_payment_reversal(cid);
+        await super.send_payment_reversal?.(cid);
         const line = this._findPaymentLine(cid);
         if (!line || !line.clover_payment_id) {
             return true;
         }
 
         try {
-            const amountCents = Math.round(line.amount * 100);
-            await this.env.services.orm.silent.call(
-                "pos.payment.method",
+            await this._callCloverMethod(
                 "clover_payment_void",
                 [[line.payment_method_id.id], line.clover_payment_id, "USER_CANCEL"]
             );
@@ -218,9 +265,14 @@ export class PaymentClover extends PaymentInterface {
     // ── Helper to display error modal ────────────────────────────────────────
 
     _showError(title, message) {
-        this.pos.dialog?.add(AlertDialog, {
+        const dialog = this.dialog || this.pos.dialog || this.env?.services?.dialog;
+        dialog?.add(AlertDialog, {
             title: title || _t("Error Clover"),
             body: message || _t("Ocurrió un error al procesar el pago."),
         });
     }
+}
+
+if (!registry.category("pos_payment_providers").contains("clover_fiserv")) {
+    registry.category("pos_payment_providers").add("clover_fiserv", PaymentClover);
 }

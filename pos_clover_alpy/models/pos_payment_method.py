@@ -72,9 +72,17 @@ class PosPaymentMethod(models.Model):
             (CLOVER_TERMINAL_TYPE, 'Clover / Fiserv (Smart POS)'),
         ]
 
+    def _get_terminal_provider_selection(self):
+        try:
+            return super()._get_terminal_provider_selection() + [
+                (CLOVER_TERMINAL_TYPE, 'Clover / Fiserv (Smart POS)'),
+            ]
+        except AttributeError:
+            return [(CLOVER_TERMINAL_TYPE, 'Clover / Fiserv (Smart POS)')]
+
     @api.model
-    def _load_pos_data_fields(self, config_id):
-        params = super()._load_pos_data_fields(config_id)
+    def _load_pos_data_fields(self, *args, **kwargs):
+        params = super()._load_pos_data_fields(*args, **kwargs)
         params += [
             'clover_environment',
             'clover_connection_type',
@@ -87,7 +95,10 @@ class PosPaymentMethod(models.Model):
         return params
 
     def _is_clover_terminal(self):
-        return self.use_payment_terminal == CLOVER_TERMINAL_TYPE
+        return (
+            getattr(self, 'use_payment_terminal', None) == CLOVER_TERMINAL_TYPE
+            or getattr(self, 'payment_provider', None) == CLOVER_TERMINAL_TYPE
+        )
 
     def _get_clover_request_handler(self):
         self.ensure_one()
