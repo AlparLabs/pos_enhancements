@@ -10,6 +10,11 @@ class ResConfigSettings(models.TransientModel):
         related='pos_config_id.nps_survey_enabled',
         readonly=False,
     )
+    pos_nps_survey_on_pre_cuenta = fields.Boolean(
+        string='Imprimir en Pre-Cuenta',
+        related='pos_config_id.nps_survey_on_pre_cuenta',
+        readonly=False,
+    )
     pos_nps_survey_url = fields.Char(
         string='NPS Survey URL',
         related='pos_config_id.nps_survey_url',

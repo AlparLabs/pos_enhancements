@@ -24,6 +24,13 @@
                             <label for="pos_nps_receipt_subtitle" string="Subtítulo / Bajada" class="col-lg-4 o_light_label"/>
                             <field name="pos_nps_receipt_subtitle" placeholder="Escaneá el código QR y dejanos tu opinión." class="col-lg-8"/>
                         </div>
+                        <div class="mt8 row">
+                            <label for="pos_nps_survey_on_pre_cuenta" string="Imprimir en Pre-Cuenta" class="col-lg-4 o_light_label"/>
+                            <div class="col-lg-8">
+                                <field name="pos_nps_survey_on_pre_cuenta"/>
+                                <span class="text-muted ms-2">Incluir también el código QR en la pre-cuenta de restaurante</span>
+                            </div>
+                        </div>
                     </div>
                 </setting>
             </setting>

@@ -74,6 +74,21 @@
                       t-esc="formatCurrency(order.priceIncl)"/>
             </div>
 
+            <!-- Encuesta NPS (si está habilitada para pre-cuenta) -->
+            <t t-if="npsSurveyEnabled">
+                <div class="pos-receipt-center-align nps-survey-qr-container" style="text-align: center; margin-top: 14px; margin-bottom: 8px; padding-top: 8px; border-top: 1px dashed #ccc;">
+                    <div t-if="npsReceiptTitle" class="nps-survey-title" style="font-weight: bold; font-size: 0.95em; margin-bottom: 5px;">
+                        <t t-esc="npsReceiptTitle"/>
+                    </div>
+                    <div class="nps-survey-qr-image" style="margin: 5px 0;">
+                        <img t-att-src="npsSurveyQrCodeSrc" style="width: 140px; height: 140px;" alt="NPS Survey QR"/>
+                    </div>
+                    <div t-if="npsReceiptSubtitle" class="nps-survey-subtitle" style="font-size: 0.8em; margin-top: 5px; color: #555;">
+                        <t t-esc="npsReceiptSubtitle"/>
+                    </div>
+                </div>
+            </t>
+
             <t t-if="order.config.receipt_footer">
                 <div class="pos-receipt-center-align"
                      style="margin-top: 16px; font-size: 0.85em; white-space: pre-line;">
