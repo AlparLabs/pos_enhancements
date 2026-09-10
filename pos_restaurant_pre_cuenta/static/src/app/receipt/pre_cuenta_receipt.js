@@ -16,6 +16,21 @@ export class PreCuentaReceipt extends Component {
         return formatCurrency(amount, this.props.order.currency.id);
     }
 
+    get showWaiter() {
+        const order = this.props.order;
+        const waiterName = order?.waiter_id?.name;
+        if (!waiterName) {
+            return false;
+        }
+        const cashierName =
+            (typeof order.getCashierName === "function" ? order.getCashierName() : null) ||
+            order.cashier?.name ||
+            order.employee_id?.name ||
+            order.user_id?.name ||
+            "";
+        return waiterName !== cashierName;
+    }
+
     get tipSuggestions() {
         const config = this.props.order?.config;
         if (!config?.pre_cuenta_show_tip) {

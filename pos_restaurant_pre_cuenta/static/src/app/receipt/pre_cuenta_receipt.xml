@@ -15,40 +15,14 @@
                 No válido como factura
             </div>
 
-            <t t-if="order.tracking_number">
+            <t t-if="showWaiter">
                 <div class="pos-receipt-center-align"
-                     style="font-size: 2em; font-weight: bold; margin: 6px 0;">
-                    <t t-esc="order.tracking_number"/>
+                     style="font-size: 1em; font-weight: bold; margin-bottom: 6px;">
+                    Mozo: <t t-esc="order.waiter_id.name"/>
                 </div>
             </t>
 
             <div style="border-top: 1px dashed #ccc; margin: 8px 0;"/>
-
-            <div class="pos-receipt-center-align" style="margin: 8px 0;">
-                <t t-if="order.table_id">
-                    <div style="font-size: 1.15em; font-weight: bold;">
-                        Mesa: <t t-esc="order.table_id.getName()"/>
-                    </div>
-                </t>
-                <t t-if="order.customer_count">
-                    <div style="font-size: 1em; font-weight: bold;">
-                        Comensales: <t t-esc="order.customer_count"/>
-                    </div>
-                </t>
-                <t t-if="order.waiter_id">
-                    <div style="font-size: 1em; font-weight: bold; margin-top: 4px;">
-                        Mozo: <t t-esc="order.waiter_id.name"/>
-                    </div>
-                </t>
-            </div>
-
-            <div style="border-top: 1px dashed #ccc; margin: 8px 0;"/>
-
-            <t t-if="order.partner_id">
-                <div class="pos-receipt-contact" style="margin-bottom: 6px;">
-                    Cliente: <t t-esc="order.partner_id.name"/>
-                </div>
-            </t>
 
             <!--
                 Orderlines. Los hijos de un combo se filtran: en la pre-cuenta
