@@ -5,11 +5,21 @@ import { patch } from "@web/core/utils/patch";
 import { KpiDashboardModal } from "@pos_restaurant_kpi/app/kpi_dashboard_modal/kpi_dashboard_modal";
 import { useState, onMounted } from "@odoo/owl";
 
+const SESSION_ORDERS_TTL = 60000; // 60 segundos de caché para llamadas al backend
+
 patch(FloorScreen.prototype, {
     setup() {
         super.setup(...arguments);
-        this.kpiState = useState({ sessionPaidOrders: [] });
-        onMounted(() => this._loadSessionPaidOrders());
+        if (!this.pos.kpiSessionState) {
+            this.pos.kpiSessionState = {
+                sessionPaidOrders: [],
+                lastFetch: 0,
+            };
+        }
+        this.kpiState = useState({
+            sessionPaidOrders: this.pos.kpiSessionState.sessionPaidOrders,
+        });
+        onMounted(() => this._loadSessionPaidOrders(false));
     },
 
     _getAllTables() {
@@ -27,45 +37,14 @@ patch(FloorScreen.prototype, {
         return [];
     },
 
-    _getAllOrders() {
-        const raw = this.pos.models?.["pos.order"];
-        if (!raw) return [];
-        if (typeof raw.getAll === "function") {
-            return raw.getAll();
-        }
-        if (Array.isArray(raw)) {
-            return raw;
-        }
-        if (typeof raw === "object") {
-            return Object.values(raw);
-        }
-        return [];
-    },
-
     _getActiveTableOrders() {
         const tables = this._getAllTables();
         const activeOrders = [];
         const seenOrderIds = new Set();
-        const sessionId = this.pos.session?.id || this.pos.pos_session?.id;
-        const allOrders = this._getAllOrders();
 
         for (const table of tables) {
-            // 1. Obtener la orden activa de la mesa si está disponible (pos_restaurant)
-            let order = table.getOrder?.();
-
-            // 2. Fallback: buscar orden borrador de esta mesa en la sesión activa
-            if (!order) {
-                order = allOrders.find((o) => {
-                    const oTableId = o.table_id?.id ?? (Array.isArray(o.table_id) ? o.table_id[0] : o.table_id);
-                    const oSessionId = o.session_id?.id ?? (typeof o.session_id === "number" ? o.session_id : (Array.isArray(o.session_id) ? o.session_id[0] : null));
-                    return (
-                        oTableId === table.id &&
-                        o.state === "draft" &&
-                        !o.finalized &&
-                        (!oSessionId || oSessionId === sessionId)
-                    );
-                });
-            }
+            // Resolver la orden activa de la mesa en O(1) vía backLink de pos_restaurant
+            const order = table.getOrder?.();
 
             if (order && order.state === "draft" && !order.finalized) {
                 const orderKey = order.uuid || order.id || order;
@@ -78,11 +57,22 @@ patch(FloorScreen.prototype, {
         return activeOrders;
     },
 
-    async _loadSessionPaidOrders() {
+    async _loadSessionPaidOrders(force = false) {
+        const now = Date.now();
+        const lastFetch = this.pos.kpiSessionState?.lastFetch || 0;
+        if (!force && (now - lastFetch < SESSION_ORDERS_TTL)) {
+            this.kpiState.sessionPaidOrders = this.pos.kpiSessionState.sessionPaidOrders;
+            return;
+        }
+
         try {
             const sessionId = this.pos.session?.id || this.pos.pos_session?.id;
             if (!sessionId) {
                 this.kpiState.sessionPaidOrders = [];
+                if (this.pos.kpiSessionState) {
+                    this.pos.kpiSessionState.sessionPaidOrders = [];
+                    this.pos.kpiSessionState.lastFetch = now;
+                }
                 return;
             }
             const records = await this.pos.data.orm.searchRead(
@@ -94,10 +84,19 @@ patch(FloorScreen.prototype, {
                 ],
                 ["id", "customer_count", "amount_total"]
             );
-            this.kpiState.sessionPaidOrders = records || [];
+            const paidOrders = records || [];
+            if (this.pos.kpiSessionState) {
+                this.pos.kpiSessionState.sessionPaidOrders = paidOrders;
+                this.pos.kpiSessionState.lastFetch = now;
+            }
+            this.kpiState.sessionPaidOrders = paidOrders;
         } catch (e) {
             console.warn("[pos_restaurant_kpi] No se pudieron cargar las órdenes pagadas de la sesión:", e);
-            this.kpiState.sessionPaidOrders = [];
+            if (this.pos.kpiSessionState?.sessionPaidOrders?.length) {
+                this.kpiState.sessionPaidOrders = this.pos.kpiSessionState.sessionPaidOrders;
+            } else {
+                this.kpiState.sessionPaidOrders = [];
+            }
         }
     },
 
@@ -160,7 +159,7 @@ patch(FloorScreen.prototype, {
         const now = new Date();
         const totalMinutes = activeOrders.reduce((sum, order) => {
             let orderDate = now;
-            const rawDate = order.creation_date || order.date_order;
+            const rawDate = order.date_order || order.creation_date;
             
             if (rawDate) {
                 if (rawDate instanceof Date) {
@@ -199,8 +198,8 @@ patch(FloorScreen.prototype, {
             return;
         }
         this._kpiDialogOpen = true;
-        // Refrescar órdenes pagadas de la sesión antes de abrir modal
-        await this._loadSessionPaidOrders();
+        // Refrescar órdenes pagadas de la sesión antes de abrir modal (forzar llamada fresca)
+        await this._loadSessionPaidOrders(true);
         this.dialog.add(KpiDashboardModal, {
             occupancyRate: this.occupancyRate,
             turnoverRate: this.turnoverRate,
