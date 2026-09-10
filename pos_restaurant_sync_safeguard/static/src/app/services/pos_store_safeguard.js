@@ -19,31 +19,32 @@ patch(PosStore.prototype, {
 
     /**
      * Surgical hook on printOrderChanges (called for each printer inside printChanges).
-     * Enforces a 3.5s timeout on the physical thermal printer printReceipt call.
-     * If a printer is offline, jammed, or socket hangs, it returns a compliant
-     * { successful: false, message: { body: ... } } object instead of throwing or hanging.
+     * Enforces an 8.5s timeout on preparation printers (IoT Box / network thermal printers).
+     * 8.5s ensures normal Raspberry Pi IoT rasterization and multi-ticket queues (e.g. Cocina + Barra
+     * on the same physical IoT Box) complete without false alarms, while safely intercepting truly
+     * disconnected or offline printers before browser hangs occur.
      */
     async printOrderChanges(data, printer) {
         const printerName = printer.config?.name || printer.name || _t("Comandera");
         let timer = null;
         const timeoutPromise = new Promise((_, reject) => {
             timer = setTimeout(() => {
-                reject(new Error(`Timeout de 3.5s en impresora '${printerName}'`));
-            }, 3500);
+                reject(new Error(`Timeout de 8.5s en impresora '${printerName}'`));
+            }, 8500);
         });
 
         try {
             const result = await Promise.race([super.printOrderChanges(data, printer), timeoutPromise]);
             return result;
         } catch (err) {
-            console.warn(`[pos_restaurant_sync_safeguard] Fallo o timeout al imprimir en '${printerName}':`, err);
+            console.warn(`[pos_restaurant_sync_safeguard] Fallo o timeout (>8.5s) al imprimir en '${printerName}':`, err);
             this.notification?.add(
-                _t("Aviso: No se pudo imprimir en '%s' (demora de red o desconexión). La comanda se registró.", printerName),
+                _t("Aviso: Demora o desconexión en impresora '%s'. La comanda se registró en el sistema.", printerName),
                 { type: "warning", sticky: true }
             );
             return {
                 successful: false,
-                message: { body: _t("Impresora desconectada o sin respuesta (timeout 3.5s)") },
+                message: { body: _t("Impresora sin respuesta o con demora excesiva (timeout 8.5s)") },
             };
         } finally {
             if (timer) {
@@ -141,55 +142,35 @@ patch(PosStore.prototype, {
     },
 
     /**
-     * Wraps all printers (unwatched.printers, printers, and receipt printer)
-     * with an asynchronous timeout (3500ms) as an extra layer of defense.
+     * Extra layer of defense: wraps stand-alone receipt printers (outside of printOrderChanges)
+     * with an 8.5s timeout so customer receipt prints never hang the terminal indefinitely.
      */
     _wrapPrintersWithSafeguard() {
-        const printerList = [];
-        if (Array.isArray(this.unwatched?.printers)) {
-            printerList.push(...this.unwatched.printers);
+        const targetPrinters = [];
+        if (this.printer?.device && typeof this.printer.device === "object") {
+            targetPrinters.push(this.printer.device);
         }
-        if (Array.isArray(this.printers)) {
-            printerList.push(...this.printers);
-        }
-        if (this.unwatched?.printer && typeof this.unwatched.printer === "object") {
-            printerList.push(this.unwatched.printer);
-        }
-        if (this.printer && typeof this.printer === "object") {
-            printerList.push(this.printer);
+        if (this.hardwareProxy?.printer && typeof this.hardwareProxy.printer === "object") {
+            targetPrinters.push(this.hardwareProxy.printer);
         }
 
-        for (const printer of printerList) {
+        for (const printer of targetPrinters) {
             if (!printer || printer._safeguardWrapped) {
                 continue;
             }
             printer._safeguardWrapped = true;
-            const printerName = printer.config?.name || printer.name || _t("Comandera");
+            const printerName = printer.config?.name || printer.name || _t("Impresora de Recibos");
 
             if (typeof printer.printReceipt === "function") {
                 const origPrintReceipt = printer.printReceipt.bind(printer);
                 printer.printReceipt = async (...args) => {
-                    return this._executeWithTimeout(origPrintReceipt, args, printerName, 3500);
-                };
-            }
-
-            if (typeof printer.print === "function") {
-                const origPrint = printer.print.bind(printer);
-                printer.print = async (...args) => {
-                    return this._executeWithTimeout(origPrint, args, printerName, 3500);
-                };
-            }
-
-            if (typeof printer.sendPrintingJob === "function") {
-                const origSendJob = printer.sendPrintingJob.bind(printer);
-                printer.sendPrintingJob = async (...args) => {
-                    return this._executeWithTimeout(origSendJob, args, printerName, 3500);
+                    return this._executeWithTimeout(origPrintReceipt, args, printerName, 8500);
                 };
             }
         }
     },
 
-    async _executeWithTimeout(fn, args, printerName, ms = 3500) {
+    async _executeWithTimeout(fn, args, printerName, ms = 8500) {
         let timer = null;
         const timeoutPromise = new Promise((_, reject) => {
             timer = setTimeout(() => {
@@ -208,7 +189,7 @@ patch(PosStore.prototype, {
             );
             return {
                 successful: false,
-                message: { body: _t("Impresora desconectada o sin respuesta (timeout 3.5s)") },
+                message: { body: _t("Impresora desconectada o sin respuesta (timeout 8.5s)") },
             };
         } finally {
             if (timer) {
