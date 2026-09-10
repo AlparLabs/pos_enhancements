@@ -7,6 +7,7 @@ import { PosStore } from "@point_of_sale/app/services/pos_store";
 patch(PosStore.prototype, {
     setup() {
         super.setup(...arguments);
+        this._orderSyncingTimestamps = {};
         this._wrapPrintersWithSafeguard();
     },
 
@@ -17,44 +18,111 @@ patch(PosStore.prototype, {
     },
 
     /**
+     * Surgical hook on printOrderChanges (called for each printer inside printChanges).
+     * Enforces a 3.5s timeout on the physical thermal printer printReceipt call.
+     * If a printer is offline, jammed, or socket hangs, it returns a compliant
+     * { successful: false, message: { body: ... } } object instead of throwing or hanging.
+     */
+    async printOrderChanges(data, printer) {
+        const printerName = printer.config?.name || printer.name || _t("Comandera");
+        let timer = null;
+        const timeoutPromise = new Promise((_, reject) => {
+            timer = setTimeout(() => {
+                reject(new Error(`Timeout de 3.5s en impresora '${printerName}'`));
+            }, 3500);
+        });
+
+        try {
+            const result = await Promise.race([super.printOrderChanges(data, printer), timeoutPromise]);
+            return result;
+        } catch (err) {
+            console.warn(`[pos_restaurant_sync_safeguard] Fallo o timeout al imprimir en '${printerName}':`, err);
+            this.notification?.add(
+                _t("Aviso: No se pudo imprimir en '%s' (demora de red o desconexión). La comanda se registró.", printerName),
+                { type: "warning", sticky: true }
+            );
+            return {
+                successful: false,
+                message: { body: _t("Impresora desconectada o sin respuesta (timeout 3.5s)") },
+            };
+        } finally {
+            if (timer) {
+                clearTimeout(timer);
+            }
+        }
+    },
+
+    /**
      * Intercepts sendOrderInPreparation to:
-     * 1. Ensure printers have safeguard timeouts active before printing.
-     * 2. Wrap execution so any unexpected promise rejection does not freeze the UI.
-     * 3. Clear all UI/order lock flags in finally so the table is never permanently stuck in "syncing".
+     * 1. Track syncingOrders timestamps to detect and auto-heal zombie locks.
+     * 2. CRITICAL FIX FOR ODOO 19 CORE: Core only syncs to backend if isPrinted is true
+     *    (line 2048: if (isPrinted && ...)). If a printer failed, core skips syncAllOrders,
+     *    leaving the order stranded locally and invisible to other terminals. We guarantee
+     *    syncAllOrders({ orders: [order], force: true }) always runs.
+     * 3. Guarantees in finally that order.uuid is removed from syncingOrders and UI locks are cleared.
      */
     async sendOrderInPreparation(order, opts = {}) {
         this._wrapPrintersWithSafeguard();
+        if (order?.uuid) {
+            this._orderSyncingTimestamps = this._orderSyncingTimestamps || {};
+            this._orderSyncingTimestamps[order.uuid] = Date.now();
+        }
+
         try {
-            return await super.sendOrderInPreparation(...arguments);
+            const res = await super.sendOrderInPreparation(...arguments);
+
+            // Respaldo de sincronización: asegurar que la orden siempre viaje al backend
+            // aún si alguna o todas las impresoras térmicas fallaron
+            if (order && !order.finalized && !this.models["pos.prep.display"]?.length) {
+                try {
+                    await this.syncAllOrders({ orders: [order], force: true });
+                } catch (syncErr) {
+                    console.warn("[pos_restaurant_sync_safeguard] syncAllOrders post-comanda:", syncErr);
+                }
+            }
+
+            return res;
         } catch (err) {
             console.error("[pos_restaurant_sync_safeguard] Error en sendOrderInPreparation:", err);
             this.notification?.add(
                 _t("Hubo una demora al enviar la comanda. La mesa se mantendrá desbloqueada."),
                 { type: "warning", sticky: true }
             );
+
+            // Intento de rescate: persistir la orden en el servidor
+            if (order && !order.finalized) {
+                try {
+                    await this.syncAllOrders({ orders: [order], force: true });
+                } catch (rescueErr) {
+                    console.warn("[pos_restaurant_sync_safeguard] Rescate de sincronización falló:", rescueErr);
+                }
+            }
+
             return false;
         } finally {
+            if (order?.uuid) {
+                this.syncingOrders?.delete(order.uuid);
+                delete this._orderSyncingTimestamps?.[order.uuid];
+            }
             this._clearOrderUiLocks(order);
         }
     },
 
     /**
-     * Wrap printChanges with error boundary to ensure that even if standard printer
-     * dispatch encounters an unhandled error, the function resolves safely without
-     * aborting order.updateLastOrderChange() and server synchronization.
+     * Auto-heals stale syncingOrders locks (>10 seconds) so users are never
+     * permanently locked out of a table saying "This order is currently syncing".
      */
-    async printChanges(order, orderChange, reprint) {
-        this._wrapPrintersWithSafeguard();
-        try {
-            return await super.printChanges(...arguments);
-        } catch (err) {
-            console.warn("[pos_restaurant_sync_safeguard] Error controlado en printChanges:", err);
-            this.notification?.add(
-                _t("Aviso: Una o más comanderas no respondieron. La orden continúa su registro."),
-                { type: "warning", sticky: true }
-            );
-            return false;
+    isOrderSyncing(order, notify = true) {
+        if (order?.uuid && this.syncingOrders?.has(order.uuid)) {
+            const lockTime = this._orderSyncingTimestamps?.[order.uuid];
+            if (lockTime && Date.now() - lockTime > 10000) {
+                console.warn(`[pos_restaurant_sync_safeguard] Auto-liberando lock zombie de sincronización para orden ${order.uuid}`);
+                this.syncingOrders.delete(order.uuid);
+                delete this._orderSyncingTimestamps[order.uuid];
+                return false;
+            }
         }
+        return super.isOrderSyncing(...arguments);
     },
 
     /**
@@ -73,18 +141,19 @@ patch(PosStore.prototype, {
     },
 
     /**
-     * Wraps all printers (kitchen/preparation printers and receipt printer)
-     * with an asynchronous timeout (3500ms).
-     *
-     * In restaurant setups, network thermal printers on the local LAN can
-     * hang or drop connection due to microcuts, paper shortages, or buffer lockups.
-     * Capping the timeout prevents the POS JavaScript thread from freezing or
-     * aborting backend synchronization.
+     * Wraps all printers (unwatched.printers, printers, and receipt printer)
+     * with an asynchronous timeout (3500ms) as an extra layer of defense.
      */
     _wrapPrintersWithSafeguard() {
         const printerList = [];
+        if (Array.isArray(this.unwatched?.printers)) {
+            printerList.push(...this.unwatched.printers);
+        }
         if (Array.isArray(this.printers)) {
             printerList.push(...this.printers);
+        }
+        if (this.unwatched?.printer && typeof this.unwatched.printer === "object") {
+            printerList.push(this.unwatched.printer);
         }
         if (this.printer && typeof this.printer === "object") {
             printerList.push(this.printer);
@@ -137,7 +206,10 @@ patch(PosStore.prototype, {
                 _t("No se pudo imprimir en '%s' (demora o desconexión). La orden se registró pero verifique el ticket.", printerName),
                 { type: "warning", sticky: true }
             );
-            return false;
+            return {
+                successful: false,
+                message: { body: _t("Impresora desconectada o sin respuesta (timeout 3.5s)") },
+            };
         } finally {
             if (timer) {
                 clearTimeout(timer);
