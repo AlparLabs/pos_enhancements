@@ -8,8 +8,8 @@
             <setting id="auto_printing" position="after">
                 <setting
                     id="pos_nps_survey_qr_setting"
-                    string="Encuesta NPS en Ticket"
-                    help="Imprime un código QR con enlace a la encuesta de satisfacción NPS en el comprobante del cliente.">
+                    string="Encuesta NPS en Comprobantes"
+                    help="Imprime un código QR con enlace a la encuesta de satisfacción NPS en los comprobantes del punto de venta.">
                     <field name="pos_nps_survey_enabled" widget="boolean_toggle"/>
                     <div class="content-group" invisible="not pos_nps_survey_enabled">
                         <div class="mt16 row">
@@ -25,10 +25,17 @@
                             <field name="pos_nps_receipt_subtitle" placeholder="Escaneá el código QR y dejanos tu opinión." class="col-lg-8"/>
                         </div>
                         <div class="mt8 row">
+                            <label for="pos_nps_survey_on_receipt" string="Imprimir en Factura" class="col-lg-4 o_light_label"/>
+                            <div class="col-lg-8">
+                                <field name="pos_nps_survey_on_receipt"/>
+                                <span class="text-muted ms-2">Imprimir el código QR en la factura / ticket fiscal final</span>
+                            </div>
+                        </div>
+                        <div class="mt8 row">
                             <label for="pos_nps_survey_on_pre_cuenta" string="Imprimir en Pre-Cuenta" class="col-lg-4 o_light_label"/>
                             <div class="col-lg-8">
                                 <field name="pos_nps_survey_on_pre_cuenta"/>
-                                <span class="text-muted ms-2">Incluir también el código QR en la pre-cuenta de restaurante</span>
+                                <span class="text-muted ms-2">Imprimir el código QR en la pre-cuenta de restaurante</span>
                             </div>
                         </div>
                     </div>

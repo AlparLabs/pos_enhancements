@@ -17,7 +17,11 @@ patch(OrderReceipt.prototype, {
     },
 
     get npsSurveyEnabled() {
-        return Boolean(this.pos?.config?.nps_survey_enabled && this.pos?.config?.nps_survey_url);
+        return Boolean(
+            this.pos?.config?.nps_survey_enabled &&
+            this.pos?.config?.nps_survey_on_receipt &&
+            this.pos?.config?.nps_survey_url
+        );
     },
 
     get npsSurveyUrl() {

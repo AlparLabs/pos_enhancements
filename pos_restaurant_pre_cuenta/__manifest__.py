@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 {
     'name': 'POS Restaurant Pre-Cuenta',
-    'version': '19.0.1.1.0',
+    'version': '19.0.1.2.0',
     'category': 'Sales/Point of Sale',
     'summary': 'Prints a "Pre-cuenta" for restaurant tables directly from the POS actionpad.',
     'description': """
@@ -12,6 +12,8 @@
           - Waiter name (optional — shown only if pos_restaurant_waiter is installed)
           - Order lines with quantities and prices
           - Total amount
+          - Suggested tip calculations (configurable percentages)
+          - NPS survey QR code (optional)
 
         Can be used standalone without pos_restaurant_waiter.
         Designed for table-service restaurants in Argentina.
@@ -22,7 +24,9 @@
     'depends': [
         'pos_restaurant',
     ],
-    'data': [],
+    'data': [
+        'views/res_config_settings_views.xml',
+    ],
     'assets': {
         'point_of_sale._assets_pos': [
             'pos_restaurant_pre_cuenta/static/src/**/*',

@@ -10,6 +10,11 @@ class PosConfig(models.Model):
         default=False,
         help='When enabled, a QR code for customer satisfaction / NPS survey is printed on the receipt.',
     )
+    nps_survey_on_receipt = fields.Boolean(
+        string='Imprimir en Factura / Ticket',
+        default=True,
+        help='Incluye el código QR de encuesta en la factura / comprobante fiscal final.',
+    )
     nps_survey_on_pre_cuenta = fields.Boolean(
         string='Imprimir en Pre-Cuenta',
         default=False,
@@ -36,6 +41,7 @@ class PosConfig(models.Model):
         read_records = super()._load_pos_data_read(records, config)
         if read_records:
             read_records[0]['nps_survey_enabled'] = config.nps_survey_enabled
+            read_records[0]['nps_survey_on_receipt'] = config.nps_survey_on_receipt
             read_records[0]['nps_survey_on_pre_cuenta'] = config.nps_survey_on_pre_cuenta
             read_records[0]['nps_survey_url'] = config.nps_survey_url
             read_records[0]['nps_receipt_title'] = config.nps_receipt_title

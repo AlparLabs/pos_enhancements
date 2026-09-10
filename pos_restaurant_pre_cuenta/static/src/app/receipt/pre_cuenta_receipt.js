@@ -16,6 +16,28 @@ export class PreCuentaReceipt extends Component {
         return formatCurrency(amount, this.props.order.currency.id);
     }
 
+    get tipSuggestions() {
+        const config = this.props.order?.config;
+        if (!config?.pre_cuenta_show_tip) {
+            return [];
+        }
+        const raw = config?.pre_cuenta_tip_percentages || "10, 15, 20";
+        const total = this.props.order?.priceIncl || 0;
+        if (!total || total <= 0) {
+            return [];
+        }
+        return raw
+            .split(",")
+            .map((s) => parseFloat(s.replace("%", "").trim()))
+            .filter((pct) => !isNaN(pct) && pct > 0)
+            .map((pct) => ({
+                percentage: pct,
+                label: `${pct}%`,
+                amount: this.formatCurrency(total * (pct / 100)),
+                totalWithTip: this.formatCurrency(total * (1 + pct / 100)),
+            }));
+    }
+
     get npsSurveyEnabled() {
         const config = this.props.order?.config;
         return Boolean(

@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates id="template" xml:space="preserve">
+    <!--
+        Quitar el cálculo de propina de la Factura final (OrderReceipt).
+        En entornos gastronómicos la propina se decide y define previamente
+        en la Pre-cuenta antes de abonar; por ende, no corresponde imprimir
+        alícuotas de propina sugeridas en el comprobante fiscal final.
+    -->
+    <t t-name="pos_restaurant_pre_cuenta.OrderReceipt" t-inherit="point_of_sale.OrderReceipt" t-inherit-mode="extension">
+        <xpath expr="//div[hasclass('tip-form')]" position="replace">
+            <!-- Omitir tip-form en factura -->
+        </xpath>
+    </t>
+</templates>

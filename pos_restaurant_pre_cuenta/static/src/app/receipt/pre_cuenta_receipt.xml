@@ -74,6 +74,26 @@
                       t-esc="formatCurrency(order.priceIncl)"/>
             </div>
 
+            <!-- Sugerencias de propina -->
+            <t t-if="tipSuggestions and tipSuggestions.length">
+                <div class="pos-receipt-tip-suggestions" style="margin-top: 12px; padding-top: 8px; border-top: 1px dashed #ccc;">
+                    <div class="pos-receipt-center-align" style="font-weight: bold; font-size: 0.95em; margin-bottom: 6px;">
+                        Propina sugerida:
+                    </div>
+                    <div class="d-flex flex-nowrap justify-content-around">
+                        <t t-foreach="tipSuggestions" t-as="tip" t-key="tip.percentage">
+                            <div class="d-flex flex-column align-items-center flex-grow-1" style="text-align: center;">
+                                <div style="font-weight: bold; font-size: 1.05em;"><t t-esc="tip.label"/></div>
+                                <div style="font-size: 0.95em; margin-top: 2px;"><t t-esc="tip.amount"/></div>
+                                <div class="text-muted" style="font-size: 0.75em; margin-top: 1px;">
+                                    (<t t-esc="tip.totalWithTip"/>)
+                                </div>
+                            </div>
+                        </t>
+                    </div>
+                </div>
+            </t>
+
             <!-- Encuesta NPS (si está habilitada para pre-cuenta) -->
             <t t-if="npsSurveyEnabled">
                 <div class="pos-receipt-center-align nps-survey-qr-container" style="text-align: center; margin-top: 14px; margin-bottom: 8px; padding-top: 8px; border-top: 1px dashed #ccc;">
