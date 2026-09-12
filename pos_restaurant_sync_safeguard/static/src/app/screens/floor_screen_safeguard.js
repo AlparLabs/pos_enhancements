@@ -8,6 +8,23 @@ patch(FloorScreen.prototype, {
     setup() {
         super.setup(...arguments);
 
+        // Core Odoo 19 sets `selectedFloorId: floor ? floor.id : null`.
+        // If currentFloor is null, undefined or detached during data sync,
+        // selectedFloorId becomes null and FloorScreen renders completely blank
+        // with no floor tab highlighted (even with 1 floor).
+        // We auto-heal selectedFloorId immediately in setup before first render.
+        const currentModelFloor = this.state.selectedFloorId
+            ? this.pos.models?.["restaurant.floor"]?.get?.(this.state.selectedFloorId)
+            : null;
+
+        if (!currentModelFloor || !currentModelFloor.active) {
+            const fallback = this._safeguardResolveFloor();
+            if (fallback) {
+                this.pos.currentFloor = fallback;
+                this.state.selectedFloorId = fallback.id;
+            }
+        }
+
         this._onSafeguardVisibilityChange = () => {
             if (document.visibilityState === "visible") {
                 this._safeguardAutoHeal();
@@ -16,6 +33,13 @@ patch(FloorScreen.prototype, {
 
         onMounted(() => {
             document.addEventListener("visibilitychange", this._onSafeguardVisibilityChange);
+            // Re-verify on mount in case an async order sync temporarily cleared selectedFloorId
+            if (!this.state.selectedFloorId || !this.pos.models?.["restaurant.floor"]?.get?.(this.state.selectedFloorId)) {
+                const fallback = this._safeguardResolveFloor();
+                if (fallback) {
+                    this.selectFloor(fallback);
+                }
+            }
             this._safeguardAutoHeal();
         });
 
@@ -25,7 +49,78 @@ patch(FloorScreen.prototype, {
     },
 
     /**
-     * Auto-heal mechanism against zombie WebSockets and missed order updates.
+     * Resolves the active floor with cascading bulletproof fallbacks:
+     * 1. pos.currentFloor (if valid, active, and present in models["restaurant.floor"])
+     * 2. Floor of the table previously selected / active in this order
+     * 3. First active floor from pos.config.floor_ids
+     * 4. First active floor in restaurant.floor model
+     */
+    _safeguardResolveFloor() {
+        // 1. Current floor if valid and active
+        const current = this.pos.currentFloor;
+        if (current) {
+            const id = typeof current === "object" ? current.id : current;
+            const floor = this.pos.models?.["restaurant.floor"]?.get?.(id);
+            if (floor && floor.active) {
+                return floor;
+            }
+        }
+
+        // 2. Floor of selectedTable
+        const table = this.pos.selectedTable;
+        if (table?.floor_id) {
+            const id = typeof table.floor_id === "object" ? table.floor_id.id : table.floor_id;
+            const floor = this.pos.models?.["restaurant.floor"]?.get?.(id);
+            if (floor && floor.active) {
+                return floor;
+            }
+        }
+
+        // 3. First active floor in pos.config.floor_ids
+        const configFloors = this.pos.config?.floor_ids || [];
+        const activeConfigFloor = (Array.isArray(configFloors) ? configFloors : Object.values(configFloors))
+            .find?.((f) => f.active) || configFloors[0];
+        if (activeConfigFloor) {
+            const id = typeof activeConfigFloor === "object" ? activeConfigFloor.id : activeConfigFloor;
+            const floor = this.pos.models?.["restaurant.floor"]?.get?.(id);
+            if (floor) {
+                return floor;
+            }
+        }
+
+        // 4. First active floor in restaurant.floor model
+        const modelFloors = this.pos.models?.["restaurant.floor"];
+        if (modelFloors) {
+            const firstActive = modelFloors.find?.((f) => f.active) || modelFloors.getFirst?.();
+            if (firstActive) {
+                return firstActive;
+            }
+        }
+
+        return null;
+    },
+
+    /**
+     * Fallback protection: if activeFloor would ever return null while floors exist,
+     * immediately resolve and return the active fallback floor.
+     */
+    get activeFloor() {
+        const floor = super.activeFloor;
+        if (floor && floor.active) {
+            return floor;
+        }
+
+        const fallback = this._safeguardResolveFloor();
+        if (fallback) {
+            this.pos.currentFloor = fallback;
+            return fallback;
+        }
+
+        return floor;
+    },
+
+    /**
+     * Auto-heal mechanism against zombie WebSockets, blank floor screens, and missed order updates.
      * Waking up a tablet or switching back to the POS tab triggers a throttled
      * verification of active draft orders for this session.
      */
@@ -36,13 +131,16 @@ patch(FloorScreen.prototype, {
         }
         this.pos._lastSafeguardHeal = now;
 
-        try {
-            // 1. Si la terminal tiene órdenes pendientes en cola local, disparar subida
-            if (this.pos.synch?.uploadPendingOrders) {
-                await this.pos.synch.uploadPendingOrders();
+        // Auto-heal floor selection if blank/null
+        if (!this.state.selectedFloorId || !this.pos.models?.["restaurant.floor"]?.get?.(this.state.selectedFloorId)) {
+            const fallback = this._safeguardResolveFloor();
+            if (fallback) {
+                this.selectFloor(fallback);
             }
+        }
 
-            // 2. Refrescar silenciosamente las órdenes borrador de mesas para esta sesión
+        try {
+            // Refrescar silenciosamente las órdenes borrador de mesas para esta sesión
             const sessionId = this.pos.session?.id || this.pos.pos_session?.id;
             if (sessionId && this.pos.data?.orm) {
                 const serverOrders = await this.pos.data.orm.searchRead(
@@ -56,16 +154,17 @@ patch(FloorScreen.prototype, {
                 );
 
                 if (serverOrders?.length) {
-                    let needsRender = false;
+                    let missingTableOrder = false;
                     for (const sOrder of serverOrders) {
                         const tableId = Array.isArray(sOrder.table_id) ? sOrder.table_id[0] : sOrder.table_id;
                         const table = this.pos.models?.["restaurant.table"]?.get?.(tableId);
                         if (table && !table.getOrder?.()) {
-                            needsRender = true;
+                            missingTableOrder = true;
+                            break;
                         }
                     }
-                    if (needsRender) {
-                        this.render();
+                    if (missingTableOrder && this.pos.deviceSync?.readDataFromServer) {
+                        await this.pos.deviceSync.readDataFromServer();
                     }
                 }
             }

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 {
     'name': 'POS Restaurant Sync Safeguard',
-    'version': '19.0.1.0.0',
+    'version': '19.0.1.0.1',
     'category': 'Sales/Point of Sale',
     'summary': 'Resilient kitchen printing with LAN timeout, UI lock auto-release and FloorScreen auto-heal.',
     'description': """

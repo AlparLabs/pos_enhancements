@@ -14,7 +14,61 @@ patch(PosStore.prototype, {
     async afterProcessServerData() {
         const result = await super.afterProcessServerData(...arguments);
         this._wrapPrintersWithSafeguard();
+        if (this.config.module_pos_restaurant && (!this.currentFloor || !this.currentFloor.active)) {
+            const activeFloor =
+                this.config.floor_ids?.find?.((f) => f.active) ||
+                this.config.floor_ids?.[0] ||
+                this.models?.["restaurant.floor"]?.getFirst?.();
+            if (activeFloor) {
+                this.currentFloor = activeFloor;
+            }
+        }
         return result;
+    },
+
+    /**
+     * Preserves and synchronizes currentFloor when navigating tables.
+     * Core Odoo 19 never updates currentFloor when entering a table, leaving it
+     * vulnerable to becoming null or disconnected during server synchronization.
+     */
+    async setTable(table, orderUuid = null) {
+        if (table?.floor_id) {
+            const floor =
+                typeof table.floor_id === "object"
+                    ? table.floor_id
+                    : this.models?.["restaurant.floor"]?.get?.(table.floor_id);
+            if (floor) {
+                this.currentFloor = floor;
+            }
+        }
+        return await super.setTable(...arguments);
+    },
+
+    async setTableFromUi(table, orderUuid = null) {
+        if (table?.floor_id) {
+            const floor =
+                typeof table.floor_id === "object"
+                    ? table.floor_id
+                    : this.models?.["restaurant.floor"]?.get?.(table.floor_id);
+            if (floor) {
+                this.currentFloor = floor;
+            }
+        }
+        return await super.setTableFromUi(...arguments);
+    },
+
+    async unsetTable() {
+        const table = this.selectedTable;
+        if (table?.floor_id) {
+            const floor =
+                typeof table.floor_id === "object"
+                    ? table.floor_id
+                    : this.models?.["restaurant.floor"]?.get?.(table.floor_id);
+            if (floor) {
+                this.currentFloor = floor;
+            }
+        }
+        return await super.unsetTable(...arguments);
     },
 
     /**
