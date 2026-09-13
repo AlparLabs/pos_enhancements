@@ -73,8 +73,8 @@ patch(PosStore.prototype, {
 
     /**
      * Surgical hook on printOrderChanges (called for each printer inside printChanges).
-     * Enforces a 15s timeout on preparation printers (IoT Box / network thermal printers).
-     * 15s ensures normal Raspberry Pi IoT rasterization and multi-ticket queues (e.g. Cocina + Barra
+     * Enforces a 12s timeout on preparation printers (IoT Box / network thermal printers).
+     * 12s ensures normal Raspberry Pi IoT rasterization and multi-ticket queues (e.g. Cocina + Barra
      * on the same physical IoT Box) complete without false alarms, while safely intercepting truly
      * disconnected or offline printers before browser hangs occur.
      */
@@ -83,22 +83,22 @@ patch(PosStore.prototype, {
         let timer = null;
         const timeoutPromise = new Promise((_, reject) => {
             timer = setTimeout(() => {
-                reject(new Error(`Timeout de 15s en impresora '${printerName}'`));
-            }, 15000);
+                reject(new Error(`Timeout de 12s en impresora '${printerName}'`));
+            }, 12000);
         });
 
         try {
             const result = await Promise.race([super.printOrderChanges(data, printer), timeoutPromise]);
             return result;
         } catch (err) {
-            console.warn(`[pos_restaurant_sync_safeguard] Fallo o timeout (>15s) al imprimir en '${printerName}':`, err);
+            console.warn(`[pos_restaurant_sync_safeguard] Fallo o timeout (>12s) al imprimir en '${printerName}':`, err);
             this.notification?.add(
                 _t("Aviso: Demora o desconexión en impresora '%s'. La comanda se registró en el sistema.", printerName),
                 { type: "warning", sticky: true }
             );
             return {
                 successful: false,
-                message: { body: _t("Impresora sin respuesta o con demora excesiva (timeout 15s)") },
+                message: { body: _t("Impresora sin respuesta o con demora excesiva (timeout 12s)") },
             };
         } finally {
             if (timer) {
@@ -164,13 +164,13 @@ patch(PosStore.prototype, {
     },
 
     /**
-     * Auto-heals stale syncingOrders locks (>20 seconds) so users are never
+     * Auto-heals stale syncingOrders locks (>16 seconds) so users are never
      * permanently locked out of a table saying "This order is currently syncing".
      */
     isOrderSyncing(order, notify = true) {
         if (order?.uuid && this.syncingOrders?.has(order.uuid)) {
             const lockTime = this._orderSyncingTimestamps?.[order.uuid];
-            if (lockTime && Date.now() - lockTime > 20000) {
+            if (lockTime && Date.now() - lockTime > 16000) {
                 console.warn(`[pos_restaurant_sync_safeguard] Auto-liberando lock zombie de sincronización para orden ${order.uuid}`);
                 this.syncingOrders.delete(order.uuid);
                 delete this._orderSyncingTimestamps[order.uuid];
@@ -197,7 +197,7 @@ patch(PosStore.prototype, {
 
     /**
      * Extra layer of defense: wraps stand-alone receipt printers (outside of printOrderChanges)
-     * with a 15s timeout so customer receipt prints never hang the terminal indefinitely.
+     * with a 12s timeout so customer receipt prints never hang the terminal indefinitely.
      */
     _wrapPrintersWithSafeguard() {
         const targetPrinters = [];
@@ -218,13 +218,13 @@ patch(PosStore.prototype, {
             if (typeof printer.printReceipt === "function") {
                 const origPrintReceipt = printer.printReceipt.bind(printer);
                 printer.printReceipt = async (...args) => {
-                    return this._executeWithTimeout(origPrintReceipt, args, printerName, 15000);
+                    return this._executeWithTimeout(origPrintReceipt, args, printerName, 12000);
                 };
             }
         }
     },
 
-    async _executeWithTimeout(fn, args, printerName, ms = 15000) {
+    async _executeWithTimeout(fn, args, printerName, ms = 12000) {
         let timer = null;
         const timeoutPromise = new Promise((_, reject) => {
             timer = setTimeout(() => {
@@ -243,7 +243,7 @@ patch(PosStore.prototype, {
             );
             return {
                 successful: false,
-                message: { body: _t("Impresora desconectada o sin respuesta (timeout 15s)") },
+                message: { body: _t("Impresora desconectada o sin respuesta (timeout 12s)") },
             };
         } finally {
             if (timer) {
