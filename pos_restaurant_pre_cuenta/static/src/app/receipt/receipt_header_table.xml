@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates id="template" xml:space="preserve">
+    <!--
+        Agrandar y destacar el número de mesa y comensales en el encabezado
+        del ticket (ReceiptHeader).
+        Por defecto en pos_restaurant, `tableName` se imprime como texto plano
+        sin contenedor ni estilo dentro de .pos-receipt-contact (que tiene 75%
+        de font-size). Con esta modificación se envuelve en un bloque destacado
+        (1.6em y bold) para una rápida lectura por parte del personal de salón y caja.
+    -->
+    <t t-name="pos_restaurant_pre_cuenta.ReceiptHeader" t-inherit="point_of_sale.ReceiptHeader" t-inherit-mode="extension">
+        <xpath expr="//t[@t-if='tableName']" position="replace">
+            <div t-if="tableName" class="pos-receipt-table-info" style="font-weight: bold; font-size: 1.6em; margin: 4px 0;">
+                <t t-esc="tableName"/>
+            </div>
+        </xpath>
+    </t>
+</templates>
