@@ -9,8 +9,8 @@
         (1.6em y bold) para una rápida lectura por parte del personal de salón y caja.
     -->
     <t t-name="pos_restaurant_pre_cuenta.ReceiptHeader" t-inherit="point_of_sale.ReceiptHeader" t-inherit-mode="extension">
-        <xpath expr="//t[@t-if='tableName']" position="replace">
-            <div t-if="tableName" class="pos-receipt-table-info" style="font-weight: bold; font-size: 1.6em; margin: 4px 0;">
+        <xpath expr="//t[@t-esc='tableName']" position="replace">
+            <div t-if="order.table_id or order.self_ordering_table_id" class="pos-receipt-table-info" style="font-weight: bold; font-size: 1.6em; margin: 4px 0;">
                 <t t-esc="tableName"/>
             </div>
         </xpath>
