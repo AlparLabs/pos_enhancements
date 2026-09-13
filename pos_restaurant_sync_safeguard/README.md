@@ -6,7 +6,7 @@ Módulo diseñado específicamente para entornos gastronómicos de alta concurre
 
 ### 1. Bloqueo por Comandera Colgada (Timeout en Red Local)
 * **Problema:** En el flujo estándar de Odoo POS Restaurant, si una comandera (ej. la de Barra) se apaga, pierde IP o tiene el buffer lleno, la llamada `printer.print(...)` queda en espera indefinida (30-60 segundos o cuelgue de promesa). Esto congela el hilo de JavaScript, aborta la llamada al backend y la mesa queda con el candado de *"sincronizando/enviando"* sin que las demás PCs puedan verla.
-* **Solución:** Envolver todas las impresoras (`this.printers` y `this.printer`) con un timeout asíncrono estricto de **3.5 segundos** mediante `Promise.race`. Si una impresora no responde, se lanza una alerta toast amarilla no bloqueante y el flujo continúa: la orden se marca como comandada y se persiste en el servidor central.
+* **Solución:** Envolver todas las impresoras (`this.printers` y `this.printer`) con un timeout asíncrono estricto de **15 segundos** mediante `Promise.race`. Si una impresora no responde, se lanza una alerta toast amarilla no bloqueante y el flujo continúa: la orden se marca como comandada y se persiste en el servidor central.
 
 ### 2. Liberación Garantizada de Bloqueos de UI (`try / finally`)
 * **Problema:** Cuando una excepción no controlada interrumpe el comande, los flags de bloqueo en la orden (`isSubmitting`, `isSending`, `syncing`) permanecen activos en memoria, obligando al usuario a reiniciar la página con `F5`.

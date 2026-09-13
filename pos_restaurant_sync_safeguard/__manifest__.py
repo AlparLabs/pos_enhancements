@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 {
     'name': 'POS Restaurant Sync Safeguard',
-    'version': '19.0.1.0.1',
+    'version': '19.0.1.0.2',
     'category': 'Sales/Point of Sale',
     'summary': 'Resilient kitchen printing with LAN timeout, UI lock auto-release and FloorScreen auto-heal.',
     'description': """
@@ -10,7 +10,7 @@ POS Restaurant Sync Safeguard & Resilience
 Protects the restaurant POS workflow in multi-terminal setups and high-latency environments (such as Odoo.sh):
 
 1. **Fail-Safe Kitchen Printing with Timeout:**
-   Wraps local LAN/thermal order printers with a 3.5-second execution timeout. If a bar or
+   Wraps local LAN/thermal order printers with a 15-second execution timeout. If a bar or
    kitchen printer is unreachable, out of paper, or experiences network lag, the error is
    caught gracefully with a non-blocking user warning instead of hanging the entire POS or
    aborting server synchronization.
