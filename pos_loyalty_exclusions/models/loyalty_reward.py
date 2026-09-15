@@ -43,7 +43,7 @@ class LoyaltyReward(models.Model):
             if reward.excluded_product_ids:
                 domain_parts.append([('id', 'in', reward.excluded_product_ids.ids)])
             if domain_parts:
-                domain = Domain.OR(domain_parts)
+                domain = Domain.AND([[('available_in_pos', '=', True)], Domain.OR(domain_parts)])
                 reward.all_excluded_product_ids = self.env['product.product'].search(domain)
             else:
                 reward.all_excluded_product_ids = self.env['product.product'].browse()
