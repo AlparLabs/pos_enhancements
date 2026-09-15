@@ -1,0 +1,10 @@
+.scrap-toggle-badge {
+    cursor: pointer;
+    user-select: none;
+    font-size: 0.75rem;
+    transition: background-color 0.15s ease-in-out, border-color 0.15s ease-in-out;
+
+    &:hover {
+        opacity: 0.85;
+    }
+}
