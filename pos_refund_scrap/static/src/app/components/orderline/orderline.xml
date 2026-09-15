@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates id="template" xml:space="preserve">
+    <t t-inherit="point_of_sale.Orderline" t-inherit-mode="extension">
+        <xpath expr="//ul[hasclass('info-list')]" position="inside">
+            <li t-if="props.mode === 'display' and line.qty lt 0"
+                class="scrap-toggle-badge cursor-pointer mt-1 py-1 px-2 rounded d-inline-flex align-items-center gap-1 w-auto"
+                t-att-class="line.is_scrap_refund ? 'bg-warning-subtle text-warning-emphasis border border-warning' : 'bg-secondary-subtle text-secondary-emphasis border border-secondary'"
+                t-on-click="toggleScrapRefund"
+                title="Haga clic para alternar entre Merma y Retorno a Stock">
+                <i t-if="line.is_scrap_refund" class="fa fa-trash-o"/>
+                <i t-else="" class="fa fa-undo"/>
+                <span class="small fw-semibold" t-out="line.is_scrap_refund ? 'Destino: Merma / Desecho' : 'Destino: Retorno a Stock'"/>
+            </li>
+        </xpath>
+    </t>
+</templates>

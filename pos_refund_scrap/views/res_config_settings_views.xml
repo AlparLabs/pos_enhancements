@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+    <record id="res_config_settings_view_form_inherit_pos_refund_scrap" model="ir.ui.view">
+        <field name="name">res.config.settings.view.form.inherit.pos_refund_scrap</field>
+        <field name="model">res.config.settings</field>
+        <field name="inherit_id" ref="point_of_sale.res_config_settings_view_form"/>
+        <field name="arch" type="xml">
+            <setting id="auto_printing" position="after">
+                <setting
+                    id="pos_refund_scrap_setting"
+                    string="Mermas en Reembolsos (Restaurante / Perecederos)"
+                    help="Evita que los productos preparados o devueltos reingresen al stock vendible, deriv?ndolos a una ubicaci?n de mermas/desperdicios.">
+                    <field name="pos_refund_to_scrap" widget="boolean_toggle"/>
+                    <div class="content-group" invisible="not pos_refund_to_scrap">
+                        <div class="mt16 row">
+                            <label for="pos_refund_scrap_mode" string="Criterio de Desecho" class="col-lg-4 o_light_label"/>
+                            <field name="pos_refund_scrap_mode" class="col-lg-8"/>
+                        </div>
+                        <div class="mt8 row">
+                            <label for="pos_refund_scrap_location_id" string="Ubicaci?n de Mermas" class="col-lg-4 o_light_label"/>
+                            <field name="pos_refund_scrap_location_id" options="{'no_create': True}" class="col-lg-8"/>
+                        </div>
+                        <div class="text-muted small mt-2">
+                            Si selecciona 'Seg?n categor?a del producto', solo los productos de las categor?as que tengan tildada la opci?n 'Desechar en reembolso' ir?n a mermas.
+                        </div>
+                    </div>
+                </setting>
+            </setting>
+        </field>
+    </record>
+</odoo>
