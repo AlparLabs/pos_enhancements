@@ -33,9 +33,10 @@ patch(PosOrderline.prototype, {
     },
 
     setQuantity(quantity, keep_price) {
-        super.setQuantity(...arguments);
-        if (this.qty < 0 && this.refunded_orderline_id && this.is_scrap_refund === undefined) {
+        const res = super.setQuantity(...arguments);
+        if (this.qty < 0 && this.refunded_orderline_id && !this.is_scrap_refund) {
             this.is_scrap_refund = this._computeIsScrapRefund();
         }
+        return res;
     },
 });
