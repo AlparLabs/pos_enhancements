@@ -69,15 +69,44 @@ class PosPaymentMethod(models.Model):
             raise AccessError(_("Do not have access to fetch token from Mercado Pago"))
 
     def force_pdv(self):
+        self.ensure_one()
         self._check_special_access()
+        if not self.mp_bearer_token:
+            raise UserError(_("Please configure the Production User Token first."))
+        if not self.mp_id_point_smart_complet:
+            if self.mp_id_point_smart:
+                self.mp_id_point_smart_complet = self._find_terminal(
+                    self.mp_bearer_token, self.mp_id_point_smart
+                )
+            if not self.mp_id_point_smart_complet:
+                raise UserError(_("No se pudo identificar la terminal. Verifique el número de serie y el token."))
+
         mercado_pago = MercadoPagoPosRequest(self.sudo().mp_bearer_token)
-        _logger.info('Calling Mercado Pago to force the terminal mode to "PDV"')
-        mode = {"operating_mode": "PDV"}
-        resp = mercado_pago.call_mercado_pago("patch", f"/point/integration-api/devices/{self.mp_id_point_smart_complet}", mode)
-        if resp.get("operating_mode") != "PDV":
-            raise UserError(_("Unexpected Mercado Pago response: %s", resp))
-        _logger.debug("Successfully set the terminal mode to 'PDV'.")
-        return None
+        _logger.info('Calling Mercado Pago Orders API to set terminal %s to PDV', self.mp_id_point_smart_complet)
+        payload = {
+            "terminals": [
+                {
+                    "id": self.mp_id_point_smart_complet,
+                    "operating_mode": "PDV",
+                }
+            ]
+        }
+        resp = mercado_pago.call_mercado_pago("patch", "/terminals/v1/setup", payload)
+        if not resp or "errorMessage" in resp or "error" in resp or resp.get("status", 200) >= 400:
+            err_msg = resp.get("errorMessage") or resp.get("message") or resp.get("error") or str(resp)
+            raise UserError(_("Error de Mercado Pago: %s", err_msg))
+
+        _logger.info("Successfully set terminal mode to 'PDV': %s", resp)
+        return {
+            'type': 'ir.actions.client',
+            'tag': 'display_notification',
+            'params': {
+                'title': _('Modo PDV Activado'),
+                'message': _('La terminal %s fue configurada en modo PDV con éxito.', self.mp_id_point_smart),
+                'type': 'success',
+                'sticky': False,
+            }
+        }
 
     def mp_order_create(self, infos):
         self._check_special_access()
