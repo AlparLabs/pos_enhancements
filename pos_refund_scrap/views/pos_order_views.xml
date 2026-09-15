@@ -5,6 +5,15 @@
         <field name="model">pos.order</field>
         <field name="inherit_id" ref="point_of_sale.view_pos_pos_form"/>
         <field name="arch" type="xml">
+            <xpath expr="//div[@name='button_box']" position="inside">
+                <button name="action_view_scrap"
+                    type="object"
+                    class="oe_stat_button"
+                    icon="oi-arrows-v"
+                    invisible="scrap_count == 0">
+                    <field name="scrap_count" widget="statinfo" string="Desechos"/>
+                </button>
+            </xpath>
             <xpath expr="//field[@name='lines']/list//field[@name='qty']" position="after">
                 <field name="is_scrap_refund" string="Merma" optional="show" widget="boolean"/>
             </xpath>

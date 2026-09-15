@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Inherit Form View to show POS Order link -->
+    <record id="stock_scrap_form_view_inherit_pos" model="ir.ui.view">
+        <field name="name">stock.scrap.form.inherit.pos</field>
+        <field name="model">stock.scrap</field>
+        <field name="inherit_id" ref="stock.stock_scrap_form_view"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='origin']" position="after">
+                <field name="pos_order_id" invisible="not pos_order_id" readonly="state == 'done'"/>
+            </xpath>
+        </field>
+    </record>
+
+    <!-- Inherit List View to show POS Order and Picking columns -->
+    <record id="stock_scrap_tree_view_inherit_pos" model="ir.ui.view">
+        <field name="name">stock.scrap.list.inherit.pos</field>
+        <field name="model">stock.scrap</field>
+        <field name="inherit_id" ref="stock.stock_scrap_tree_view"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='date_done']" position="after">
+                <field name="picking_id" optional="show"/>
+                <field name="pos_order_id" optional="show"/>
+            </xpath>
+        </field>
+    </record>
+</odoo>
