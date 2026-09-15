@@ -30,7 +30,7 @@ class StockPicking(models.Model):
         first_order = scrap_lines[0].order_id
         config = first_order.session_id.config_id
         scrap_location = config.refund_scrap_location_id or self.env['stock.location'].search([
-            ('scrap_location', '=', True),
+            ('usage', '=', 'inventory'),
             ('company_id', 'in', [picking_type.company_id.id, False]),
         ], limit=1)
 

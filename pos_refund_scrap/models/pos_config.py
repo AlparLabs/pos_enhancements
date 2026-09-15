@@ -23,7 +23,7 @@ class PosConfig(models.Model):
     refund_scrap_location_id = fields.Many2one(
         'stock.location',
         string='Ubicaci?n de merma para reembolsos',
-        domain="[('scrap_location', '=', True)]",
+        domain="[('usage', '=', 'inventory')]",
         compute='_compute_refund_scrap_location_id',
         store=True,
         readonly=False,
@@ -35,7 +35,7 @@ class PosConfig(models.Model):
         for config in self:
             if not config.refund_scrap_location_id:
                 scrap_location = self.env['stock.location'].search([
-                    ('scrap_location', '=', True),
+                    ('usage', '=', 'inventory'),
                     ('company_id', 'in', [config.company_id.id, False]),
                 ], limit=1)
                 config.refund_scrap_location_id = scrap_location
