@@ -15,3 +15,8 @@ class ResConfigSettings(models.TransientModel):
         related='pos_config_id.l10n_ar_show_product_reference',
         readonly=False,
     )
+    pos_l10n_ar_receipt_style = fields.Selection(
+        string='Receipt Style',
+        related='pos_config_id.l10n_ar_receipt_style',
+        readonly=False,
+    )
