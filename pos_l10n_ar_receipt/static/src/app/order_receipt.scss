@@ -14,3 +14,122 @@
     padding-top: 5px;
     margin-top: 5px;
 }
+
+// Supermarket / Retail (Frat) receipt layout
+.pos-supermarket-receipt {
+    // Hide standard date, cashier, amount, and default orderline loops when supermarket layout is active
+    #order-date,
+    .cashier,
+    .pos-receipt-vat,
+    .pos-receipt-amount,
+    OrderDisplay,
+    .orderlines {
+        display: none !important;
+    }
+
+    .pos-supermarket-divider {
+        border-top: 1px dashed #000;
+        margin: 5px 0;
+        width: 100%;
+    }
+
+    .pos-supermarket-header {
+        margin-top: 4px;
+        line-height: 1.3;
+
+        .pos-supermarket-copy-label {
+            font-size: 1.05em;
+            font-weight: bold;
+        }
+
+        .pos-supermarket-doc-title {
+            font-size: 1.05em;
+            font-weight: bold;
+        }
+
+        .pos-supermarket-partner-resp {
+            font-size: 0.9em;
+            font-weight: normal;
+        }
+
+        .pos-supermarket-meta-grid {
+            font-size: 0.85em;
+            font-weight: normal;
+            line-height: 1.35;
+            text-align: left;
+        }
+    }
+
+    .pos-supermarket-lines {
+        margin: 6px 0;
+        text-align: left;
+
+        .pos-supermarket-category-title {
+            font-weight: bold;
+            font-size: 0.95em;
+            text-transform: capitalize;
+            margin-top: 8px;
+            margin-bottom: 2px;
+        }
+
+        .pos-supermarket-item {
+            margin-bottom: 5px;
+
+            .pos-supermarket-item-name {
+                font-size: 0.85em;
+                text-transform: uppercase;
+                line-height: 1.2;
+            }
+
+            .pos-supermarket-item-calc {
+                font-size: 0.85em;
+                margin-top: 1px;
+            }
+
+            .pos-supermarket-item-discount {
+                font-size: 0.8em;
+                color: #555;
+            }
+
+            .pos-supermarket-barcode {
+                font-size: 0.8em;
+                font-family: monospace;
+                letter-spacing: 0.5px;
+                color: #333;
+                margin-top: 1px;
+            }
+        }
+    }
+
+    .pos-supermarket-totals-block {
+        margin-top: 4px;
+        font-size: 0.9em;
+
+        .pos-supermarket-subtotal-row {
+            padding: 2px 0;
+            font-size: 0.95em;
+        }
+
+        .pos-supermarket-discounts-title {
+            margin-top: 4px;
+            text-align: left;
+            font-size: 0.9em;
+        }
+
+        .pos-supermarket-discount-row {
+            font-size: 0.85em;
+            color: #333;
+            padding: 1px 0;
+        }
+
+        .pos-supermarket-ahorro-row {
+            font-size: 1.05em;
+            margin-top: 3px;
+        }
+
+        .pos-supermarket-total-row {
+            font-size: 1.2em;
+            padding: 2px 0;
+        }
+    }
+}

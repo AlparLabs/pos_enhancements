@@ -8,18 +8,52 @@
     -->
     <t t-name="pos_l10n_ar_receipt.ReceiptHeader" t-inherit="point_of_sale.ReceiptHeader" t-inherit-mode="extension">
         <xpath expr="//div[hasclass('pos-receipt-contact')]" position="after">
-            <div t-if="order.l10n_ar_document_type_name" class="pos-receipt-center-align" style="font-weight: bold; margin-top: 5px;">
-                <t t-esc="order.l10n_ar_document_type_name"/> - <t t-esc="props.l10nArCopyLabel or 'ORIGINAL'"/> - COD (<t t-esc="order.l10n_ar_document_type_code"/>)
-            </div>
-            <div t-if="order.l10n_latam_document_number" class="pos-receipt-center-align" style="font-weight: bold;">
-                Nº DE FACTURA: <t t-esc="order.l10n_latam_document_number"/>
-            </div>
-            <div t-if="order.l10n_ar_company_cuit" class="pos-receipt-center-align" style="font-size: 0.9em;">
-                CUIT: <t t-esc="order.l10n_ar_company_cuit"/>
-            </div>
-            <div t-if="order.l10n_ar_company_responsibility" class="pos-receipt-center-align" style="font-size: 0.9em; margin-bottom: 5px;">
-                <t t-esc="order.l10n_ar_company_responsibility"/>
-            </div>
+            <t t-if="isSupermarketReceipt">
+                <div class="pos-supermarket-header text-center">
+                    <div class="pos-supermarket-copy-label">
+                        <t t-esc="props.l10nArCopyLabel or 'ORIGINAL'"/>
+                    </div>
+                    <div class="pos-supermarket-doc-title">
+                        <t t-esc="supermarketHeaderData.docType"/> (Cod.<t t-esc="supermarketHeaderData.docCode"/>)
+                    </div>
+                    <div class="pos-supermarket-partner-resp">
+                        <t t-esc="supermarketHeaderData.partnerResp"/>
+                    </div>
+
+                    <div class="pos-supermarket-divider"/>
+
+                    <div class="pos-supermarket-meta-grid">
+                        <div class="d-flex justify-content-between">
+                            <span>P.V. Nro.: <t t-esc="supermarketHeaderData.pv"/></span>
+                            <span>Nro T. <t t-esc="supermarketHeaderData.ticketNum"/></span>
+                        </div>
+                        <div class="d-flex justify-content-between">
+                            <span>Fecha <t t-esc="supermarketHeaderData.dateStr"/></span>
+                            <span>Hora <t t-esc="supermarketHeaderData.timeStr"/></span>
+                        </div>
+                        <div class="d-flex justify-content-between">
+                            <span>Caja <t t-esc="supermarketHeaderData.caja"/></span>
+                            <span>Cajero/a: <t t-esc="supermarketHeaderData.cajero"/></span>
+                        </div>
+                    </div>
+
+                    <div class="pos-supermarket-divider"/>
+                </div>
+            </t>
+            <t t-else="">
+                <div t-if="order.l10n_ar_document_type_name" class="pos-receipt-center-align" style="font-weight: bold; margin-top: 5px;">
+                    <t t-esc="order.l10n_ar_document_type_name"/> - <t t-esc="props.l10nArCopyLabel or 'ORIGINAL'"/> - COD (<t t-esc="order.l10n_ar_document_type_code"/>)
+                </div>
+                <div t-if="order.l10n_latam_document_number" class="pos-receipt-center-align" style="font-weight: bold;">
+                    Nº DE FACTURA: <t t-esc="order.l10n_latam_document_number"/>
+                </div>
+                <div t-if="order.l10n_ar_company_cuit" class="pos-receipt-center-align" style="font-size: 0.9em;">
+                    CUIT: <t t-esc="order.l10n_ar_company_cuit"/>
+                </div>
+                <div t-if="order.l10n_ar_company_responsibility" class="pos-receipt-center-align" style="font-size: 0.9em; margin-bottom: 5px;">
+                    <t t-esc="order.l10n_ar_company_responsibility"/>
+                </div>
+            </t>
         </xpath>
 
         <!--
@@ -45,6 +79,93 @@
         <!-- Forward the copy label (ORIGINAL/DUPLICADO) down to the header. -->
         <xpath expr="//ReceiptHeader" position="attributes">
             <attribute name="l10nArCopyLabel">props.l10nArCopyLabel</attribute>
+        </xpath>
+
+        <!-- Apply supermarket receipt class to root container if active -->
+        <xpath expr="//div[hasclass('pos-receipt')]" position="attributes">
+            <attribute name="t-att-class">{'pos-supermarket-receipt': isSupermarketReceipt}</attribute>
+        </xpath>
+
+        <!-- Supermarket Lines (grouped by category) before OrderDisplay -->
+        <xpath expr="//OrderDisplay" position="before">
+            <t t-if="isSupermarketReceipt">
+                <div class="pos-supermarket-lines">
+                    <t t-foreach="supermarketData.groups" t-as="group" t-key="group.name">
+                        <div class="pos-supermarket-category-title">
+                            <t t-esc="group.name"/>
+                        </div>
+                        <t t-foreach="group.lines" t-as="item" t-key="item.line.uuid">
+                            <div class="pos-supermarket-item">
+                                <div class="pos-supermarket-item-name">
+                                    <t t-esc="item.name"/>
+                                </div>
+                                <div class="d-flex justify-content-between pos-supermarket-item-calc">
+                                    <span>
+                                        <t t-esc="item.qtyStr"/> x <t t-esc="item.unitPriceStr"/> (<t t-esc="item.taxRateStr"/>)
+                                    </span>
+                                    <span class="pos-receipt-right-align">
+                                        <t t-esc="item.subtotalStr"/>
+                                    </span>
+                                </div>
+                                <div t-if="item.hasDiscount" class="d-flex justify-content-between pos-supermarket-item-discount">
+                                    <span class="ps-2 text-muted">
+                                        <t t-esc="item.discountName"/>
+                                    </span>
+                                    <span class="pos-receipt-right-align text-muted">
+                                        -<t t-esc="item.discountStr"/>
+                                    </span>
+                                </div>
+                                <div t-if="item.barcode" class="pos-supermarket-barcode">
+                                    <t t-esc="item.barcode"/>
+                                </div>
+                            </div>
+                        </t>
+                    </t>
+                </div>
+            </t>
+        </xpath>
+
+        <!-- Supermarket Totals, Discounts & Savings Block before pos-receipt-amount -->
+        <xpath expr="//div[hasclass('pos-receipt-amount')]" position="before">
+            <t t-if="isSupermarketReceipt">
+                <div class="pos-supermarket-totals-block">
+                    <div class="pos-supermarket-divider"/>
+                    <div class="d-flex justify-content-between pos-supermarket-subtotal-row">
+                        <span class="fw-bold">SUBTOTAL SIN DESCUENTOS</span>
+                        <span class="pos-receipt-right-align fw-bold">
+                            $ <t t-esc="supermarketData.subtotalWithoutDiscountsStr"/>
+                        </span>
+                    </div>
+                    <div class="pos-supermarket-divider"/>
+
+                    <t t-if="supermarketData.hasDiscounts">
+                        <div class="pos-supermarket-discounts-title fw-bold">
+                            DESCUENTOS
+                        </div>
+                        <t t-foreach="supermarketData.discounts" t-as="disc" t-key="disc.name + disc_index">
+                            <div class="d-flex justify-content-between pos-supermarket-discount-row">
+                                <span class="ps-2"><t t-esc="disc.name"/></span>
+                                <span class="pos-receipt-right-align">-<t t-esc="disc.amountStr"/></span>
+                            </div>
+                        </t>
+                        <div class="d-flex justify-content-between pos-supermarket-ahorro-row fw-bold" style="margin-top: 4px;">
+                            <span>AHORRO</span>
+                            <span class="pos-receipt-right-align">
+                                $ <t t-esc="supermarketData.totalSavingsStr"/>
+                            </span>
+                        </div>
+                        <div class="pos-supermarket-divider"/>
+                    </t>
+
+                    <div class="d-flex justify-content-between pos-supermarket-total-row fw-bold" style="font-size: 1.25em; margin: 4px 0;">
+                        <span>TOTAL</span>
+                        <span class="pos-receipt-right-align">
+                            $ <t t-esc="supermarketTotalStr"/>
+                        </span>
+                    </div>
+                    <div class="pos-supermarket-divider"/>
+                </div>
+            </t>
         </xpath>
 
         <!-- ARCA (AFIP) QR Code and CAE details -->

@@ -7,6 +7,12 @@
         <field name="arch" type="xml">
             <setting id="auto_printing" position="after">
                 <setting
+                    id="l10n_ar_receipt_style"
+                    string="Estilo de Ticket"
+                    help="Seleccione el formato del ticket para este punto de venta (Estándar o Supermercado Retail Frat).">
+                    <field name="pos_l10n_ar_receipt_style"/>
+                </setting>
+                <setting
                     id="l10n_ar_receipt_print_duplicate"
                     string="Original &amp; Duplicate (AR)"
                     help="Print invoiced sales twice: one ORIGINAL and one DUPLICADO copy for internal control.">

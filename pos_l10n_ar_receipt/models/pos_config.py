@@ -21,6 +21,18 @@ class PosConfig(models.Model):
             "printed in bold before its name on the invoiced receipt."
         ),
     )
+    l10n_ar_receipt_style = fields.Selection(
+        selection=[
+            ('standard', 'Estándar (Gastro / General)'),
+            ('supermarket', 'Supermercado / Retail (Frat)'),
+        ],
+        string='Receipt Style',
+        default='standard',
+        help=(
+            "Receipt layout: 'standard' uses the standard Odoo ticket format; "
+            "'supermarket' groups products by category, displays barcodes, and highlights discounts/savings."
+        ),
+    )
 
     @api.model
     def _load_pos_data_read(self, records, config):
@@ -32,4 +44,5 @@ class PosConfig(models.Model):
         if read_records:
             read_records[0]['l10n_ar_receipt_print_duplicate'] = config.l10n_ar_receipt_print_duplicate
             read_records[0]['l10n_ar_show_product_reference'] = config.l10n_ar_show_product_reference
+            read_records[0]['l10n_ar_receipt_style'] = config.l10n_ar_receipt_style
         return read_records
