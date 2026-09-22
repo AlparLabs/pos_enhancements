@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates id="template" xml:space="preserve">
+    <t t-inherit="pos_restaurant.FloorScreen" t-inherit-mode="extension" owl="1">
+        <xpath expr="//div[hasclass('table')]" position="inside">
+            <t t-set="customerName" t-value="getTableCustomerName(table)"/>
+            <span
+                t-if="customerName"
+                class="table-customer-badge badge rounded-pill text-bg-primary position-absolute top-0 start-50"
+                style="font-size: 0.70em; z-index: 10; transform: translate(-50%, -110%); max-width: 90%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"
+                t-att-title="customerName"
+            >
+                <i class="fa fa-user-circle me-1"/>
+                <t t-esc="customerName"/>
+            </span>
+        </xpath>
+    </t>
+</templates>

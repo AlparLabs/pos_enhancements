@@ -1,0 +1,8 @@
+.table-customer-badge {
+    font-size: 0.70em !important;
+    z-index: 10;
+    max-width: 90%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
