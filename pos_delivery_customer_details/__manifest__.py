@@ -3,7 +3,7 @@
     'name': 'POS Delivery Customer Details',
     'version': '19.0.1.0.0',
     'category': 'Sales/Point of Sale',
-    'summary': 'Imprime datos completos del cliente en comandas de cocina, tickets de venta y facturas',
+    'summary': 'Imprime datos completos del cliente en comandas de cocina y tickets de venta',
     'description': """
         Módulo para Puntos de Venta con servicio de entrega o delivery.
         Agrega un check de configuración en el POS para imprimir:
@@ -15,14 +15,12 @@
         En:
         1. Comandas de cocina / preparación (OrderChangeReceipt)
         2. Tickets de cierre de venta (OrderReceipt)
-        3. Facturas impresas (reporte PDF y ticket fiscal)
     """,
     'author': 'AlparData',
     'website': 'https://www.alpardata.com.ar',
-    'depends': ['point_of_sale', 'account'],
+    'depends': ['point_of_sale'],
     'data': [
         'views/res_config_settings_views.xml',
-        'views/report_invoice_views.xml',
     ],
     'assets': {
         'point_of_sale._assets_pos': [
@@ -30,7 +28,6 @@
             'pos_delivery_customer_details/static/src/app/**/*.xml',
         ],
     },
-    'post_init_hook': 'post_init_hook',
     'installable': True,
     'application': False,
     'license': 'LGPL-3',

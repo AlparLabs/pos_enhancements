@@ -10,7 +10,7 @@ class PosConfig(models.Model):
         default=False,
         help=(
             "Cuando está activo, imprime los datos completos del cliente (Nombre, Dirección, "
-            "Localidad, CP, Teléfono y Correo) en comandas de cocina, tickets de venta y facturas."
+            "Localidad, CP, Teléfono y Correo) en comandas de cocina y tickets de venta."
         ),
     )
 

@@ -9,7 +9,7 @@
                 <setting
                     id="pos_delivery_customer_details"
                     string="Datos de Entrega del Cliente"
-                    help="Imprime nombre, dirección completa, teléfono y correo electrónico del cliente en comandas de cocina, tickets de venta y facturas para repartos y delivery.">
+                    help="Imprime nombre, dirección completa, teléfono y correo electrónico del cliente en comandas de cocina y tickets de venta para repartos y delivery.">
                     <field name="pos_delivery_customer_details" widget="boolean_toggle"/>
                 </setting>
             </setting>
