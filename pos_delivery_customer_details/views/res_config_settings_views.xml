@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+    <record id="res_config_settings_view_form_pos_delivery_customer_details" model="ir.ui.view">
+        <field name="name">res.config.settings.view.form.inherit.pos_delivery_customer_details</field>
+        <field name="model">res.config.settings</field>
+        <field name="inherit_id" ref="point_of_sale.res_config_settings_view_form"/>
+        <field name="arch" type="xml">
+            <setting id="auto_printing" position="after">
+                <setting
+                    id="pos_delivery_customer_details"
+                    string="Datos de Entrega del Cliente"
+                    help="Imprime nombre, dirección completa, teléfono y correo electrónico del cliente en comandas de cocina, tickets de venta y facturas para repartos y delivery.">
+                    <field name="pos_delivery_customer_details" widget="boolean_toggle"/>
+                </setting>
+            </setting>
+        </field>
+    </record>
+</odoo>
