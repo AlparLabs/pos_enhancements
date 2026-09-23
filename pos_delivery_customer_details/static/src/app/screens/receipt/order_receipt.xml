@@ -1,29 +1,29 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <templates id="template" xml:space="preserve">
-    <t t-name="pos_delivery_customer_details.OrderReceipt" t-inherit="point_of_sale.OrderReceipt" t-inherit-mode="extension">
-        <xpath expr="//ReceiptHeader" position="after">
-            <t t-set="delivery_customer" t-value="deliveryCustomer or order?.delivery_customer or props.data?.delivery_customer or props.order?.delivery_customer"/>
-            <t t-if="delivery_customer">
-                <div class="pos-receipt-delivery-customer text-start my-2 p-2"
-                     style="font-size: 85%; border: 1px dashed black; border-radius: 3px; line-height: 1.25;">
-                    <div style="font-weight: bold; text-align: center; border-bottom: 1px dashed black; padding-bottom: 2px; margin-bottom: 4px; letter-spacing: 0.05rem;">
-                        DATOS DE ENTREGA
-                    </div>
-                    <div><strong>Cliente: </strong><t t-esc="delivery_customer.name"/></div>
-                    <div t-if="delivery_customer.street">
-                        <strong>Dirección: </strong><t t-esc="delivery_customer.street"/>
-                    </div>
-                    <div t-if="delivery_customer.city_state_zip">
-                        <strong>Localidad: </strong><t t-esc="delivery_customer.city_state_zip"/>
-                    </div>
-                    <div t-if="delivery_customer.phone">
-                        <strong>Tel: </strong><t t-esc="delivery_customer.phone"/>
-                    </div>
-                    <div t-if="delivery_customer.email">
-                        <strong>Email: </strong><t t-esc="delivery_customer.email"/>
-                    </div>
+    <!-- Destacar datos del cliente (nombre, dirección) e imprimir teléfono en tickets de venta / recibos proforma -->
+    <t t-name="pos_delivery_customer_details.ReceiptHeader" t-inherit="point_of_sale.ReceiptHeader" t-inherit-mode="extension">
+        <xpath expr="//div[hasclass('pos-receipt-customer')]" position="replace">
+            <t t-set="customer_phone" t-value="order.partner_id.phone or order.partner_id.mobile"/>
+            <div t-if="order.partner_id" class="pos-receipt-customer text-center mt-2 mb-2 p-1" style="line-height: 1.35;">
+                <div t-if="order.partner_id.name" class="fw-bolder" style="font-size: 1.5em; margin-bottom: 2px;">
+                    <t t-if="order.partner_id.parent_name">
+                        <span t-esc="order.partner_id.parent_name" />,
+                    </t>
+                    <span t-esc="order.partner_id.name" />
                 </div>
-            </t>
+                <div t-if="order.partner_id.pos_contact_address" style="font-size: 1.2em; font-weight: 500;">
+                    <span t-esc="order.partner_id.pos_contact_address" />
+                </div>
+                <div t-if="customer_phone" class="pos-receipt-customer-phone fw-bolder" style="font-size: 1.35em; margin-top: 3px;">
+                    <span>Tel: </span><span t-esc="customer_phone" />
+                </div>
+                <div t-if="order.partner_id.email" style="font-size: 1.1em;">
+                    <span>Email: </span><span t-esc="order.partner_id.email" />
+                </div>
+                <div t-if="order.partner_id.vat" style="font-size: 1.1em;">
+                    <span t-esc="order.partner_id.vat" />
+                </div>
+            </div>
         </xpath>
     </t>
 </templates>

@@ -9,7 +9,10 @@ patch(PosOrder.prototype, {
      * Reactive getter to access delivery customer details on order instance
      */
     get delivery_customer() {
-        if (!this.config?.pos_delivery_customer_details || !this.partner_id) {
+        if (!this.partner_id) {
+            return null;
+        }
+        if (this.config && this.config.pos_delivery_customer_details === false) {
             return null;
         }
         return formatCustomerDeliveryDetails(this.partner_id, this.models);

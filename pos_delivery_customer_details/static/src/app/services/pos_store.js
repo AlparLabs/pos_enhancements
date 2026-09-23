@@ -11,7 +11,7 @@ patch(PosStore.prototype, {
      */
     getOrderData(order, reprint) {
         const data = super.getOrderData(...arguments);
-        if (this.config?.pos_delivery_customer_details && order?.partner_id) {
+        if (order?.partner_id && this.config?.pos_delivery_customer_details !== false) {
             data.delivery_customer = formatCustomerDeliveryDetails(
                 order.partner_id,
                 this.models

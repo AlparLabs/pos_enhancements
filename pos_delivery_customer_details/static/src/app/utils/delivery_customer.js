@@ -32,7 +32,8 @@ export function formatCustomerDeliveryDetails(partner, models) {
     }
     const city_state_zip = cityParts.join(", ");
 
-    const phone = partner.phone ? String(partner.phone).trim() : "";
+    const rawPhone = partner.phone || partner.mobile || "";
+    const phone = rawPhone ? String(rawPhone).trim() : "";
 
     return {
         name: partner.name || "",

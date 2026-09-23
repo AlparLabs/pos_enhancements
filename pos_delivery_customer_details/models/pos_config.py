@@ -7,7 +7,7 @@ class PosConfig(models.Model):
 
     pos_delivery_customer_details = fields.Boolean(
         string='Datos de Entrega en Comprobantes',
-        default=False,
+        default=True,
         help=(
             "Cuando está activo, imprime los datos completos del cliente (Nombre, Dirección, "
             "Localidad, CP, Teléfono y Correo) en comandas de cocina y tickets de venta."
