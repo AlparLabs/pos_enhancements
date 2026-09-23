@@ -6,16 +6,23 @@ import { formatCustomerDeliveryDetails } from "@pos_delivery_customer_details/ap
 
 patch(PosOrder.prototype, {
     /**
+     * Reactive getter to access delivery customer details on order instance
+     */
+    get delivery_customer() {
+        if (!this.config?.pos_delivery_customer_details || !this.partner_id) {
+            return null;
+        }
+        return formatCustomerDeliveryDetails(this.partner_id, this.models);
+    },
+
+    /**
      * @override
-     * Expose customer delivery details to printed order receipt
+     * Expose customer delivery details to printed order receipt data
      */
     export_for_printing(baseUrl, headerData) {
         const data = super.export_for_printing(...arguments);
-        if (this.config?.pos_delivery_customer_details && this.partner_id) {
-            data.delivery_customer = formatCustomerDeliveryDetails(
-                this.partner_id,
-                this.models
-            );
+        if (data) {
+            data.delivery_customer = this.delivery_customer;
         }
         return data;
     },
