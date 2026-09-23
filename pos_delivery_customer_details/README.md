@@ -9,7 +9,7 @@ Este módulo permite imprimir los datos completos del cliente en **comandas de c
   - Nombre o Razón Social
   - Dirección completa (Calle, Número, Piso y Departamento / `street` y `street2`)
   - Localidad, Provincia y Código Postal
-  - Teléfono / Móvil de contacto
+  - Teléfono de contacto (`phone`)
   - Correo electrónico
 - **Comandas de Cocina (`OrderChangeReceipt`)**:
   - Bloque destacado `DATOS DE ENTREGA` para que el personal de cocina y empaquetado identifique a quién pertenece el pedido y los datos de contacto.

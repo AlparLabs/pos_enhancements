@@ -10,7 +10,7 @@
         - Nombre / Razón Social
         - Calle, número y piso/departamento (street y street2)
         - Ciudad, provincia y código postal
-        - Teléfono y móvil
+        - Teléfono de contacto
         - Correo electrónico
         En:
         1. Comandas de cocina / preparación (OrderChangeReceipt)
