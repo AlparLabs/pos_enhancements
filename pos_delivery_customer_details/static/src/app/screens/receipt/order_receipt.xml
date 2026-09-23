@@ -2,24 +2,25 @@
 <templates id="template" xml:space="preserve">
     <t t-name="pos_delivery_customer_details.OrderReceipt" t-inherit="point_of_sale.OrderReceipt" t-inherit-mode="extension">
         <xpath expr="//ReceiptHeader" position="after">
-            <t t-if="props.data.delivery_customer">
+            <t t-set="delivery_customer" t-value="deliveryCustomer or order?.delivery_customer or props.data?.delivery_customer or props.order?.delivery_customer"/>
+            <t t-if="delivery_customer">
                 <div class="pos-receipt-delivery-customer text-start my-2 p-2"
                      style="font-size: 85%; border: 1px dashed black; border-radius: 3px; line-height: 1.25;">
                     <div style="font-weight: bold; text-align: center; border-bottom: 1px dashed black; padding-bottom: 2px; margin-bottom: 4px; letter-spacing: 0.05rem;">
                         DATOS DE ENTREGA
                     </div>
-                    <div><strong>Cliente: </strong><t t-esc="props.data.delivery_customer.name"/></div>
-                    <div t-if="props.data.delivery_customer.street">
-                        <strong>Dirección: </strong><t t-esc="props.data.delivery_customer.street"/>
+                    <div><strong>Cliente: </strong><t t-esc="delivery_customer.name"/></div>
+                    <div t-if="delivery_customer.street">
+                        <strong>Dirección: </strong><t t-esc="delivery_customer.street"/>
                     </div>
-                    <div t-if="props.data.delivery_customer.city_state_zip">
-                        <strong>Localidad: </strong><t t-esc="props.data.delivery_customer.city_state_zip"/>
+                    <div t-if="delivery_customer.city_state_zip">
+                        <strong>Localidad: </strong><t t-esc="delivery_customer.city_state_zip"/>
                     </div>
-                    <div t-if="props.data.delivery_customer.phone">
-                        <strong>Tel: </strong><t t-esc="props.data.delivery_customer.phone"/>
+                    <div t-if="delivery_customer.phone">
+                        <strong>Tel: </strong><t t-esc="delivery_customer.phone"/>
                     </div>
-                    <div t-if="props.data.delivery_customer.email">
-                        <strong>Email: </strong><t t-esc="props.data.delivery_customer.email"/>
+                    <div t-if="delivery_customer.email">
+                        <strong>Email: </strong><t t-esc="delivery_customer.email"/>
                     </div>
                 </div>
             </t>

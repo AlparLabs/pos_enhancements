@@ -2,7 +2,7 @@
 <templates id="template" xml:space="preserve">
     <t t-name="pos_delivery_customer_details.OrderChangeReceipt" t-inherit="point_of_sale.OrderChangeReceipt" t-inherit-mode="extension">
         <xpath expr="//span[hasclass('my-4')]" position="after">
-            <t t-set="delivery_customer" t-value="data?.delivery_customer or (changes and changes.delivery_customer)"/>
+            <t t-set="delivery_customer" t-value="data?.delivery_customer or changes?.delivery_customer"/>
             <t t-if="delivery_customer">
                 <div class="pos-kitchen-delivery-customer text-start my-2 p-1"
                      style="font-size: 80%; border: 1px dashed black; line-height: 1.25;">
