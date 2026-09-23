@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates id="template" xml:space="preserve">
+    <t t-name="pos_delivery_customer_details.OrderChangeReceipt" t-inherit="point_of_sale.OrderChangeReceipt" t-inherit-mode="extension">
+        <xpath expr="//span[hasclass('my-4')]" position="after">
+            <t t-set="delivery_customer" t-value="data?.delivery_customer or (changes and changes.delivery_customer)"/>
+            <t t-if="delivery_customer">
+                <div class="pos-kitchen-delivery-customer text-start my-2 p-1"
+                     style="font-size: 80%; border: 1px dashed black; line-height: 1.25;">
+                    <div style="font-weight: bold; text-align: center; border-bottom: 1px dashed black; padding-bottom: 2px; margin-bottom: 3px; letter-spacing: 0.05rem;">
+                        DATOS DE ENTREGA
+                    </div>
+                    <div><strong>Cliente: </strong><t t-esc="delivery_customer.name"/></div>
+                    <div t-if="delivery_customer.street">
+                        <strong>Dirección: </strong><t t-esc="delivery_customer.street"/>
+                    </div>
+                    <div t-if="delivery_customer.city_state_zip">
+                        <strong>Localidad: </strong><t t-esc="delivery_customer.city_state_zip"/>
+                    </div>
+                    <div t-if="delivery_customer.phone">
+                        <strong>Tel: </strong><t t-esc="delivery_customer.phone"/>
+                    </div>
+                    <div t-if="delivery_customer.email">
+                        <strong>Email: </strong><t t-esc="delivery_customer.email"/>
+                    </div>
+                </div>
+            </t>
+        </xpath>
+    </t>
+</templates>
