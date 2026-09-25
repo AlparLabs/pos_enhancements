@@ -210,6 +210,11 @@ class PosPaymentMethod(models.Model):
         return resp
 
     def _find_terminal(self, token, point_smart):
+        # The core pos_mercado_pago module (when installed alongside this one)
+        # calls _find_terminal from its create/write whenever a token is set,
+        # regardless of the terminal type. QR methods have no serial number.
+        if not point_smart:
+            return False
         mercado_pago = MercadoPagoPosRequest(token)
         data = mercado_pago.call_mercado_pago("get", "/terminals/v1/list", {})
         _logger.info("Mercado Pago Devices Response: %s", data)
