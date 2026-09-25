@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!--
+        Runs hourly. There is deliberately no numbercall field: it was removed from
+        ir.cron in Odoo 19, and a cron without it already repeats indefinitely.
+    -->
+    <record id="ir_cron_fetch_settlements" model="ir.cron">
+        <field name="name">POS: fetch Mercado Pago settlement data</field>
+        <field name="model_id" ref="point_of_sale.model_pos_payment"/>
+        <field name="state">code</field>
+        <field name="code">model._cron_fetch_settlements()</field>
+        <field name="interval_number">1</field>
+        <field name="interval_type">hours</field>
+        <field name="user_id" ref="base.user_root"/>
+    </record>
+</odoo>
